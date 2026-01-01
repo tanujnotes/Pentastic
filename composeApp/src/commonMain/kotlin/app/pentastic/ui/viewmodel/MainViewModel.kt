@@ -113,9 +113,25 @@ class MainViewModel(
                 repository.insertNote(Note(page = 1, text = "Welcome to Pentastic! 🖊️", orderAt = 3L))
                 repository.insertNote(Note(page = 1, text = "Double tap a task to mark it as done. ✔", orderAt = 2L))
                 repository.insertNote(Note(page = 1, text = "Single tap, long press or swipe for more...", orderAt = 1L))
-                savePageNames(10, "Long press to rename")
+
+                repository.insertNote(Note(page = 2, text = "Tip: You can long press the page names on the index page to rename them.", orderAt = 4L))
+                repository.insertNote(Note(page = 9, text = "Write down your new year resolution before you forget them :D", orderAt = 5L))
+                repository.insertNote(Note(page = 10, text = "3 big things that you want to accomplish in your lifetime.", orderAt = 6L))
+
+                renamePages()
                 dataStoreRepository.firstLaunchDone()
             }
+        }
+    }
+
+    fun renamePages() {
+        val updatedMap = pageNames.value.toMutableMap()
+        updatedMap[1] = "Today"
+        updatedMap[2] = "Later"
+        updatedMap[9] = "2026"
+        updatedMap[10] = "Life goals"
+        viewModelScope.launch {
+            dataStoreRepository.savePageNames(updatedMap)
         }
     }
 }
