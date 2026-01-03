@@ -40,7 +40,8 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
 
     val pagerState = rememberPagerState(
         initialPage = 1,
-        pageCount = { pages.size + 1 })
+        pageCount = { (pages.size + 1).coerceAtLeast(2) }
+    )
     val coroutineScope = rememberCoroutineScope()
 
     BackHandler(pagerState.currentPage > 0) {
