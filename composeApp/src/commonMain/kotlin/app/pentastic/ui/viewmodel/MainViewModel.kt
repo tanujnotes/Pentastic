@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
+import app.pentastic.data.Page
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,51 +27,34 @@ class MainViewModel(
         loadNotesByPage()
     }
 
-//    val currentPage: StateFlow<Int> = runBlocking {
-//        val initialPage = dataStoreRepository.currentPage.first()
-//        dataStoreRepository.currentPage.stateIn(
-//            scope = viewModelScope,
-//            started = SharingStarted.WhileSubscribed(5000),
-//            initialValue = initialPage
-//        )
-//    }
-//
-//    fun saveCurrentPage(pageNumber: Int) {
-//        viewModelScope.launch {
-//            dataStoreRepository.saveCurrentPage(pageNumber)
-//        }
-//    }
-
     private val _allNotes = MutableStateFlow<List<Note>>(emptyList())
     val allNotes: StateFlow<List<Note>> = _allNotes.asStateFlow()
 
-    private val _notesByPage = MutableStateFlow<Map<Int, List<Note>>>(emptyMap())
-    val notesByPage: StateFlow<Map<Int, List<Note>>> = _notesByPage.asStateFlow()
+    private val _notesByPage = MutableStateFlow<Map<Long, List<Note>>>(emptyMap())
+    val notesByPage: StateFlow<Map<Long, List<Note>>> = _notesByPage.asStateFlow()
 
-    private val _notesCountByPage = MutableStateFlow<Map<Int, Int>>(emptyMap())
-    val notesCountByPage: StateFlow<Map<Int, Int>> = _notesCountByPage.asStateFlow()
+    private val _notesCountByPage = MutableStateFlow<Map<Long, Int>>(emptyMap())
+    val notesCountByPage: StateFlow<Map<Long, Int>> = _notesCountByPage.asStateFlow()
 
-    private val _priorityNotesCountByPage = MutableStateFlow<Map<Int, Int>>(emptyMap())
-    val priorityNotesCountByPage: StateFlow<Map<Int, Int>> = _priorityNotesCountByPage.asStateFlow()
+    private val _priorityNotesCountByPage = MutableStateFlow<Map<Long, Int>>(emptyMap())
+    val priorityNotesCountByPage: StateFlow<Map<Long, Int>> = _priorityNotesCountByPage.asStateFlow()
 
-    val pageNames: StateFlow<Map<Int, String>> = dataStoreRepository.pageNames.stateIn(
+    val pages: StateFlow<List<Page>> = repository.getAllPages().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyMap()
+        initialValue = emptyList()
     )
 
-    fun savePageNames(page: Int, name: String) {
-        val updatedMap = pageNames.value.toMutableMap()
-        updatedMap[page] = name
+    fun savePageName(page: Page, name: String) {
         viewModelScope.launch {
-            dataStoreRepository.savePageNames(updatedMap)
+            repository.updatePage(page.copy(name = name))
         }
     }
 
     private fun loadNotesByPage() {
         viewModelScope.launch {
             repository.getAllNotes().collect { allNotes ->
-                val groupedNotes = allNotes.groupBy { it.page }
+                val groupedNotes = allNotes.groupBy { it.pageId }
                 _allNotes.emit(allNotes)
                 _notesByPage.emit(groupedNotes)
                 _notesCountByPage.emit(groupedNotes.mapValues { (_, notes) -> notes.count { !it.done } })
@@ -79,9 +63,9 @@ class MainViewModel(
         }
     }
 
-    fun insertNote(page: Int, text: String) {
+    fun insertNote(pageId: Long, text: String) {
         viewModelScope.launch {
-            repository.insertNote(Note(page = page, text = text))
+            repository.insertNote(Note(pageId = pageId, text = text))
         }
     }
 
@@ -110,28 +94,33 @@ class MainViewModel(
     private fun checkFirstLaunch() {
         viewModelScope.launch {
             if (dataStoreRepository.firstLaunch.first()) {
-                repository.insertNote(Note(page = 1, text = "Welcome to Pentastic! 🖊️", orderAt = 3L))
-                repository.insertNote(Note(page = 1, text = "Double tap a task to mark it as done. ✔", orderAt = 2L))
-                repository.insertNote(Note(page = 1, text = "Single tap, long press or swipe for more...", orderAt = 1L))
+                val page1 = repository.insertPage(Page(name = "Today")) // id 1
+                val page2 = repository.insertPage(Page(name = "Later"))
+                val page3 = repository.insertPage(Page(name = "Page 3"))
+                val page4 = repository.insertPage(Page(name = "Page 4"))
+                val page5 = repository.insertPage(Page(name = "Page 5"))
+                val page6 = repository.insertPage(Page(name = "Page 6"))
+                val page7 = repository.insertPage(Page(name = "Page 7"))
+                val page8 = repository.insertPage(Page(name = "Page 8"))
+                val page9 = repository.insertPage(Page(name = "2026"))
+                val page10 = repository.insertPage(Page(name = "Life goals"))
 
-                repository.insertNote(Note(page = 2, text = "Tip: You can long press the page names on the index page to rename them.", orderAt = 4L))
-                repository.insertNote(Note(page = 9, text = "Write down your new year resolution before you forget them :D", orderAt = 5L))
-                repository.insertNote(Note(page = 10, text = "3 big things that you want to accomplish in your lifetime.", orderAt = 6L))
+                repository.insertNote(Note(pageId = page1, text = "Welcome to Pentastic! 🖊️", orderAt = 3L))
+                repository.insertNote(Note(pageId = page1, text = "Double tap a task to mark it as done. ✔", orderAt = 2L))
+                repository.insertNote(Note(pageId = page1, text = "Single tap, long press or swipe for more...", orderAt = 1L))
 
-                renamePages()
+                repository.insertNote(
+                    Note(
+                        pageId = page2,
+                        text = "Tip: You can long press the page names on the index page to rename them.",
+                        orderAt = 4L
+                    )
+                )
+                repository.insertNote(Note(pageId = page9, text = "Write down your new year resolution before you forget them :D", orderAt = 5L))
+                repository.insertNote(Note(pageId = page10, text = "3 big things that you want to accomplish in your lifetime.", orderAt = 6L))
+
                 dataStoreRepository.firstLaunchDone()
             }
-        }
-    }
-
-    fun renamePages() {
-        val updatedMap = pageNames.value.toMutableMap()
-        updatedMap[1] = "Today"
-        updatedMap[2] = "Later"
-        updatedMap[9] = "2026"
-        updatedMap[10] = "Life goals"
-        viewModelScope.launch {
-            dataStoreRepository.savePageNames(updatedMap)
         }
     }
 }

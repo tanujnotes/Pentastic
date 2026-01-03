@@ -17,12 +17,6 @@ fun SetupNavGraph(
     ) {
         composable(route = Screen.Home.route) {
             HomeScreen()
-
-//            HomeScreen(
-//                navigateToSettings = {
-//                    navController.navigate(Screen.Settings.route)
-//                }
-//            )
         }
     }
 }

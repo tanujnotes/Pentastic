@@ -2,6 +2,8 @@ package app.pentastic.data
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -9,12 +11,22 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
-@Entity
+@Entity(
+    foreignKeys = [
+        ForeignKey(
+            entity = Page::class,
+            parentColumns = ["id"],
+            childColumns = ["pageId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("pageId")]
+)
 data class Note(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val uuid: String = Uuid.random().toString(),
-    val page: Int = 0,
+    val pageId: Long = 0,
     @ColumnInfo(defaultValue = "0")
     val priority: Int = 0,
     val text: String,

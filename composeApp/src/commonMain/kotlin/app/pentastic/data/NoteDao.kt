@@ -19,8 +19,8 @@ interface NoteDao {
     @Query("SELECT * FROM note ORDER BY done, priority DESC, orderAt DESC")
     fun getAllNotes(): Flow<List<Note>>
 
-    @Query("SELECT * FROM note WHERE page = :page ORDER BY done, priority DESC, orderAt DESC")
-    fun getAllNotesByPage(page: Int): Flow<List<Note>>
+    @Query("SELECT * FROM note WHERE pageId = :pageId ORDER BY done, priority DESC, orderAt DESC")
+    fun getAllNotesByPage(pageId: Long): Flow<List<Note>>
 
     @Query("DELETE FROM note WHERE id = :id")
     suspend fun deleteNote(id: Long)

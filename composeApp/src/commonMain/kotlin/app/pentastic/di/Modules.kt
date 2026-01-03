@@ -19,7 +19,8 @@ val sharedModule = module {
             .build()
     }
     single { get<PentasticDatabase>().noteDao }
-    single<MyRepository> { MyRepository(get()) }
+    single { get<PentasticDatabase>().pageDao }
+    single<MyRepository> { MyRepository(get(), get()) }
     single<DataStoreRepository> { DataStoreRepository(get()) }
 
     viewModelOf(::MainViewModel)

@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -36,21 +36,21 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pentastic.data.Page
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import kotlin.time.ExperimentalTime
 
 @Composable
 fun IndexPage(
-    noOfPages: Int,
-    notesCountByPage: Map<Int, Int>,
-    priorityNotesCountByPage: Map<Int, Int>,
-    pageNames: Map<Int, String>,
-    onPageClick: (Int) -> Unit,
-    onPageNameChange: (Int, String) -> Unit,
+    pages: List<Page>,
+    notesCountByPage: Map<Long, Int>,
+    priorityNotesCountByPage: Map<Long, Int>,
+    onPageClick: (Long) -> Unit,
+    onPageNameChange: (Page, String) -> Unit,
 ) {
 
     var showDialog by remember { mutableStateOf(false) }
-    var selectedPageIndex by remember { mutableStateOf(-1) }
+    var selectedPage: Page? by remember { mutableStateOf(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -70,61 +70,57 @@ fun IndexPage(
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(noOfPages) { pageIndex ->
-                if (pageIndex == 0)
-                    Spacer(Modifier.height(8.dp))
-                else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .combinedClickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { onPageClick(pageIndex) },
-                                onLongClick = {
-                                    selectedPageIndex = pageIndex
-                                    showDialog = true
-                                }
-                            ),
-                    ) {
-                        Text(text = "$pageIndex.", color = Color.Gray, modifier = Modifier.defaultMinSize(minWidth = 32.dp))
-                        Spacer(Modifier.width(8.dp))
+            items(pages) { page ->
+                if (page.id == 0L) return@items // Skip page 0
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .combinedClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onPageClick(page.id) },
+                            onLongClick = {
+                                selectedPage = page
+                                showDialog = true
+                            }
+                        ),
+                ) {
+                    Text(text = "${page.id}.", color = Color.Gray, modifier = Modifier.defaultMinSize(minWidth = 32.dp))
+                    Spacer(Modifier.width(8.dp))
 
-                        Text(text = pageNames[pageIndex] ?: "Page $pageIndex")
+                    Text(text = page.name)
 
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "................................................................................................................... ",
-                            color = Color.LightGray,
-                            maxLines = 1,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            modifier = Modifier.defaultMinSize(minWidth = 16.dp),
-                            text = (
-                                    if ((priorityNotesCountByPage[pageIndex] ?: 0) > 0)
-                                        priorityNotesCountByPage[pageIndex]
-                                    else
-                                        (notesCountByPage[pageIndex] ?: 0)
-                                    ).toString(),
-                            color = if ((priorityNotesCountByPage[pageIndex] ?: 0) > 0) Color.Red
-                            else if ((notesCountByPage[pageIndex] ?: 0) > 0) Color.Gray
-                            else Color.LightGray,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "................................................................................................................... ",
+                        color = Color.LightGray,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        modifier = Modifier.defaultMinSize(minWidth = 16.dp),
+                        text = (
+                                if ((priorityNotesCountByPage[page.id] ?: 0) > 0)
+                                    priorityNotesCountByPage[page.id]
+                                else
+                                    (notesCountByPage[page.id] ?: 0)
+                                ).toString(),
+                        color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) Color.Red
+                        else if ((notesCountByPage[page.id] ?: 0) > 0) Color.Gray
+                        else Color.LightGray,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
-        if (showDialog) {
+        if (showDialog && selectedPage != null) {
             EditPageNameDialog(
-                pageIndex = selectedPageIndex,
-                currentPageName = pageNames[selectedPageIndex] ?: "",
+                page = selectedPage!!,
                 onDismiss = { showDialog = false },
                 onConfirm = { newName ->
-                    onPageNameChange(selectedPageIndex, newName.ifBlank { "Page $selectedPageIndex" })
+                    onPageNameChange(selectedPage!!, newName.ifBlank { "Untitled" })
                     showDialog = false
                 }
             )
@@ -135,12 +131,11 @@ fun IndexPage(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditPageNameDialog(
-    pageIndex: Int,
-    currentPageName: String,
+    page: Page,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
-    var text by remember { mutableStateOf(currentPageName) }
+    var text by remember { mutableStateOf(page.name) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -149,7 +144,7 @@ fun EditPageNameDialog(
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("Page $pageIndex") },
+                label = { Text("Page ${page.id}") },
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words
                 )
@@ -173,20 +168,15 @@ fun EditPageNameDialog(
 fun IndexPagePreview() {
     Surface(color = Color.White) {
         IndexPage(
-            11,
+            listOf(Page(1, name = "Default"), Page(2, name = "Todo later"), Page(5, name = "Pro Launcher")),
             mapOf(
-                1 to 5,
-                2 to 3,
-                5 to 18,
-                8 to 1,
-                10 to 12
+                1L to 5,
+                2L to 3,
+                5L to 18,
+                8L to 1,
+                10L to 12
             ),
-            mapOf(1 to 4),
-            mapOf(
-                1 to "Default",
-                2 to "Todo later",
-                5 to "Pro Launcher",
-            ),
+            mapOf(1L to 4),
             onPageClick = {}
         ) { page, name -> }
     }

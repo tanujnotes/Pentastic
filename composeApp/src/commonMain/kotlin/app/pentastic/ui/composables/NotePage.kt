@@ -67,6 +67,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.pentastic.data.Note
+import app.pentastic.data.Page
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -78,12 +79,11 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun NotePage(
     notes: List<Note>,
-    onInsertNote: (Int, String) -> Unit,
+    onInsertNote: (Long, String) -> Unit,
     onUpdateNote: (Note) -> Unit,
     onDeleteNote: (Note) -> Unit,
     toggleNoteDone: (Note) -> Unit,
-    pageIndex: Int,
-    pageNames: Map<Int, String>,
+    page: Page,
 ) {
     var newNoteText by remember { mutableStateOf("") }
     val noteMovedToIndex = remember { mutableStateOf(-1) }
@@ -131,7 +131,7 @@ fun NotePage(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = (pageNames[pageIndex] ?: "Page $pageIndex"),
+                text = page.name,
                 style = TextStyle(
                     color = Color(0xFFA52A2A),
                     fontSize = 32.sp,
@@ -298,7 +298,7 @@ fun NotePage(
                 ),
                 placeholder = {
                     if (!isInputFocused) {
-                        Text(text = "$pageIndex.", color = Color(0xFFC0D0D0))
+                        Text(text = "${page.id}.", color = Color(0xFFC0D0D0))
                     }
                 },
                 keyboardOptions = KeyboardOptions(
@@ -313,7 +313,7 @@ fun NotePage(
             IconButton(
                 onClick = {
                     if (newNoteText.isNotBlank()) {
-                        onInsertNote(pageIndex, newNoteText.trim())
+                        onInsertNote(page.id, newNoteText.trim())
                         newNoteText = ""
                     } else {
                         focusRequester.requestFocus()

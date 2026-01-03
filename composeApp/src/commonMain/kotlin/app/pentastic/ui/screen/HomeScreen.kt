@@ -31,19 +31,16 @@ import kotlin.time.ExperimentalTime
 
 @Composable
 fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
-    val noOfPage = 11
     val viewModel = koinViewModel<MainViewModel>()
 
-//    val currentPage by viewModel.currentPage.collectAsState()
-    // val allNotes by viewModel.allNotes.collectAsState()
+    val pages by viewModel.pages.collectAsState()
     val notesByPage by viewModel.notesByPage.collectAsState()
     val notesCountByPage by viewModel.notesCountByPage.collectAsState()
     val priorityNotesCountByPage by viewModel.priorityNotesCountByPage.collectAsState()
-    val pageNames by viewModel.pageNames.collectAsState()
 
     val pagerState = rememberPagerState(
         initialPage = 1,
-        pageCount = { noOfPage })
+        pageCount = { pages.size + 1 })
     val coroutineScope = rememberCoroutineScope()
 
     BackHandler(pagerState.currentPage > 0) {
@@ -51,10 +48,6 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
             pagerState.animateScrollToPage(0)
         }
     }
-
-//    LaunchedEffect(pagerState.currentPage) {
-//        viewModel.saveCurrentPage(pagerState.currentPage)
-//    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().imePadding(), containerColor = Color(0xFFF9FBFF)
@@ -67,29 +60,34 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
             HorizontalPager(state = pagerState) { pageIndex ->
                 if (pageIndex == 0)
                     IndexPage(
-                        noOfPage,
-                        notesCountByPage,
-                        priorityNotesCountByPage,
-                        pageNames,
-                        onPageClick = { page ->
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(page)
+                        pages = pages,
+                        notesCountByPage = notesCountByPage,
+                        priorityNotesCountByPage = priorityNotesCountByPage,
+                        onPageClick = { pageId ->
+                            val targetIndex = pages.indexOfFirst { it.id == pageId } + 1
+                            if (targetIndex > 0) {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(targetIndex)
+                                }
                             }
                         },
                         onPageNameChange = { page, name ->
-                            viewModel.savePageNames(page, name)
+                            viewModel.savePageName(page, name)
                         }
                     )
-                else
-                    NotePage(
-                        notes = notesByPage[pageIndex] ?: emptyList(),
-                        onInsertNote = { page, text -> viewModel.insertNote(page, text) },
-                        onUpdateNote = { note -> viewModel.updateNote(note) },
-                        onDeleteNote = { note -> viewModel.deleteNote(note) },
-                        toggleNoteDone = { note -> viewModel.toggleNoteDone(note) },
-                        pageIndex = pageIndex,
-                        pageNames = pageNames,
-                    )
+                else {
+                    val currentPage = pages.getOrNull(pageIndex - 1) // pages start with id 1
+                    if (currentPage != null) {
+                        NotePage(
+                            notes = notesByPage[currentPage.id] ?: emptyList(),
+                            onInsertNote = { pageId, text -> viewModel.insertNote(pageId, text) },
+                            onUpdateNote = { note -> viewModel.updateNote(note) },
+                            onDeleteNote = { note -> viewModel.deleteNote(note) },
+                            toggleNoteDone = { note -> viewModel.toggleNoteDone(note) },
+                            page = currentPage,
+                        )
+                    }
+                }
             }
         }
     }
