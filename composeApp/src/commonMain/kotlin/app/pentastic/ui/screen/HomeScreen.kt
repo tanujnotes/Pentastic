@@ -74,6 +74,9 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                         },
                         onPageNameChange = { page, name ->
                             viewModel.savePageName(page, name)
+                        },
+                        onPageOrderChange = { updatedPages ->
+                            viewModel.updatePageOrder(updatedPages)
                         }
                     )
                 else {

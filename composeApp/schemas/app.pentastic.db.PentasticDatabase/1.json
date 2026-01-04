@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "5b98372ffcc8b7c1d4864d9869dcdaa5",
+    "identityHash": "2b0135686da587003aa66dffbcfa41bd",
     "entities": [
       {
         "tableName": "Note",
@@ -97,7 +97,7 @@
       },
       {
         "tableName": "Page",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `orderAt` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -115,6 +115,12 @@
             "fieldPath": "name",
             "columnName": "name",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "orderAt",
+            "columnName": "orderAt",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -140,7 +146,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5b98372ffcc8b7c1d4864d9869dcdaa5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2b0135686da587003aa66dffbcfa41bd')"
     ]
   }
 }

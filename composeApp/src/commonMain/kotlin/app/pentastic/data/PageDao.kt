@@ -15,7 +15,7 @@ interface PageDao {
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updatePage(page: Page)
 
-    @Query("SELECT * FROM page")
+    @Query("SELECT * FROM page ORDER BY orderAt DESC")
     fun getAllPages(): Flow<List<Page>>
 
     @Query("SELECT * FROM page WHERE id = :id")

@@ -1,9 +1,17 @@
-@file:OptIn(ExperimentalTime::class)
+@file:OptIn(
+    ExperimentalTime::class, ExperimentalMaterial3Api::class,
+    ExperimentalFoundationApi::class
+)
 
 package app.pentastic.ui.composables
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,33 +21,48 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun IndexPage(
     pages: List<Page>,
@@ -47,81 +70,170 @@ fun IndexPage(
     priorityNotesCountByPage: Map<Long, Int>,
     onPageClick: (Long) -> Unit,
     onPageNameChange: (Page, String) -> Unit,
+    onPageOrderChange: (List<Page>) -> Unit,
 ) {
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var pageToRename: Page? by remember { mutableStateOf(null) }
 
-    var showDialog by remember { mutableStateOf(false) }
-    var selectedPage: Page? by remember { mutableStateOf(null) }
+    var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
+
+    LaunchedEffect(pages) {
+        localPages = pages.filter { it.id != 0L }
+    }
+
+    var isReorderMode by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = isReorderMode) {
+        isReorderMode = false
+    }
+
+    val lazyListState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        localPages = localPages.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 17.dp, top = 14.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(start = 17.dp, top = 14.dp, bottom = 6.dp, end = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Index",
+                text = if (isReorderMode) "Reorder Pages" else "Index",
                 style = TextStyle(
                     color = Color(0xFFA52A2A),
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Light
                 )
             )
+            if (isReorderMode) {
+                Text(
+                    text = "Done",
+                    style = TextStyle(color = Color(0xFF284283), fontWeight = FontWeight.Medium),
+                    modifier = Modifier.padding(4.dp).clickable(onClick = {
+                        isReorderMode = false
+                    })
+                )
+            }
         }
 
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(pages) { page ->
-                if (page.id == 0L) return@items // Skip page 0
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .combinedClickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { onPageClick(page.id) },
-                            onLongClick = {
-                                selectedPage = page
-                                showDialog = true
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            state = lazyListState
+        ) {
+            itemsIndexed(localPages, key = { _, it -> it.id }) { index, page ->
+                ReorderableItem(reorderableState, key = page.id) { isDragging ->
+                    val interactionSource = remember { MutableInteractionSource() }
+                    var showMenu by remember { mutableStateOf(false) }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(if (isDragging) Color.White.copy(alpha = 0.8f) else Color.Transparent)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .then(
+                                    if (!isReorderMode) {
+                                        Modifier.combinedClickable(
+                                            interactionSource = interactionSource,
+                                            indication = null,
+                                            onClick = { onPageClick(page.id) },
+                                            onLongClick = { showMenu = true }
+                                        )
+                                    } else Modifier
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${index + 1}.",
+                                color = Color.Gray,
+                                modifier = Modifier.defaultMinSize(minWidth = 32.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+
+                            Text(text = page.name)
+
+                            Spacer(Modifier.width(6.dp))
+
+                            if (!isReorderMode) {
+                                Text(
+                                    text = "................................................................................................................... ",
+                                    color = Color.LightGray,
+                                    maxLines = 1,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    modifier = Modifier.defaultMinSize(minWidth = 16.dp),
+                                    text = (
+                                            if ((priorityNotesCountByPage[page.id] ?: 0) > 0)
+                                                priorityNotesCountByPage[page.id]
+                                            else
+                                                (notesCountByPage[page.id] ?: 0)
+                                            ).toString(),
+                                    color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) Color.Red
+                                    else if ((notesCountByPage[page.id] ?: 0) > 0) Color.Gray
+                                    else Color.LightGray,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                                Icon(
+                                    imageVector = Icons.Default.DragHandle,
+                                    contentDescription = "Reorder",
+                                    tint = Color.LightGray,
+                                    modifier = Modifier.draggableHandle(
+                                        onDragStopped = {
+                                            onPageOrderChange(localPages)
+                                        },
+                                        interactionSource = interactionSource
+                                    )
+                                )
                             }
-                        ),
-                ) {
-                    Text(text = "${page.id}.", color = Color.Gray, modifier = Modifier.defaultMinSize(minWidth = 32.dp))
-                    Spacer(Modifier.width(8.dp))
+                        }
 
-                    Text(text = page.name)
-
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "................................................................................................................... ",
-                        color = Color.LightGray,
-                        maxLines = 1,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        modifier = Modifier.defaultMinSize(minWidth = 16.dp),
-                        text = (
-                                if ((priorityNotesCountByPage[page.id] ?: 0) > 0)
-                                    priorityNotesCountByPage[page.id]
-                                else
-                                    (notesCountByPage[page.id] ?: 0)
-                                ).toString(),
-                        color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) Color.Red
-                        else if ((notesCountByPage[page.id] ?: 0) > 0) Color.Gray
-                        else Color.LightGray,
-                        textAlign = TextAlign.Center
-                    )
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            offset = DpOffset(x = 42.dp, y = 0.dp),
+                            modifier = Modifier.background(color = Color(0xFFF9FBFF)),
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Rename") },
+                                onClick = {
+                                    showMenu = false
+                                    pageToRename = page
+                                    showRenameDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.Edit, tint = Color.Gray, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Reorder") },
+                                onClick = {
+                                    showMenu = false
+                                    isReorderMode = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.Sort, tint = Color.Gray, contentDescription = null) }
+                            )
+                        }
+                    }
                 }
             }
         }
-        if (showDialog && selectedPage != null) {
+        if (showRenameDialog && pageToRename != null) {
             EditPageNameDialog(
-                page = selectedPage!!,
-                onDismiss = { showDialog = false },
+                page = pageToRename!!,
+                onDismiss = { showRenameDialog = false },
                 onConfirm = { newName ->
-                    onPageNameChange(selectedPage!!, newName.ifBlank { "Untitled" })
-                    showDialog = false
+                    onPageNameChange(pageToRename!!, newName.ifBlank { "Untitled" })
+                    showRenameDialog = false
                 }
             )
         }
@@ -177,7 +289,9 @@ fun IndexPagePreview() {
                 10L to 12
             ),
             mapOf(1L to 4),
-            onPageClick = {}
-        ) { page, name -> }
+            onPageClick = {},
+            onPageNameChange = { _, _ -> },
+            onPageOrderChange = {}
+        )
     }
 }

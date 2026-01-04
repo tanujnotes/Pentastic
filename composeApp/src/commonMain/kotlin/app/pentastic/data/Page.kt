@@ -14,6 +14,8 @@ data class Page(
     val id: Long = 0,
     val uuid: String = Uuid.random().toString(),
     val name: String = "Page",
+    val orderAt: Long = Clock.System.now().toEpochMilliseconds(),
+
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val updatedAt: Long = Clock.System.now().toEpochMilliseconds(),
 )
