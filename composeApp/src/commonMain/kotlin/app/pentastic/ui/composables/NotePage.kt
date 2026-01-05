@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -338,59 +339,75 @@ private fun NoteActionsMenu(
     onSetPriority: () -> Unit,
 ) {
     DropdownMenu(
-        offset = DpOffset(x = 32.dp, y = 0.dp),
         modifier = Modifier.background(color = Color(0xFFF9FBFF)),
         expanded = expanded,
+        offset = DpOffset(x = 42.dp, y = 0.dp),
         onDismissRequest = onDismissRequest,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            IconButton(onClick = {
-                onDelete()
-                onDismissRequest()
-            }) {
+        DropdownMenuItem(
+            text = { Text("Done", color = Color(0xFF284283)) },
+            leadingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete note",
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Done",
                     tint = Color(0xFF284283)
                 )
-            }
-
-            IconButton(onClick = {
-                onCopy()
+            },
+            onClick = {
+                onToggleDone()
                 onDismissRequest()
-            }) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy note",
-                    tint = Color(0xFF284283)
+            }
+        )
+
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = "Priority",
+                    color = Color(0xFF284283)
                 )
-            }
-
-            IconButton(onClick = {
-                onSetPriority()
-                onDismissRequest()
-            }) {
+            },
+            leadingIcon = {
                 Icon(
                     imageVector = if (note.priority == 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                     contentDescription = "Change priority",
                     tint = Color(0xFF284283)
                 )
-            }
-
-            IconButton(onClick = {
-                onToggleDone()
+            },
+            onClick = {
+                onSetPriority()
                 onDismissRequest()
-            }) {
+            }
+        )
+
+        DropdownMenuItem(
+            text = { Text("Copy", color = Color(0xFF284283)) },
+            leadingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Mark as Done",
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy note",
                     tint = Color(0xFF284283)
                 )
+            },
+            onClick = {
+                onCopy()
+                onDismissRequest()
             }
-        }
+        )
+
+        DropdownMenuItem(
+            text = { Text("Delete", color = Color(0xFF284283)) },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete note",
+                    tint = Color(0xFF284283)
+                )
+            },
+            onClick = {
+                onDelete()
+                onDismissRequest()
+            }
+        )
     }
 }
 
@@ -412,7 +429,7 @@ private fun handleToggleDone(
                     delay(delayMillis)
                     styledText.value = buildAnnotatedString {
                         withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                            append(note.text.substring(0, index + 1))
+                            append(note.text.take(index + 1))
                         }
                         append(note.text.substring(index + 1))
                     }
