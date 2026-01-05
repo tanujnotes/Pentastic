@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -25,8 +26,10 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -87,6 +90,7 @@ fun NotePage(
     page: Page,
 ) {
     var newNoteText by remember { mutableStateOf("") }
+    var editingNote by remember { mutableStateOf<Note?>(null) }
     val noteMovedToIndex = remember { mutableStateOf(-1) }
     val focusRequester = remember { FocusRequester() }
     var isInputFocused by remember { mutableStateOf(false) }
@@ -243,6 +247,12 @@ fun NotePage(
                                             orderAt = Clock.System.now().toEpochMilliseconds()
                                         )
                                     )
+                                },
+                                onEdit = {
+                                    editingNote = note
+                                    newNoteText = note.text
+                                    focusRequester.requestFocus()
+                                    keyboardController?.show()
                                 }
                             )
                         }
@@ -314,7 +324,12 @@ fun NotePage(
             IconButton(
                 onClick = {
                     if (newNoteText.isNotBlank()) {
-                        onInsertNote(page.id, newNoteText.trim())
+                        if (editingNote != null) {
+                            onUpdateNote(editingNote!!.copy(text = newNoteText.trim()))
+                            editingNote = null
+                        } else {
+                            onInsertNote(page.id, newNoteText.trim())
+                        }
                         newNoteText = ""
                     } else {
                         focusRequester.requestFocus()
@@ -322,7 +337,11 @@ fun NotePage(
                     }
                 }
             ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Note", tint = Color(0xFFC0D0D0))
+                Icon(
+                    imageVector = if (editingNote != null) Icons.Default.Check else Icons.Default.Add,
+                    contentDescription = if (editingNote != null) "Update Note" else "Add Note",
+                    tint = Color(0xFFBCC1CE)
+                )
             }
         }
     }
@@ -337,6 +356,7 @@ private fun NoteActionsMenu(
     onCopy: () -> Unit,
     onToggleDone: () -> Unit,
     onSetPriority: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     DropdownMenu(
         modifier = Modifier.background(color = Color(0xFFF9FBFF)),
@@ -345,9 +365,10 @@ private fun NoteActionsMenu(
         onDismissRequest = onDismissRequest,
     ) {
         DropdownMenuItem(
-            text = { Text("Done", color = Color(0xFF284283)) },
+            text = { Text(if (note.done) "Todo" else "Done", color = Color(0xFF284283)) },
             leadingIcon = {
                 Icon(
+                    modifier = Modifier.size(24.dp),
                     imageVector = Icons.Default.Check,
                     contentDescription = "Done",
                     tint = Color(0xFF284283)
@@ -368,6 +389,7 @@ private fun NoteActionsMenu(
             },
             leadingIcon = {
                 Icon(
+                    modifier = Modifier.size(22.dp),
                     imageVector = if (note.priority == 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                     contentDescription = "Change priority",
                     tint = Color(0xFF284283)
@@ -383,6 +405,7 @@ private fun NoteActionsMenu(
             text = { Text("Copy", color = Color(0xFF284283)) },
             leadingIcon = {
                 Icon(
+                    modifier = Modifier.size(20.dp),
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = "Copy note",
                     tint = Color(0xFF284283)
@@ -395,9 +418,31 @@ private fun NoteActionsMenu(
         )
 
         DropdownMenuItem(
+            text = { Text("Edit", color = Color(0xFF284283)) },
+            leadingIcon = {
+                Icon(
+                    modifier = Modifier.size(22.dp),
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit note",
+                    tint = Color(0xFF284283)
+                )
+            },
+            onClick = {
+                onEdit()
+                onDismissRequest()
+            }
+        )
+
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 8.dp),
+            color = Color(0xFFE9ECEF)
+        )
+
+        DropdownMenuItem(
             text = { Text("Delete", color = Color(0xFF284283)) },
             leadingIcon = {
                 Icon(
+                    modifier = Modifier.size(22.dp),
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete note",
                     tint = Color(0xFF284283)
