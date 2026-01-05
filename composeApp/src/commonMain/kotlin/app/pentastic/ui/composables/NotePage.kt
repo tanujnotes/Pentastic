@@ -132,7 +132,7 @@ fun NotePage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 19.dp, top = 16.dp, bottom = 26.dp, end = 8.dp),
+                .padding(start = 18.dp, top = 16.dp, bottom = 26.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(

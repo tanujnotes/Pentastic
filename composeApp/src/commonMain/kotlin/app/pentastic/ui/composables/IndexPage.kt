@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -34,6 +35,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +51,9 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -76,6 +81,10 @@ fun IndexPage(
     var pageToRename: Page? by remember { mutableStateOf(null) }
 
     var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
+    val uriHandler = LocalUriHandler.current
+    var showTopMenu by remember { mutableStateOf(false) }
+
+    val clipboardManager = LocalClipboardManager.current
 
     LaunchedEffect(pages) {
         localPages = pages.filter { it.id != 0L }
@@ -98,12 +107,12 @@ fun IndexPage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 17.dp, top = 14.dp, bottom = 6.dp, end = 16.dp),
+                .padding(start = 16.dp, top = 14.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = if (isReorderMode) "Reorder Pages" else "Index",
+                text = if (isReorderMode) "Reorder" else "Index",
                 style = TextStyle(
                     color = Color(0xFFA52A2A),
                     fontSize = 32.sp,
@@ -114,15 +123,53 @@ fun IndexPage(
                 Text(
                     text = "Done",
                     style = TextStyle(color = Color(0xFF284283), fontWeight = FontWeight.Medium),
-                    modifier = Modifier.padding(4.dp).clickable(onClick = {
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp).clickable(onClick = {
                         isReorderMode = false
                     })
                 )
+            } else {
+                Box {
+                    IconButton(onClick = { showTopMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint = Color.LightGray
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showTopMenu,
+                        onDismissRequest = { showTopMenu = false },
+                        modifier = Modifier.background(color = Color(0xFFF9FBFF)),
+                        offset = DpOffset(x = 0.dp, y = 0.dp),
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Rate", color = Color(0xFF284283)) },
+                            onClick = {
+                                showTopMenu = false
+                                uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Share", color = Color(0xFF284283)) },
+                            onClick = {
+                                showTopMenu = false
+                                clipboardManager.setText(AnnotatedString("Minimal Todo Lists - It's Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Follow", color = Color(0xFF284283)) },
+                            onClick = {
+                                showTopMenu = false
+                                uriHandler.openUri("https://twitter.com/tanujnotes")
+                            }
+                        )
+                    }
+                }
             }
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             state = lazyListState
         ) {
             itemsIndexed(localPages, key = { _, it -> it.id }) { index, page ->
@@ -227,12 +274,13 @@ fun IndexPage(
                 }
             }
         }
+
         if (showRenameDialog && pageToRename != null) {
             EditPageNameDialog(
                 page = pageToRename!!,
                 onDismiss = { showRenameDialog = false },
                 onConfirm = { newName ->
-                    onPageNameChange(pageToRename!!, newName.ifBlank { "Untitled" })
+                    onPageNameChange(pageToRename!!, newName.ifBlank { "Page" })
                     showRenameDialog = false
                 }
             )
