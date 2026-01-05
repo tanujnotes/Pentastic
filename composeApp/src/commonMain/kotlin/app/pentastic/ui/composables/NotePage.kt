@@ -138,7 +138,7 @@ fun NotePage(
             Text(
                 text = page.name,
                 style = TextStyle(
-                    color = Color(0xFFA52A2A),
+                    color = Color(0xFF933A3A),
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Light
                 )
@@ -163,7 +163,7 @@ fun NotePage(
                                     } else if (note.done) {
                                         SpanStyle(textDecoration = TextDecoration.LineThrough)
                                     } else if (note.priority == 1) {
-                                        SpanStyle(color = Color.Red)
+                                        SpanStyle(color = Color(0xFFD01616))
                                     } else {
                                         SpanStyle() // Default style
                                     }
@@ -278,7 +278,7 @@ fun NotePage(
             // Bottom fade-to-edge gradient
             Box(
                 modifier = Modifier
-                    .fillMaxWidth() // Fills the available space
+                    .fillMaxWidth()
                     .height(32.dp)
                     .background(
                         brush = Brush.verticalGradient(
@@ -307,11 +307,11 @@ fun NotePage(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 ),
-                placeholder = {
-                    if (!isInputFocused) {
-                        Text(text = "${page.id}.", color = Color(0xFFC0D0D0))
-                    }
-                },
+//                placeholder = {
+//                    if (!isInputFocused) {
+//                        Text(text = "${page.id}.", color = Color(0xFFC0D0D0))
+//                    }
+//                },
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences
                 ),
@@ -338,9 +338,10 @@ fun NotePage(
                 }
             ) {
                 Icon(
+                    modifier = Modifier.size(42.dp),
                     imageVector = if (editingNote != null) Icons.Default.Check else Icons.Default.Add,
                     contentDescription = if (editingNote != null) "Update Note" else "Add Note",
-                    tint = Color(0xFFBCC1CE)
+                    tint = Color(0xFFD4D8E0)
                 )
             }
         }

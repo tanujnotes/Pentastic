@@ -114,7 +114,7 @@ fun IndexPage(
             Text(
                 text = if (isReorderMode) "Reorder" else "Index",
                 style = TextStyle(
-                    color = Color(0xFFA52A2A),
+                    color = Color(0xFF933A3A),
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Light
                 )
@@ -225,7 +225,7 @@ fun IndexPage(
                                             else
                                                 (notesCountByPage[page.id] ?: 0)
                                             ).toString(),
-                                    color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) Color.Red
+                                    color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) Color(0xFFD01616)
                                     else if ((notesCountByPage[page.id] ?: 0) > 0) Color.Gray
                                     else Color.LightGray,
                                     textAlign = TextAlign.Center
