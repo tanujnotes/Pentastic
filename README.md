@@ -4,4 +4,4 @@
 ### Dev: [tanujnotes](https://x.com/tanujnotes)
 
 
-A ⭐️ will be highly appreciated. Thank you!
+A ⭐️ to this repo will be highly appreciated. Thank you!
