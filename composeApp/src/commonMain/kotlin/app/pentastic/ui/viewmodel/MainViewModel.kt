@@ -45,6 +45,12 @@ class MainViewModel(
         initialValue = emptyList()
     )
 
+    fun addPage(pageName: String) {
+        viewModelScope.launch {
+            repository.insertPage(Page(name = pageName))
+        }
+    }
+
     fun savePageName(page: Page, name: String) {
         viewModelScope.launch {
             repository.updatePage(page.copy(name = name))
@@ -104,16 +110,16 @@ class MainViewModel(
     private fun checkFirstLaunch() {
         viewModelScope.launch {
             if (dataStoreRepository.firstLaunch.first()) {
-                val page1 = repository.insertPage(Page(name = "Today", orderAt = 100L - 1)) // id 1
-                val page2 = repository.insertPage(Page(name = "Later", orderAt = 100L - 2))
-                val page3 = repository.insertPage(Page(name = "Page 3", orderAt = 100L - 3))
-                val page4 = repository.insertPage(Page(name = "Page 4", orderAt = 100L - 4))
-                val page5 = repository.insertPage(Page(name = "Page 5", orderAt = 100L - 5))
-                val page6 = repository.insertPage(Page(name = "Page 6", orderAt = 100L - 6))
-                val page7 = repository.insertPage(Page(name = "Page 7", orderAt = 100L - 7))
-                val page8 = repository.insertPage(Page(name = "Page 8", orderAt = 100L - 8))
-                val page9 = repository.insertPage(Page(name = "2026", orderAt = 100L - 9))
-                val page10 = repository.insertPage(Page(name = "Life goals", orderAt = 100L - 10))
+                val page1 = repository.insertPage(Page(name = "Today")) // id 1
+                val page2 = repository.insertPage(Page(name = "Later"))
+                val page3 = repository.insertPage(Page(name = "Page 3"))
+                val page4 = repository.insertPage(Page(name = "Page 4"))
+                val page5 = repository.insertPage(Page(name = "Page 5"))
+                val page6 = repository.insertPage(Page(name = "Page 6"))
+                val page7 = repository.insertPage(Page(name = "Page 7"))
+                val page8 = repository.insertPage(Page(name = "Page 8"))
+                val page9 = repository.insertPage(Page(name = "2026"))
+                val page10 = repository.insertPage(Page(name = "Life goals"))
 
                 repository.insertNote(Note(pageId = page1, text = "Welcome to Pentastic! 🖊️", orderAt = 3L))
                 repository.insertNote(Note(pageId = page1, text = "Double tap a task to mark it as done. ✔", orderAt = 2L))

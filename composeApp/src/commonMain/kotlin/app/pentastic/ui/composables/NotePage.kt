@@ -16,11 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
@@ -31,10 +29,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,8 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -60,7 +53,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -83,17 +75,14 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun NotePage(
     notes: List<Note>,
-    onInsertNote: (Long, String) -> Unit,
     onUpdateNote: (Note) -> Unit,
     onDeleteNote: (Note) -> Unit,
     toggleNoteDone: (Note) -> Unit,
     page: Page,
 ) {
-    var newNoteText by remember { mutableStateOf("") }
     var editingNote by remember { mutableStateOf<Note?>(null) }
     val noteMovedToIndex = remember { mutableStateOf(-1) }
     val focusRequester = remember { FocusRequester() }
-    var isInputFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -149,7 +138,7 @@ fun NotePage(
                 modifier = Modifier.fillMaxSize(), // Changed from weight(1f) to fillMaxSize
                 state = lazyListState,
             ) {
-                itemsIndexed(list, key = { _, item -> item.id }) { index, note ->
+                items(list, key = { it.id }) { note ->
                     if (note.done) Spacer(modifier = Modifier.height(10.dp))
 
                     ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
@@ -230,14 +219,13 @@ fun NotePage(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+                            val clipboardManager = LocalClipboardManager.current
                             NoteActionsMenu(
                                 note = note,
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
                                 onDelete = { onDeleteNote(note) },
-                                onCopy = with(LocalClipboardManager.current) {
-                                    { setText(AnnotatedString(note.text)) }
-                                },
+                                onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
                                 onToggleDone = { handleToggleDone(note, toggleNoteDone, scope, styledText) },
                                 onSetPriority = {
                                     onUpdateNote(
@@ -250,7 +238,6 @@ fun NotePage(
                                 },
                                 onEdit = {
                                     editingNote = note
-                                    newNoteText = note.text
                                     focusRequester.requestFocus()
                                     keyboardController?.show()
                                 }
@@ -287,63 +274,6 @@ fun NotePage(
                     ).align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center
             ) {}
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().height(80.dp).padding(start = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                modifier = Modifier.weight(1f)
-                    .focusRequester(focusRequester)
-                    .onFocusChanged { isInputFocused = it.isFocused },
-                value = newNoteText,
-                onValueChange = { if (it.length <= 300) newNoteText = it },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedTextColor = Color(0xFF284283).copy(alpha = 0.9f),
-                    cursorColor = Color(0x33284283),
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-//                placeholder = {
-//                    if (!isInputFocused) {
-//                        Text(text = "${page.id}.", color = Color(0xFFC0D0D0))
-//                    }
-//                },
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences
-                ),
-                textStyle = TextStyle(
-                    lineHeight = 20.sp,
-                    fontSize = 16.sp,
-                    letterSpacing = 0.5.sp
-                )
-            )
-            IconButton(
-                onClick = {
-                    if (newNoteText.isNotBlank()) {
-                        if (editingNote != null) {
-                            onUpdateNote(editingNote!!.copy(text = newNoteText.trim()))
-                            editingNote = null
-                        } else {
-                            onInsertNote(page.id, newNoteText.trim())
-                        }
-                        newNoteText = ""
-                    } else {
-                        focusRequester.requestFocus()
-                        keyboardController?.show()
-                    }
-                }
-            ) {
-                Icon(
-                    modifier = Modifier.size(42.dp),
-                    imageVector = if (editingNote != null) Icons.Default.Check else Icons.Default.Add,
-                    contentDescription = if (editingNote != null) "Update Note" else "Add Note",
-                    tint = Color(0xFFD4D8E0)
-                )
-            }
         }
     }
 }
@@ -470,7 +400,7 @@ private fun handleToggleDone(
         scope.launch {
             val delayMillis = if (note.text.length > 20) 5L else 20L
             run loop@{
-                note.text.forEachIndexed { index, c ->
+                note.text.forEachIndexed { index, _ ->
                     if (index > 80) return@loop
                     delay(delayMillis)
                     styledText.value = buildAnnotatedString {

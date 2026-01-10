@@ -14,13 +14,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Color
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import app.pentastic.ui.composables.CommonInput
 import app.pentastic.ui.composables.IndexPage
 import app.pentastic.ui.composables.NotePage
 import app.pentastic.ui.viewmodel.MainViewModel
@@ -43,6 +47,7 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
         pageCount = { (pages.size + 1).coerceAtLeast(2) }
     )
     val coroutineScope = rememberCoroutineScope()
+    var text by remember { mutableStateOf("") }
 
     BackHandler(pagerState.currentPage > 0) {
         coroutineScope.launch {
@@ -51,7 +56,25 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().imePadding(), containerColor = Color(0xFFF9FBFF)
+        modifier = Modifier.fillMaxSize().imePadding(),
+        containerColor = Color(0xFFF9FBFF),
+        bottomBar = {
+            CommonInput(
+                text = text,
+                onTextChange = { text = it },
+                onActionClick = {
+                    if (pagerState.currentPage == 0) {
+                        viewModel.addPage(text.trim())
+                    } else {
+                        val page = pages.getOrNull(pagerState.currentPage - 1)
+                        if (page != null) {
+                            viewModel.insertNote(page.id, text.trim())
+                        }
+                    }
+                    text = ""
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -84,7 +107,6 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                     if (currentPage != null) {
                         NotePage(
                             notes = notesByPage[currentPage.id] ?: emptyList(),
-                            onInsertNote = { pageId, text -> viewModel.insertNote(pageId, text) },
                             onUpdateNote = { note -> viewModel.updateNote(note) },
                             onDeleteNote = { note -> viewModel.deleteNote(note) },
                             toggleNoteDone = { note -> viewModel.toggleNoteDone(note) },
