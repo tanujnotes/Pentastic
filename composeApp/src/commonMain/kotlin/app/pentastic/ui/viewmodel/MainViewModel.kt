@@ -110,7 +110,7 @@ class MainViewModel(
     private fun checkFirstLaunch() {
         viewModelScope.launch {
             if (dataStoreRepository.firstLaunch.first()) {
-                val page1 = repository.insertPage(Page(name = "Today")) // id 1
+                val page1 = repository.insertPage(Page(name = "Today"))
                 val page2 = repository.insertPage(Page(name = "Later"))
                 val page3 = repository.insertPage(Page(name = "Page 3"))
                 val page4 = repository.insertPage(Page(name = "Page 4"))
@@ -121,9 +121,10 @@ class MainViewModel(
                 val page9 = repository.insertPage(Page(name = "2026"))
                 val page10 = repository.insertPage(Page(name = "Life goals"))
 
-                repository.insertNote(Note(pageId = page1, text = "Welcome to Pentastic! 🖊️", orderAt = 3L))
-                repository.insertNote(Note(pageId = page1, text = "Double tap a task to mark it as done. ✔", orderAt = 2L))
-                repository.insertNote(Note(pageId = page1, text = "Single tap, long press or swipe for more...", orderAt = 1L))
+                repository.insertNote(Note(pageId = page1, text = "Install Pentastic!️", done = true, orderAt = 3L))
+                repository.insertNote(Note(pageId = page1, text = "Double tap to mark a task as done. ✔", orderAt = 2L))
+                repository.insertNote(Note(pageId = page1, text = "Single tap for menu; long press to reorder.", orderAt = 1L))
+                repository.insertNote(Note(pageId = page1, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L))
 
                 repository.insertNote(
                     Note(
@@ -132,8 +133,20 @@ class MainViewModel(
                         orderAt = 4L
                     )
                 )
-                repository.insertNote(Note(pageId = page9, text = "Write down your new year resolution before you forget them :D", orderAt = 5L))
-                repository.insertNote(Note(pageId = page10, text = "3 big things that you want to accomplish in your lifetime.", orderAt = 6L))
+                repository.insertNote(
+                    Note(
+                        pageId = page9,
+                        text = "Write down your New Year's resolutions before you forget them, like last year. :D",
+                        orderAt = 5L
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page10,
+                        text = "Write down five big things you want to accomplish in your lifetime. Do it!",
+                        orderAt = 6L
+                    )
+                )
 
                 dataStoreRepository.firstLaunchDone()
                 dataStoreRepository.pagesReordered()
