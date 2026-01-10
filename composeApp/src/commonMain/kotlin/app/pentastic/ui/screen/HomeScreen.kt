@@ -115,7 +115,8 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                         },
                         onPageOrderChange = { updatedPages ->
                             viewModel.updatePageOrder(updatedPages)
-                        }
+                        },
+                        onPageDelete = { page -> viewModel.deletePage(page) }
                     )
                 else {
                     val currentPage = pages.getOrNull(pageIndex - 1) // pages start with id 1

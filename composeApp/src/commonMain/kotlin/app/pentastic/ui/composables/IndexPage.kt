@@ -26,10 +26,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -46,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -65,6 +67,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -79,15 +82,19 @@ fun IndexPage(
     onPageClick: (Long) -> Unit,
     onPageNameChange: (Page, String) -> Unit,
     onPageOrderChange: (List<Page>) -> Unit,
+    onPageDelete: (Page) -> Unit,
 ) {
     var showRenameDialog by remember { mutableStateOf(false) }
     var pageToRename: Page? by remember { mutableStateOf(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var pageToDelete: Page? by remember { mutableStateOf(null) }
 
     var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
     val uriHandler = LocalUriHandler.current
     var showTopMenu by remember { mutableStateOf(false) }
 
     val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(pages) {
         localPages = pages.filter { it.id != 0L }
@@ -156,7 +163,9 @@ fun IndexPage(
                             text = { Text("Share", color = Color(0xFF284283)) },
                             onClick = {
                                 showTopMenu = false
-                                clipboardManager.setText(AnnotatedString("Minimal Todo Lists - It's Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                                coroutineScope.launch {
+                                    clipboardManager.setText(AnnotatedString("Minimal Todo Lists - It's Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                                }
                             }
                         )
                         DropdownMenuItem(
@@ -280,7 +289,16 @@ fun IndexPage(
                                         showMenu = false
                                         isReorderMode = true
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Sort, tint = Color.Gray, contentDescription = null) }
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, tint = Color.Gray, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    onClick = {
+                                        showMenu = false
+                                        pageToDelete = page
+                                        showDeleteDialog = true
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Delete, tint = Color.Gray, contentDescription = null) }
                                 )
                             }
                         }
@@ -295,6 +313,17 @@ fun IndexPage(
                     onConfirm = { newName ->
                         onPageNameChange(pageToRename!!, newName.ifBlank { "Page" })
                         showRenameDialog = false
+                    }
+                )
+            }
+
+            if (showDeleteDialog && pageToDelete != null) {
+                DeletePageConfirmationDialog(
+                    page = pageToDelete!!,
+                    onDismiss = { showDeleteDialog = false },
+                    onConfirm = {
+                        onPageDelete(pageToDelete!!)
+                        showDeleteDialog = false
                     }
                 )
             }
@@ -363,6 +392,29 @@ fun EditPageNameDialog(
     )
 }
 
+@Composable
+fun DeletePageConfirmationDialog(
+    page: Page,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete page") },
+        text = { Text("Are you sure you want to delete page '${page.name}' and all its notes?") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
 @Preview
 @Composable
 fun IndexPagePreview() {
@@ -379,7 +431,8 @@ fun IndexPagePreview() {
             mapOf(1L to 4),
             onPageClick = {},
             onPageNameChange = { _, _ -> },
-            onPageOrderChange = {}
+            onPageOrderChange = {},
+            onPageDelete = {}
         )
     }
 }

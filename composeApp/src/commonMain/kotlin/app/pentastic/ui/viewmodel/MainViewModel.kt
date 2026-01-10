@@ -73,6 +73,12 @@ class MainViewModel(
         }
     }
 
+    fun deletePage(page: Page) {
+        viewModelScope.launch {
+            repository.deletePage(page.id)
+        }
+    }
+
     private fun loadNotesByPage() {
         viewModelScope.launch {
             repository.getAllNotes().collect { allNotes ->
