@@ -124,7 +124,7 @@ fun NotePage(
                 text = page.name,
                 style = TextStyle(
                     color = Color(0xFF933A3A),
-                    fontSize = 32.sp,
+                    fontSize = 36.sp,
                     fontWeight = FontWeight.Light
                 )
             )
@@ -208,7 +208,7 @@ fun NotePage(
                                     modifier = Modifier.padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                                     text = styledText.value,
                                     color = Color(0xFF284283).copy(alpha = if (note.done) 0.33f else 1f),
-                                    fontSize = 16.sp,
+                                    fontSize = 18.sp,
                                     lineHeight = 20.sp,
                                     letterSpacing = 0.5.sp,
                                     maxLines = if (showMenu) Int.MAX_VALUE else 2,

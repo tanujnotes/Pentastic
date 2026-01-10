@@ -58,6 +58,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -115,7 +116,7 @@ fun IndexPage(
                 text = if (isReorderMode) "Reorder" else "Index",
                 style = TextStyle(
                     color = Color(0xFF933A3A),
-                    fontSize = 32.sp,
+                    fontSize = 36.sp,
                     fontWeight = FontWeight.Light
                 )
             )
@@ -200,12 +201,18 @@ fun IndexPage(
                         ) {
                             Text(
                                 text = "${index + 1}.",
-                                color = Color.Gray,
+                                fontSize = 18.sp,
+                                color = Color.LightGray,
                                 modifier = Modifier.defaultMinSize(minWidth = 32.dp)
                             )
                             Spacer(Modifier.width(8.dp))
 
-                            Text(text = page.name)
+                            Text(
+                                text = page.name.take(20),
+                                fontSize = 18.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
 
                             Spacer(Modifier.width(6.dp))
 
@@ -225,6 +232,7 @@ fun IndexPage(
                                             else
                                                 (notesCountByPage[page.id] ?: 0)
                                             ).toString(),
+                                    fontSize = 18.sp,
                                     color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) Color(0xFFD01616)
                                     else if ((notesCountByPage[page.id] ?: 0) > 0) Color.Gray
                                     else Color.LightGray,
@@ -302,11 +310,11 @@ fun EditPageNameDialog(
         title = { Text("Edit page name") },
         text = {
             OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("Page ${page.id}") },
+                value = text.take(20),
+                onValueChange = { if (it.length <= 20) text = it },
+                label = { Text("Page ${page.id}.") },
                 keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words
+                    capitalization = KeyboardCapitalization.Sentences
                 )
             )
         },
