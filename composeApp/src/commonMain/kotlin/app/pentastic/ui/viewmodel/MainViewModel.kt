@@ -27,9 +27,6 @@ class MainViewModel(
         loadNotesByPage()
     }
 
-    private val _allNotes = MutableStateFlow<List<Note>>(emptyList())
-    val allNotes: StateFlow<List<Note>> = _allNotes.asStateFlow()
-
     private val _notesByPage = MutableStateFlow<Map<Long, List<Note>>>(emptyMap())
     val notesByPage: StateFlow<Map<Long, List<Note>>> = _notesByPage.asStateFlow()
 
@@ -39,11 +36,18 @@ class MainViewModel(
     private val _priorityNotesCountByPage = MutableStateFlow<Map<Long, Int>>(emptyMap())
     val priorityNotesCountByPage: StateFlow<Map<Long, Int>> = _priorityNotesCountByPage.asStateFlow()
 
+    private val _editingNote = MutableStateFlow<Note?>(null)
+    val editingNote: StateFlow<Note?> = _editingNote.asStateFlow()
+
     val pages: StateFlow<List<Page>> = repository.getAllPages().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    fun setEditingNote(note: Note?) {
+        _editingNote.value = note
+    }
 
     fun addPage(pageName: String) {
         viewModelScope.launch {
@@ -71,7 +75,6 @@ class MainViewModel(
         viewModelScope.launch {
             repository.getAllNotes().collect { allNotes ->
                 val groupedNotes = allNotes.groupBy { it.pageId }
-                _allNotes.emit(allNotes)
                 _notesByPage.emit(groupedNotes)
                 _notesCountByPage.emit(groupedNotes.mapValues { (_, notes) -> notes.count { !it.done } })
                 _priorityNotesCountByPage.emit(groupedNotes.mapValues { (_, notes) -> notes.count { it.priority > 0 && !it.done } })
@@ -88,6 +91,7 @@ class MainViewModel(
     fun updateNote(note: Note) {
         viewModelScope.launch {
             repository.updateNote(note)
+            setEditingNote(null)
         }
     }
 
@@ -112,12 +116,12 @@ class MainViewModel(
             if (dataStoreRepository.firstLaunch.first()) {
                 val page1 = repository.insertPage(Page(name = "Today"))
                 val page2 = repository.insertPage(Page(name = "Later"))
-                val page3 = repository.insertPage(Page(name = "Page 3"))
-                val page4 = repository.insertPage(Page(name = "Page 4"))
-                val page5 = repository.insertPage(Page(name = "Page 5"))
-                val page6 = repository.insertPage(Page(name = "Page 6"))
-                val page7 = repository.insertPage(Page(name = "Page 7"))
-                val page8 = repository.insertPage(Page(name = "Page 8"))
+                repository.insertPage(Page(name = "Page 3"))
+                repository.insertPage(Page(name = "Page 4"))
+                repository.insertPage(Page(name = "Page 5"))
+                repository.insertPage(Page(name = "Page 6"))
+                repository.insertPage(Page(name = "Page 7"))
+                repository.insertPage(Page(name = "Page 8"))
                 val page9 = repository.insertPage(Page(name = "2026"))
                 val page10 = repository.insertPage(Page(name = "Life goals"))
 

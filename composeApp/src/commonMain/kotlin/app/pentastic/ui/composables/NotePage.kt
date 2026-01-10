@@ -41,13 +41,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -79,13 +77,11 @@ fun NotePage(
     onDeleteNote: (Note) -> Unit,
     toggleNoteDone: (Note) -> Unit,
     page: Page,
+    setEditingNote: (Note?) -> Unit,
 ) {
-    var editingNote by remember { mutableStateOf<Note?>(null) }
     val noteMovedToIndex = remember { mutableStateOf(-1) }
-    val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
 
     var list by remember { mutableStateOf(notes) }
@@ -236,11 +232,7 @@ fun NotePage(
                                         )
                                     )
                                 },
-                                onEdit = {
-                                    editingNote = note
-                                    focusRequester.requestFocus()
-                                    keyboardController?.show()
-                                }
+                                onEdit = { setEditingNote(note) }
                             )
                         }
                     }

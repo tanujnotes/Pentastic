@@ -6,12 +6,17 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +46,7 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
     val notesByPage by viewModel.notesByPage.collectAsState()
     val notesCountByPage by viewModel.notesCountByPage.collectAsState()
     val priorityNotesCountByPage by viewModel.priorityNotesCountByPage.collectAsState()
+    val editingNote by viewModel.editingNote.collectAsState()
 
     val pagerState = rememberPagerState(
         initialPage = 1,
@@ -49,6 +55,10 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
     val coroutineScope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
 
+    LaunchedEffect(editingNote) {
+        editingNote?.let { text = it.text }
+    }
+
     BackHandler(pagerState.currentPage > 0) {
         coroutineScope.launch {
             pagerState.animateScrollToPage(0)
@@ -56,23 +66,28 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().imePadding(),
+        modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFFF9FBFF),
         bottomBar = {
             CommonInput(
+                modifier = Modifier.navigationBarsPadding().imePadding(),
                 text = text,
                 onTextChange = { text = it },
                 onActionClick = {
-                    if (pagerState.currentPage == 0) {
-                        viewModel.addPage(text.trim())
-                    } else {
-                        val page = pages.getOrNull(pagerState.currentPage - 1)
-                        if (page != null) {
-                            viewModel.insertNote(page.id, text.trim())
-                        }
+                    val note = editingNote
+                    if (note != null)
+                        viewModel.updateNote(note.copy(text = text.trim()))
+                    else {
+                        if (pagerState.currentPage == 0)
+                            viewModel.addPage(text.trim())
+                        else
+                            pages.getOrNull(pagerState.currentPage - 1)?.let { page ->
+                                viewModel.insertNote(page.id, text.trim())
+                            }
                     }
                     text = ""
-                }
+                },
+                actionIcon = if (editingNote != null) Icons.Default.Check else Icons.Default.Add
             )
         }
     ) { paddingValues ->
@@ -111,6 +126,7 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                             onDeleteNote = { note -> viewModel.deleteNote(note) },
                             toggleNoteDone = { note -> viewModel.toggleNoteDone(note) },
                             page = currentPage,
+                            setEditingNote = { note -> viewModel.setEditingNote(note) }
                         )
                     }
                 }
