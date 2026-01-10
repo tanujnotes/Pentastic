@@ -18,6 +18,8 @@ object DatastoreKeys {
     val TOTAL_PAGES = intPreferencesKey("total_pages")
     val CURRENT_PAGE = intPreferencesKey("current_page")
     val PAGE_NAMES_MAP = stringPreferencesKey("page_names_map")
+
+    val PAGES_REORDERED = booleanPreferencesKey("pages_reordered")
 }
 
 class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
@@ -29,6 +31,16 @@ class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun firstLaunchDone() {
         dataStore.edit { settings ->
             settings[DatastoreKeys.FIRST_LAUNCH] = false
+        }
+    }
+
+    val pagesReordered: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.PAGES_REORDERED] ?: false
+    }
+
+    suspend fun pagesReordered() {
+        dataStore.edit { settings ->
+            settings[DatastoreKeys.PAGES_REORDERED] = true
         }
     }
 

@@ -136,6 +136,16 @@ class MainViewModel(
                 repository.insertNote(Note(pageId = page10, text = "3 big things that you want to accomplish in your lifetime.", orderAt = 6L))
 
                 dataStoreRepository.firstLaunchDone()
+                dataStoreRepository.pagesReordered()
+            } else if (!dataStoreRepository.pagesReordered.first()) {
+                pages.collect {
+                    if (it.isNotEmpty()) {
+                        it.forEach { page ->
+                            repository.updatePage(page.copy(orderAt = 0))
+                        }
+                        dataStoreRepository.pagesReordered()
+                    }
+                }
             }
         }
     }
