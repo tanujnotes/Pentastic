@@ -51,7 +51,9 @@ class MainViewModel(
 
     fun addPage(pageName: String) {
         viewModelScope.launch {
-            repository.insertPage(Page(name = pageName))
+            if (pages.value.size < 100) {
+                repository.insertPage(Page(name = pageName))
+            }
         }
     }
 
