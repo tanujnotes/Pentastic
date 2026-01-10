@@ -131,7 +131,7 @@ fun NotePage(
         }
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(), // Changed from weight(1f) to fillMaxSize
+                modifier = Modifier.fillMaxSize(),
                 state = lazyListState,
             ) {
                 items(list, key = { it.id }) { note ->
