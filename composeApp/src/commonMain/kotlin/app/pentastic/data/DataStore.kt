@@ -15,11 +15,10 @@ import kotlinx.serialization.json.Json
 object DatastoreKeys {
     val FIRST_LAUNCH = booleanPreferencesKey("first_launch")
 
-    val TOTAL_PAGES = intPreferencesKey("total_pages")
     val CURRENT_PAGE = intPreferencesKey("current_page")
     val PAGE_NAMES_MAP = stringPreferencesKey("page_names_map")
 
-    val PAGES_REORDERED = booleanPreferencesKey("pages_reordered")
+    val MIGRATION_SORT_PAGES_ASC = booleanPreferencesKey("migration_sort_pages_asc")
 }
 
 class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
@@ -35,22 +34,12 @@ class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
     }
 
     val pagesReordered: Flow<Boolean> = dataStore.data.map { preferences ->
-        preferences[DatastoreKeys.PAGES_REORDERED] ?: false
+        preferences[DatastoreKeys.MIGRATION_SORT_PAGES_ASC] ?: false
     }
 
     suspend fun pagesReordered() {
         dataStore.edit { settings ->
-            settings[DatastoreKeys.PAGES_REORDERED] = true
-        }
-    }
-
-    val totalPages: Flow<Int> = dataStore.data.map { preferences ->
-        preferences[DatastoreKeys.TOTAL_PAGES] ?: 11
-    }
-
-    suspend fun saveTotalPages(page: Int) {
-        dataStore.edit { settings ->
-            settings[DatastoreKeys.TOTAL_PAGES] = page
+            settings[DatastoreKeys.MIGRATION_SORT_PAGES_ASC] = true
         }
     }
 

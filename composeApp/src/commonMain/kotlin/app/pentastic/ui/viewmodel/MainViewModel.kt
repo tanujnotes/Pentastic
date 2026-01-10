@@ -65,11 +65,10 @@ class MainViewModel(
 
     fun updatePageOrder(pages: List<Page>) {
         viewModelScope.launch {
-            val baseTime = Clock.System.now().toEpochMilliseconds()
-
-            pages.forEachIndexed { index, page ->
-                repository.updatePage(page.copy(orderAt = baseTime - index))
+            val updatedPages = pages.mapIndexed { index, page ->
+                page.copy(orderAt = index.toLong())
             }
+            repository.updatePages(updatedPages)
         }
     }
 
@@ -165,9 +164,10 @@ class MainViewModel(
             } else if (!dataStoreRepository.pagesReordered.first()) {
                 pages.collect {
                     if (it.isNotEmpty()) {
-                        it.forEach { page ->
-                            repository.updatePage(page.copy(orderAt = 0))
+                        val updatedPages = it.mapIndexed { index, page ->
+                            page.copy(orderAt = index.toLong())
                         }
+                        repository.updatePages(updatedPages)
                         dataStoreRepository.pagesReordered()
                     }
                 }

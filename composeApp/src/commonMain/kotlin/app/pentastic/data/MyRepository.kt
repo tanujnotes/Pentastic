@@ -35,6 +35,10 @@ class MyRepository(
         pageDao.updatePage(page)
     }
 
+    suspend fun updatePages(pages: List<Page>) {
+        pageDao.updatePages(pages)
+    }
+
     fun getAllPages(): Flow<List<Page>> {
         return pageDao.getAllPages()
     }
