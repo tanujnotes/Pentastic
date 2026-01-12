@@ -180,7 +180,7 @@ fun IndexPage(
                                 onClick = {
                                     showTopMenu = false
                                     coroutineScope.launch {
-                                        clipboardManager.setText(AnnotatedString("Minimal Todo Lists - It's Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                                        clipboardManager.setText(AnnotatedString("Minimal Todo Lists - Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
                                     }
                                 }
                             )
@@ -188,7 +188,7 @@ fun IndexPage(
                                 text = { Text("Follow", color = Color(0xFF284283)) },
                                 onClick = {
                                     showTopMenu = false
-                                    uriHandler.openUri("https://twitter.com/tanujnotes")
+                                    uriHandler.openUri("https://x.com/tanujnotes")
                                 }
                             )
                         }
