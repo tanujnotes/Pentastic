@@ -5,18 +5,18 @@ package app.pentastic.ui.composables
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -51,6 +51,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -134,8 +135,8 @@ fun NotePage(
                 modifier = Modifier.fillMaxSize(),
                 state = lazyListState,
             ) {
-                items(list, key = { it.id }) { note ->
-                    if (note.done) Spacer(modifier = Modifier.height(10.dp))
+                itemsIndexed(list, key = { _, it -> it.id }) { index, note ->
+                    if (note.done) Spacer(modifier = Modifier.height(12.dp))
 
                     ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
                         val interactionSource = remember { MutableInteractionSource() }
@@ -199,19 +200,23 @@ fun NotePage(
                                     interactionSource = interactionSource,
                                 ).animateItem(),
                         ) {
-                            Row(
-                                Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                            Row(Modifier.fillMaxSize()) {
                                 Text(
-                                    modifier = Modifier.padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                                    modifier = Modifier.padding(start = 12.dp, top = 4.dp).defaultMinSize(minWidth = 28.dp),
+                                    text = (index + 1).toString() + ".",
+                                    color = if (note.priority == 1) Color(0xFFD01616).copy(alpha = 0.7f) else Color(0xFF284283).copy(alpha = 0.33f),
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 17.sp,
+                                    lineHeight = 20.sp
+                                )
+                                Text(
+                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp).weight(1f),
                                     text = styledText.value,
                                     color = Color(0xFF284283).copy(alpha = if (note.done) 0.33f else 1f),
-                                    fontSize = 18.sp,
+                                    fontSize = 17.sp,
                                     lineHeight = 20.sp,
                                     letterSpacing = 0.5.sp,
-                                    maxLines = if (showMenu) Int.MAX_VALUE else 2,
+                                    maxLines = if (showMenu) Int.MAX_VALUE else if (note.done) 1 else 3,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
@@ -237,7 +242,7 @@ fun NotePage(
                         }
                     }
                     if (!note.done)
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                 }
             }
 
