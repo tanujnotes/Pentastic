@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -61,7 +58,11 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
 
     BackHandler(pagerState.currentPage > 0) {
         coroutineScope.launch {
-            pagerState.animateScrollToPage(0)
+            if (editingNote != null) {
+                viewModel.setEditingNote(null)
+                text = ""
+            } else
+                pagerState.animateScrollToPage(0)
         }
     }
 
@@ -87,7 +88,7 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                     }
                     text = ""
                 },
-                actionIcon = if (editingNote != null) Icons.Default.Check else Icons.Default.Add
+                isEditing = editingNote != null
             )
         }
     ) { paddingValues ->

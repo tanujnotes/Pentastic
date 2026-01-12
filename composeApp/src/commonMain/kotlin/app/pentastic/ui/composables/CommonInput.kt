@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextField
@@ -23,7 +24,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -36,7 +36,8 @@ fun CommonInput(
     onTextChange: (String) -> Unit,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
-    actionIcon: ImageVector = Icons.Default.Add,
+    isEditing: Boolean = false,
+//    actionIcon: ImageVector = Icons.Default.Add,
     actionIconContentDescription: String = "Add",
 ) {
     var isInputFocused by remember { mutableStateOf(false) }
@@ -87,7 +88,7 @@ fun CommonInput(
         ) {
             Icon(
                 modifier = Modifier.size(42.dp),
-                imageVector = actionIcon,
+                imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Add,
                 contentDescription = actionIconContentDescription,
                 tint = Color(0xFFD4D8E0)
             )
