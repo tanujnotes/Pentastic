@@ -165,7 +165,7 @@ fun IndexPage(
                             expanded = showTopMenu,
                             onDismissRequest = { showTopMenu = false },
                             modifier = Modifier.background(color = Color(0xFFF9FBFF)),
-                            offset = DpOffset(x = 0.dp, y = 0.dp),
+                            offset = DpOffset(x = (-12).dp, y = (-4).dp),
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Rate", color = Color(0xFF284283)) },
@@ -288,7 +288,7 @@ fun IndexPage(
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
-                                offset = DpOffset(x = 42.dp, y = 0.dp),
+                                offset = DpOffset(x = 80.dp, y = 0.dp),
                                 modifier = Modifier.background(color = Color(0xFFF9FBFF)),
                             ) {
                                 DropdownMenuItem(

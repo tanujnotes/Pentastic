@@ -289,7 +289,7 @@ private fun NoteActionsMenu(
     DropdownMenu(
         modifier = Modifier.background(color = Color(0xFFF9FBFF)),
         expanded = expanded,
-        offset = DpOffset(x = 42.dp, y = 0.dp),
+        offset = DpOffset(x = 80.dp, y = 0.dp),
         onDismissRequest = onDismissRequest,
     ) {
         DropdownMenuItem(
