@@ -44,6 +44,7 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
     val notesCountByPage by viewModel.notesCountByPage.collectAsState()
     val priorityNotesCountByPage by viewModel.priorityNotesCountByPage.collectAsState()
     val editingNote by viewModel.editingNote.collectAsState()
+    val showRateButton by viewModel.showRateButton.collectAsState()
 
     val pagerState = rememberPagerState(
         initialPage = 1,
@@ -103,6 +104,7 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                         pages = pages,
                         notesCountByPage = notesCountByPage,
                         priorityNotesCountByPage = priorityNotesCountByPage,
+                        showRateButton = showRateButton,
                         onPageClick = { pageId ->
                             val targetIndex = pages.indexOfFirst { it.id == pageId } + 1
                             if (targetIndex > 0) {

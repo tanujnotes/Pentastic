@@ -67,8 +67,10 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
+import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.ExperimentalTime
@@ -79,11 +81,14 @@ fun IndexPage(
     pages: List<Page>,
     notesCountByPage: Map<Long, Int>,
     priorityNotesCountByPage: Map<Long, Int>,
+    showRateButton: Boolean,
     onPageClick: (Long) -> Unit,
     onPageNameChange: (Page, String) -> Unit,
     onPageOrderChange: (List<Page>) -> Unit,
     onPageDelete: (Page) -> Unit,
 ) {
+    val viewModel = koinViewModel<MainViewModel>()
+
     var showRenameDialog by remember { mutableStateOf(false) }
     var pageToRename: Page? by remember { mutableStateOf(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -138,43 +143,55 @@ fun IndexPage(
                     })
                 )
             } else {
-                Box {
-                    IconButton(onClick = { showTopMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Options",
-                            tint = Color.LightGray
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showTopMenu,
-                        onDismissRequest = { showTopMenu = false },
-                        modifier = Modifier.background(color = Color(0xFFF9FBFF)),
-                        offset = DpOffset(x = 0.dp, y = 0.dp),
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Rate", color = Color(0xFF284283)) },
-                            onClick = {
-                                showTopMenu = false
+                Row {
+                    if (showRateButton)
+                        Text(
+                            text = "Rate",
+                            style = TextStyle(fontWeight = FontWeight.Medium),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp).clickable(onClick = {
+                                viewModel.onRateClicked()
                                 uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
-                            }
+                            })
                         )
-                        DropdownMenuItem(
-                            text = { Text("Share", color = Color(0xFF284283)) },
-                            onClick = {
-                                showTopMenu = false
-                                coroutineScope.launch {
-                                    clipboardManager.setText(AnnotatedString("Minimal Todo Lists - It's Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                    Box {
+                        IconButton(onClick = { showTopMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Options",
+                                tint = Color.LightGray
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showTopMenu,
+                            onDismissRequest = { showTopMenu = false },
+                            modifier = Modifier.background(color = Color(0xFFF9FBFF)),
+                            offset = DpOffset(x = 0.dp, y = 0.dp),
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Rate", color = Color(0xFF284283)) },
+                                onClick = {
+                                    showTopMenu = false
+                                    viewModel.onRateClicked()
+                                    uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
                                 }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Follow", color = Color(0xFF284283)) },
-                            onClick = {
-                                showTopMenu = false
-                                uriHandler.openUri("https://twitter.com/tanujnotes")
-                            }
-                        )
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Share", color = Color(0xFF284283)) },
+                                onClick = {
+                                    showTopMenu = false
+                                    coroutineScope.launch {
+                                        clipboardManager.setText(AnnotatedString("Minimal Todo Lists - It's Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Follow", color = Color(0xFF284283)) },
+                                onClick = {
+                                    showTopMenu = false
+                                    uriHandler.openUri("https://twitter.com/tanujnotes")
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -429,10 +446,11 @@ fun IndexPagePreview() {
                 10L to 12
             ),
             mapOf(1L to 4),
+            false,
             onPageClick = {},
             onPageNameChange = { _, _ -> },
             onPageOrderChange = {},
-            onPageDelete = {}
+            {},
         )
     }
 }

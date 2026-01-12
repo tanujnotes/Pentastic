@@ -6,6 +6,7 @@ import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
 import app.pentastic.data.Page
+import app.pentastic.utils.hasBeenHours
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,11 @@ class MainViewModel(
     init {
         checkFirstLaunch()
         loadNotesByPage()
+        checkForRateButton()
     }
+
+    private val _showRateButton = MutableStateFlow(false)
+    val showRateButton: StateFlow<Boolean> = _showRateButton.asStateFlow()
 
     private val _notesByPage = MutableStateFlow<Map<Long, List<Note>>>(emptyMap())
     val notesByPage: StateFlow<Map<Long, List<Note>>> = _notesByPage.asStateFlow()
@@ -118,9 +123,29 @@ class MainViewModel(
         viewModelScope.launch { repository.deleteNote(note.id) }
     }
 
+    fun onRateClicked() {
+        viewModelScope.launch {
+            _showRateButton.value = false
+            dataStoreRepository.rateButtonClicked()
+        }
+    }
+
+    private fun checkForRateButton() {
+        viewModelScope.launch {
+            if (dataStoreRepository.showRateButton.first()
+                && dataStoreRepository.firstLaunchTime.first().hasBeenHours(1)
+                && repository.getAllNotes().first().size > 10
+            ) {
+                _showRateButton.value = true
+            }
+        }
+    }
+
     private fun checkFirstLaunch() {
         viewModelScope.launch {
             if (dataStoreRepository.firstLaunch.first()) {
+                dataStoreRepository.setFirstLaunchTime(Clock.System.now().toEpochMilliseconds())
+
                 val page1 = repository.insertPage(Page(name = "Today"))
                 val page2 = repository.insertPage(Page(name = "Later"))
                 repository.insertPage(Page(name = "Page 3"))
