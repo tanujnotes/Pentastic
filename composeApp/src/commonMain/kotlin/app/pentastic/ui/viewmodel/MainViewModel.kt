@@ -152,10 +152,10 @@ class MainViewModel(
                 repository.insertPage(Page(name = "Page 4"))
                 repository.insertPage(Page(name = "Page 5"))
                 repository.insertPage(Page(name = "Page 6"))
-                repository.insertPage(Page(name = "Page 7"))
-                repository.insertPage(Page(name = "Page 8"))
+                val page7 = repository.insertPage(Page(name = "Don't do"))
+                val page8 = repository.insertPage(Page(name = "Quotes"))
                 val page9 = repository.insertPage(Page(name = "2026"))
-                val page10 = repository.insertPage(Page(name = "Life goals"))
+                val page10 = repository.insertPage(Page(name = "YOLO"))
 
                 repository.insertNote(Note(pageId = page1, text = "Install Pentastic!️", done = true, orderAt = 3L))
                 repository.insertNote(Note(pageId = page1, text = "Double tap to mark a task as done. ✔", orderAt = 2L))
@@ -166,21 +166,43 @@ class MainViewModel(
                     Note(
                         pageId = page2,
                         text = "Tip: You can long press the page names on the index page to rename them.",
-                        orderAt = 4L
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page7,
+                        text = "You know you need this list. We all do. 😁",
+                        priority = 1,
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page8,
+                        text = "I highly recommend using lists. I make lists of what I want to accomplish each year, each month, and each day. Lists are very focusing, and they help me with multitasking because I don’t have to keep as much in my head. — Sam Altman",
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page8,
+                        text = "The person who writes down the thing has tremendous power. — Mark Andreessen",
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page8,
+                        text = "You mind is for having ideas, not holding them. — David Allen",
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = page9,
                         text = "Write down your New Year's resolutions before you forget them, like last year. :D",
-                        orderAt = 5L
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = page10,
-                        text = "Write down five big things you want to accomplish in your lifetime. Do it!",
-                        orderAt = 6L
+                        text = "Write down 3 big things you want to accomplish in your lifetime and just! do! it!",
                     )
                 )
 
