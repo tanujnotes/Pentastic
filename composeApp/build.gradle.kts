@@ -92,8 +92,8 @@ android {
         applicationId = "app.pentastic"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 5
-        versionName = "v0.5"
+        versionCode = 6
+        versionName = "v0.6"
     }
     packaging {
         resources {
