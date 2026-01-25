@@ -23,12 +23,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
-import androidx.compose.ui.graphics.Color
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import app.pentastic.ui.composables.CommonInput
 import app.pentastic.ui.composables.IndexPage
 import app.pentastic.ui.composables.NotePage
+import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -69,7 +69,7 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFFF9FBFF),
+        containerColor = AppTheme.colors.background,
         bottomBar = {
             CommonInput(
                 modifier = Modifier.navigationBarsPadding().imePadding(),

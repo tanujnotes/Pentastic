@@ -63,6 +63,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.pentastic.data.Note
 import app.pentastic.data.Page
+import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -124,7 +125,7 @@ fun NotePage(
             Text(
                 text = page.name,
                 style = TextStyle(
-                    color = Color(0xFF933A3A),
+                    color = AppTheme.colors.pageTitle,
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Light
                 )
@@ -141,15 +142,16 @@ fun NotePage(
                     ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
                         val interactionSource = remember { MutableInteractionSource() }
                         var showMenu by remember { mutableStateOf(false) }
-                        val styledText = remember(note.text, note.done, note.priority, isDragging) {
+                        val colors = AppTheme.colors
+                        val styledText = remember(note.text, note.done, note.priority, isDragging, colors) {
                             mutableStateOf(
                                 buildAnnotatedString {
                                     val style = if (isDragging) {
-                                        SpanStyle(color = Color.LightGray)
+                                        SpanStyle(color = colors.hint)
                                     } else if (note.done) {
                                         SpanStyle(textDecoration = TextDecoration.LineThrough)
                                     } else if (note.priority == 1) {
-                                        SpanStyle(color = Color(0xFFD01616))
+                                        SpanStyle(color = colors.priorityText)
                                     } else {
                                         SpanStyle() // Default style
                                     }
@@ -204,7 +206,7 @@ fun NotePage(
                                 Text(
                                     modifier = Modifier.padding(start = 12.dp, top = 4.dp).defaultMinSize(minWidth = 28.dp),
                                     text = (index + 1).toString() + ".",
-                                    color = if (note.priority == 1) Color(0xFFD01616).copy(alpha = 0.7f) else Color(0xFF284283).copy(alpha = 0.33f),
+                                    color = if (note.priority == 1) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
                                     textAlign = TextAlign.Center,
                                     fontSize = 17.sp,
                                     lineHeight = 20.sp
@@ -212,7 +214,7 @@ fun NotePage(
                                 Text(
                                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp).weight(1f),
                                     text = styledText.value,
-                                    color = Color(0xFF284283).copy(alpha = if (note.done) 0.33f else 1f),
+                                    color = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
                                     fontSize = 17.sp,
                                     lineHeight = 20.sp,
                                     letterSpacing = 0.5.sp,
@@ -253,7 +255,7 @@ fun NotePage(
                     .height(10.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(Color(0xFFF9FBFF), Color.Transparent)
+                            colors = listOf(AppTheme.colors.background, Color.Transparent)
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -266,7 +268,7 @@ fun NotePage(
                     .height(32.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color(0xFFF9FBFF))
+                            colors = listOf(Color.Transparent, AppTheme.colors.background)
                         )
                     ).align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center
@@ -286,20 +288,21 @@ private fun NoteActionsMenu(
     onSetPriority: () -> Unit,
     onEdit: () -> Unit,
 ) {
+    val colors = AppTheme.colors
     DropdownMenu(
-        modifier = Modifier.background(color = Color(0xFFF9FBFF)),
+        modifier = Modifier.background(color = colors.menuBackground),
         expanded = expanded,
         offset = DpOffset(x = 80.dp, y = 0.dp),
         onDismissRequest = onDismissRequest,
     ) {
         DropdownMenuItem(
-            text = { Text(if (note.done) "Todo" else "Done", color = Color(0xFF284283)) },
+            text = { Text(if (note.done) "Todo" else "Done", color = colors.primaryText) },
             leadingIcon = {
                 Icon(
                     modifier = Modifier.size(24.dp),
                     imageVector = Icons.Default.Check,
                     contentDescription = "Done",
-                    tint = Color(0xFF284283)
+                    tint = colors.primaryText
                 )
             },
             onClick = {
@@ -312,7 +315,7 @@ private fun NoteActionsMenu(
             text = {
                 Text(
                     text = "Priority",
-                    color = Color(0xFF284283)
+                    color = colors.primaryText
                 )
             },
             leadingIcon = {
@@ -320,7 +323,7 @@ private fun NoteActionsMenu(
                     modifier = Modifier.size(22.dp),
                     imageVector = if (note.priority == 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                     contentDescription = "Change priority",
-                    tint = Color(0xFF284283)
+                    tint = colors.primaryText
                 )
             },
             onClick = {
@@ -330,13 +333,13 @@ private fun NoteActionsMenu(
         )
 
         DropdownMenuItem(
-            text = { Text("Copy", color = Color(0xFF284283)) },
+            text = { Text("Copy", color = colors.primaryText) },
             leadingIcon = {
                 Icon(
                     modifier = Modifier.size(20.dp),
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = "Copy note",
-                    tint = Color(0xFF284283)
+                    tint = colors.primaryText
                 )
             },
             onClick = {
@@ -346,13 +349,13 @@ private fun NoteActionsMenu(
         )
 
         DropdownMenuItem(
-            text = { Text("Edit", color = Color(0xFF284283)) },
+            text = { Text("Edit", color = colors.primaryText) },
             leadingIcon = {
                 Icon(
                     modifier = Modifier.size(22.dp),
                     imageVector = Icons.Default.Edit,
                     contentDescription = "Edit note",
-                    tint = Color(0xFF284283)
+                    tint = colors.primaryText
                 )
             },
             onClick = {
@@ -363,17 +366,17 @@ private fun NoteActionsMenu(
 
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 8.dp),
-            color = Color(0xFFE9ECEF)
+            color = colors.divider
         )
 
         DropdownMenuItem(
-            text = { Text("Delete", color = Color(0xFF284283)) },
+            text = { Text("Delete", color = colors.primaryText) },
             leadingIcon = {
                 Icon(
                     modifier = Modifier.size(22.dp),
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete note",
-                    tint = Color(0xFF284283)
+                    tint = colors.primaryText
                 )
             },
             onClick = {

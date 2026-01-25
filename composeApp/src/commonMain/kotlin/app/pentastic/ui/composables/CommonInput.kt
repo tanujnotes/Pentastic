@@ -29,6 +29,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pentastic.ui.theme.AppTheme
 
 @Composable
 fun CommonInput(
@@ -62,8 +63,9 @@ fun CommonInput(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
                 disabledContainerColor = Color.Transparent,
-                focusedTextColor = Color(0xFF284283).copy(alpha = 0.9f),
-                cursorColor = Color(0x33284283),
+                focusedTextColor = AppTheme.colors.primaryText.copy(alpha = 0.9f),
+                unfocusedTextColor = AppTheme.colors.primaryText.copy(alpha = 0.9f),
+                cursorColor = AppTheme.colors.cursor,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             ),
@@ -90,7 +92,7 @@ fun CommonInput(
                 modifier = Modifier.size(42.dp),
                 imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Add,
                 contentDescription = actionIconContentDescription,
-                tint = Color(0xFFD4D8E0)
+                tint = AppTheme.colors.icon
             )
         }
     }
