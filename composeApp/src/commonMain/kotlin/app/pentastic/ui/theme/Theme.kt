@@ -35,13 +35,13 @@ val LightColors = AppColors(
 
 val DarkColors = AppColors(
     background = Color.Black,
-    primaryText = Color(0xFFD7DAE3),
-    pageTitle = Color(0xFF803543),
-    priorityText = Color(0xFFFF5252),
+    primaryText = Color(0xFFA0A3AD),
+    pageTitle = Color(0xFF93593A),
+    priorityText = Color(0xFFFF3D3D),
     menuBackground = Color(0xFF1A1A1A),
     divider = Color(0xFF333333),
     icon = Color(0xFF666666),
-    hint = Color(0xFF666666),
+    hint = Color(0xCD666666),
     dragging = Color(0xFF1A1A1A),
     cursor = Color(0x66E0E0E0),
 )
