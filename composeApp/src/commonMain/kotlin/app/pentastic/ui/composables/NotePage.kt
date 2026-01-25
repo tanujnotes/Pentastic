@@ -119,14 +119,14 @@ fun NotePage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 18.dp, top = 16.dp, bottom = 26.dp, end = 8.dp),
+                .padding(start = 18.dp, top = 16.dp, bottom = 24.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = page.name,
                 style = TextStyle(
                     color = AppTheme.colors.pageTitle,
-                    fontSize = 36.sp,
+                    fontSize = 40.sp,
                     fontWeight = FontWeight.Light
                 )
             )
@@ -208,14 +208,14 @@ fun NotePage(
                                     text = (index + 1).toString() + ".",
                                     color = if (note.priority == 1) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
                                     textAlign = TextAlign.Center,
-                                    fontSize = 17.sp,
+                                    fontSize = 18.sp,
                                     lineHeight = 20.sp
                                 )
                                 Text(
-                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp).weight(1f),
+                                    modifier = Modifier.padding(start = 10.dp, end = 12.dp, top = 4.dp, bottom = 4.dp).weight(1f),
                                     text = styledText.value,
                                     color = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
-                                    fontSize = 17.sp,
+                                    fontSize = 18.sp,
                                     lineHeight = 20.sp,
                                     letterSpacing = 0.5.sp,
                                     maxLines = if (showMenu) Int.MAX_VALUE else if (note.done) 1 else 3,

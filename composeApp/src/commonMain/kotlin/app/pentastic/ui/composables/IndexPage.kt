@@ -131,7 +131,7 @@ fun IndexPage(
                 text = if (isReorderMode) "Reorder" else "Index",
                 style = TextStyle(
                     color = AppTheme.colors.pageTitle,
-                    fontSize = 36.sp,
+                    fontSize = 40.sp,
                     fontWeight = FontWeight.Light
                 )
             )
