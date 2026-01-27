@@ -16,11 +16,17 @@ interface NoteDao {
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updateNote(note: Note)
 
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun updateNotes(notes: List<Note>)
+
     @Query("SELECT * FROM note ORDER BY done, priority DESC, orderAt DESC")
     fun getAllNotes(): Flow<List<Note>>
 
     @Query("SELECT * FROM note WHERE pageId = :pageId ORDER BY done, priority DESC, orderAt DESC")
     fun getAllNotesByPage(pageId: Long): Flow<List<Note>>
+
+    @Query("SELECT * FROM note WHERE repeatFrequency > 0 AND taskLastDoneAt > 0 AND done = 1")
+    suspend fun getCompletedRepeatingNotes(): List<Note>
 
     @Query("DELETE FROM note WHERE id = :id")
     suspend fun deleteNote(id: Long)

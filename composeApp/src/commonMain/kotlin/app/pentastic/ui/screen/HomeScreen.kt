@@ -130,7 +130,8 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                             onDeleteNote = { note -> viewModel.deleteNote(note) },
                             toggleNoteDone = { note -> viewModel.toggleNoteDone(note) },
                             page = currentPage,
-                            setEditingNote = { note -> viewModel.setEditingNote(note) }
+                            setEditingNote = { note -> viewModel.setEditingNote(note) },
+                            onSetRepeatFrequency = { note, frequency -> viewModel.setNoteRepeatFrequency(note, frequency) }
                         )
                     }
                 }

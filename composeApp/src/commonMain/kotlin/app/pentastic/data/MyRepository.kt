@@ -15,8 +15,16 @@ class MyRepository(
         noteDao.updateNote(note)
     }
 
+    suspend fun updateNotes(notes: List<Note>) {
+        noteDao.updateNotes(notes)
+    }
+
     fun getAllNotes(): Flow<List<Note>> {
         return noteDao.getAllNotes()
+    }
+
+    suspend fun getCompletedRepeatingNotes(): List<Note> {
+        return noteDao.getCompletedRepeatingNotes()
     }
 
     fun getAllNotesByPage(pageId: Long): Flow<List<Note>> {

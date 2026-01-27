@@ -33,6 +33,13 @@ data class Note(
     val done: Boolean = false,
     val orderAt: Long = Clock.System.now().toEpochMilliseconds(),
 
+    @ColumnInfo(defaultValue = "0")
+    val repeatFrequency: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val repeatTaskStartFrom: Long = 0,
+    @ColumnInfo(defaultValue = "0")
+    val taskLastDoneAt: Long = 0,
+
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val updatedAt: Long = Clock.System.now().toEpochMilliseconds(),
 )

@@ -6,6 +6,8 @@ import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
 import app.pentastic.data.Page
+import app.pentastic.data.RepeatFrequency
+import app.pentastic.utils.calendarDaysSince
 import app.pentastic.utils.hasBeenHours
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +29,7 @@ class MainViewModel(
         checkFirstLaunch()
         loadNotesByPage()
         checkForRateButton()
+        resetRepeatingTasksTodo()
     }
 
     private val _showRateButton = MutableStateFlow(false)
@@ -109,13 +112,47 @@ class MainViewModel(
 
     fun toggleNoteDone(note: Note) {
         viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
             repository.updateNote(
                 note.copy(
                     done = !note.done,
-                    priority = 0,
-                    orderAt = Clock.System.now().toEpochMilliseconds()
+                    orderAt = now,
+                    taskLastDoneAt = if (note.done) now else note.taskLastDoneAt
                 )
             )
+        }
+    }
+
+    fun setNoteRepeatFrequency(note: Note, frequency: RepeatFrequency) {
+        viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
+            repository.updateNote(
+                note.copy(
+                    repeatFrequency = frequency.ordinal,
+                    updatedAt = now,
+                    repeatTaskStartFrom = if (frequency != RepeatFrequency.NONE) now else 0L
+                )
+            )
+        }
+    }
+
+    private fun resetRepeatingTasksTodo() {
+        viewModelScope.launch {
+            val completedRepeatingNotes = repository.getCompletedRepeatingNotes()
+            val notesToReset = completedRepeatingNotes.filter { note ->
+                val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+                note.taskLastDoneAt.calendarDaysSince() >= frequency.days
+            }
+            if (notesToReset.isNotEmpty()) {
+                val now = Clock.System.now().toEpochMilliseconds()
+                val resetNotes = notesToReset.map { note ->
+                    note.copy(
+                        done = false,
+                        orderAt = now
+                    )
+                }
+                repository.updateNotes(resetNotes)
+            }
         }
     }
 

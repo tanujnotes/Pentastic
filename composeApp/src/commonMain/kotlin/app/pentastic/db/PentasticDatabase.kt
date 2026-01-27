@@ -1,5 +1,6 @@
 package app.pentastic.db
 
+import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
@@ -11,10 +12,10 @@ import app.pentastic.data.PageDao
 
 @Database(
     entities = [Note::class, Page::class],
-    version = 1,
-//    autoMigrations = [
-//        AutoMigration(from = 1, to = 2)
-//    ],
+    version = 2,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2)
+    ],
     exportSchema = true
 )
 @TypeConverters(

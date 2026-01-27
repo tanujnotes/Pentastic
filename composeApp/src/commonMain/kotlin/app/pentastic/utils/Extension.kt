@@ -2,6 +2,9 @@
 
 package app.pentastic.utils
 
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -14,3 +17,10 @@ fun Long.hasBeenHours(hours: Int): Boolean =
 
 fun Long.hasBeenMinutes(minutes: Int): Boolean =
     ((Clock.System.now().toEpochMilliseconds() - this) / Constant.ONE_MINUTE_IN_MILLIS) >= minutes
+
+fun Long.calendarDaysSince(): Int {
+    val timeZone = TimeZone.currentSystemDefault()
+    val startDate = Instant.fromEpochMilliseconds(this).toLocalDateTime(timeZone).date
+    val nowDate = Instant.fromEpochMilliseconds(Clock.System.now().toEpochMilliseconds()).toLocalDateTime(timeZone).date
+    return (nowDate.toEpochDays() - startDate.toEpochDays()).toInt()
+}

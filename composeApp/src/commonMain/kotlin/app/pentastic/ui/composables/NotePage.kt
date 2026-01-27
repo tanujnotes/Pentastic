@@ -3,8 +3,10 @@
 package app.pentastic.ui.composables
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -25,11 +28,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +68,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.pentastic.data.Note
 import app.pentastic.data.Page
+import app.pentastic.data.RepeatFrequency
 import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -80,8 +86,10 @@ fun NotePage(
     toggleNoteDone: (Note) -> Unit,
     page: Page,
     setEditingNote: (Note?) -> Unit,
+    onSetRepeatFrequency: (Note, RepeatFrequency) -> Unit,
 ) {
     val noteMovedToIndex = remember { mutableStateOf(-1) }
+    var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -239,7 +247,8 @@ fun NotePage(
                                         )
                                     )
                                 },
-                                onEdit = { setEditingNote(note) }
+                                onEdit = { setEditingNote(note) },
+                                onSetRepeat = { noteForRepeatDialog = note }
                             )
                         }
                     }
@@ -273,6 +282,17 @@ fun NotePage(
                     ).align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center
             ) {}
+
+            if (noteForRepeatDialog != null) {
+                RepeatFrequencyDialog(
+                    currentFrequency = RepeatFrequency.fromOrdinal(noteForRepeatDialog!!.repeatFrequency),
+                    onDismiss = { noteForRepeatDialog = null },
+                    onConfirm = { frequency ->
+                        onSetRepeatFrequency(noteForRepeatDialog!!, frequency)
+                        noteForRepeatDialog = null
+                    }
+                )
+            }
         }
     }
 }
@@ -287,103 +307,106 @@ private fun NoteActionsMenu(
     onToggleDone: () -> Unit,
     onSetPriority: () -> Unit,
     onEdit: () -> Unit,
+    onSetRepeat: () -> Unit,
 ) {
     val colors = AppTheme.colors
+    val currentFrequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+
+    data class MenuAction(
+        val label: String,
+        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val tint: Color,
+        val onClick: () -> Unit,
+    )
+
+    val actions = listOf(
+        MenuAction(
+            label = if (note.done) "Todo" else "Done",
+            icon = Icons.Default.Check,
+            tint = colors.primaryText,
+            onClick = { onToggleDone(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = "Priority",
+            icon = if (note.priority == 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+            tint = colors.primaryText,
+            onClick = { onSetPriority(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = "Copy",
+            icon = Icons.Default.ContentCopy,
+            tint = colors.primaryText,
+            onClick = { onCopy(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = "Edit",
+            icon = Icons.Default.Edit,
+            tint = colors.primaryText,
+            onClick = { onEdit(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = "Delete",
+            icon = Icons.Default.Delete,
+            tint = colors.primaryText,
+            onClick = { onDelete(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = if (currentFrequency == RepeatFrequency.NONE) "Repeat" else currentFrequency.label,
+            icon = Icons.Default.Repeat,
+            tint = colors.primaryText,
+            onClick = { onSetRepeat(); onDismissRequest() }
+        ),
+    )
+
     DropdownMenu(
         modifier = Modifier.background(color = colors.menuBackground),
         expanded = expanded,
-        offset = DpOffset(x = 80.dp, y = 0.dp),
+        offset = DpOffset(x = 40.dp, y = 0.dp),
         onDismissRequest = onDismissRequest,
     ) {
-        DropdownMenuItem(
-            text = { Text(if (note.done) "Todo" else "Done", color = colors.primaryText) },
-            leadingIcon = {
-                Icon(
-                    modifier = Modifier.size(24.dp),
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Done",
-                    tint = colors.primaryText
-                )
-            },
-            onClick = {
-                onToggleDone()
-                onDismissRequest()
+        Column(modifier = Modifier.padding(8.dp)) {
+            actions.chunked(2).forEach { rowActions ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    rowActions.forEach { action ->
+                        Box(
+                            modifier = Modifier
+                                .size(width = 80.dp, height = 64.dp)
+                                .background(
+                                    color = colors.background.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable(onClick = action.onClick),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    modifier = Modifier.size(22.dp),
+                                    imageVector = action.icon,
+                                    contentDescription = action.label,
+                                    tint = action.tint
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = action.label,
+                                    style = TextStyle(
+                                        fontSize = 12.sp,
+                                        color = action.tint,
+                                        textAlign = TextAlign.Center
+                                    ),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        )
-
-        DropdownMenuItem(
-            text = {
-                Text(
-                    text = "Priority",
-                    color = colors.primaryText
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    modifier = Modifier.size(22.dp),
-                    imageVector = if (note.priority == 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                    contentDescription = "Change priority",
-                    tint = colors.primaryText
-                )
-            },
-            onClick = {
-                onSetPriority()
-                onDismissRequest()
-            }
-        )
-
-        DropdownMenuItem(
-            text = { Text("Copy", color = colors.primaryText) },
-            leadingIcon = {
-                Icon(
-                    modifier = Modifier.size(20.dp),
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy note",
-                    tint = colors.primaryText
-                )
-            },
-            onClick = {
-                onCopy()
-                onDismissRequest()
-            }
-        )
-
-        DropdownMenuItem(
-            text = { Text("Edit", color = colors.primaryText) },
-            leadingIcon = {
-                Icon(
-                    modifier = Modifier.size(22.dp),
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit note",
-                    tint = colors.primaryText
-                )
-            },
-            onClick = {
-                onEdit()
-                onDismissRequest()
-            }
-        )
-
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 8.dp),
-            color = colors.divider
-        )
-
-        DropdownMenuItem(
-            text = { Text("Delete", color = colors.primaryText) },
-            leadingIcon = {
-                Icon(
-                    modifier = Modifier.size(22.dp),
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete note",
-                    tint = colors.primaryText
-                )
-            },
-            onClick = {
-                onDelete()
-                onDismissRequest()
-            }
-        )
+        }
     }
 }
 
@@ -414,4 +437,48 @@ private fun handleToggleDone(
             toggleNoteDone(note)
         }
     }
+}
+
+@Composable
+private fun RepeatFrequencyDialog(
+    currentFrequency: RepeatFrequency,
+    onDismiss: () -> Unit,
+    onConfirm: (RepeatFrequency) -> Unit,
+) {
+    var selectedFrequency by remember { mutableStateOf(currentFrequency) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Repeat task") },
+        text = {
+            Column {
+                RepeatFrequency.entries.forEach { frequency ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedFrequency = frequency }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedFrequency == frequency,
+                            onClick = { selectedFrequency = frequency }
+                        )
+                        Text(text = frequency.label)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedFrequency) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
