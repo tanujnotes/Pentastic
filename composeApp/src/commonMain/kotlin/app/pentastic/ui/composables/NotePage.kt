@@ -214,7 +214,7 @@ fun NotePage(
                                 Text(
                                     modifier = Modifier.padding(start = 12.dp, top = 4.dp).defaultMinSize(minWidth = 28.dp),
                                     text = (index + 1).toString() + ".",
-                                    color = if (note.priority == 1) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
+                                    color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
                                     textAlign = TextAlign.Center,
                                     fontSize = 18.sp,
                                     lineHeight = 20.sp
