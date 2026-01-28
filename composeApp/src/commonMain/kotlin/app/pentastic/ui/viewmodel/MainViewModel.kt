@@ -122,7 +122,7 @@ class MainViewModel(
                 note.copy(
                     done = !note.done,
                     orderAt = now,
-                    taskLastDoneAt = if (note.done) now else note.taskLastDoneAt
+                    taskLastDoneAt = if (note.done) note.taskLastDoneAt else now
                 )
             )
         }
