@@ -145,7 +145,7 @@ fun NotePage(
                 state = lazyListState,
             ) {
                 itemsIndexed(list, key = { _, it -> it.id }) { index, note ->
-                    if (note.done) Spacer(modifier = Modifier.height(12.dp))
+                    if (note.done) Spacer(modifier = Modifier.height(14.dp))
 
                     ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
                         val interactionSource = remember { MutableInteractionSource() }
@@ -227,7 +227,7 @@ fun NotePage(
                                     lineHeight = 20.sp
                                 )
                                 Text(
-                                    modifier = Modifier.padding(start = 10.dp, end = 12.dp, top = 4.dp, bottom = 4.dp).weight(1f),
+                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp).weight(1f),
                                     text = styledText.value,
                                     color = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
                                     fontSize = 18.sp,
@@ -268,7 +268,7 @@ fun NotePage(
                         }
                     }
                     if (!note.done)
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                 }
             }
 
