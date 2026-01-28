@@ -40,9 +40,9 @@ val LightColors = AppColors(
 
 val DarkColors = AppColors(
     background = Color.Black,
-    primaryText = Color(0xFFA0A3AD),
+    primaryText = Color(0xFFDBDEE7),
     pageTitle = Color(0xFF93593A),
-    priorityText = Color(0xFFFF3D3D),
+    priorityText = Color(0xFFFF1111),
     menuBackground = Color(0xFF1A1A1A),
     divider = Color(0xFF333333),
     icon = Color(0xFF666666),
