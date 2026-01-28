@@ -180,7 +180,13 @@ fun NotePage(
                                             showMenu = true
                                         },
                                         onDoubleTap = {
-                                            handleToggleDone(note, toggleNoteDone, scope, styledText)
+                                            handleToggleDone(
+                                                note,
+                                                toggleNoteDone,
+                                                scope,
+                                                styledText,
+                                                if (note.priority == 1) colors.priorityText else colors.primaryText
+                                            )
                                         },
                                     )
                                 }
@@ -238,7 +244,15 @@ fun NotePage(
                                 onDismissRequest = { showMenu = false },
                                 onDelete = { onDeleteNote(note) },
                                 onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
-                                onToggleDone = { handleToggleDone(note, toggleNoteDone, scope, styledText) },
+                                onToggleDone = {
+                                    handleToggleDone(
+                                        note,
+                                        toggleNoteDone,
+                                        scope,
+                                        styledText,
+                                        if (note.priority == 1) colors.priorityText else colors.primaryText
+                                    )
+                                },
                                 onSetPriority = {
                                     onUpdateNote(
                                         note.copy(
@@ -416,6 +430,7 @@ private fun handleToggleDone(
     toggleNoteDone: (Note) -> Unit,
     scope: CoroutineScope,
     styledText: MutableState<AnnotatedString>,
+    color: Color,
 ) {
     if (note.done) {
         toggleNoteDone(note)
@@ -428,10 +443,21 @@ private fun handleToggleDone(
                     if (index > 80) return@loop
                     delay(delayMillis)
                     styledText.value = buildAnnotatedString {
-                        withStyle(style = SpanStyle(textDecoration = TextDecoration.LineThrough)) {
+                        withStyle(
+                            style = SpanStyle(
+                                textDecoration = TextDecoration.LineThrough,
+                                color = color
+                            )
+                        ) {
                             append(note.text.take(index + 1))
                         }
-                        append(note.text.substring(index + 1))
+                        withStyle(
+                            style = SpanStyle(
+                                color = color
+                            )
+                        ) {
+                            append(note.text.substring(index + 1))
+                        }
                     }
                 }
             }
