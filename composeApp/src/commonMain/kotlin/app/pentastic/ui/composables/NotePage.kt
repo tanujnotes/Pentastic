@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalTime::class)
+@file:OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 
 package app.pentastic.ui.composables
 
@@ -29,10 +29,12 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -389,10 +391,6 @@ private fun NoteActionsMenu(
                         Box(
                             modifier = Modifier
                                 .size(width = 80.dp, height = 64.dp)
-                                .background(
-                                    color = colors.background.copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
                                 .clickable(onClick = action.onClick),
                             contentAlignment = Alignment.Center
                         ) {
@@ -473,12 +471,17 @@ private fun RepeatFrequencyDialog(
     onConfirm: (RepeatFrequency) -> Unit,
 ) {
     var selectedFrequency by remember { mutableStateOf(currentFrequency) }
+    val colors = AppTheme.colors
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Repeat task") },
-        text = {
-            Column {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Repeat task", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
                 RepeatFrequency.entries.forEach { frequency ->
                     Row(
                         modifier = Modifier
@@ -492,20 +495,19 @@ private fun RepeatFrequencyDialog(
                             selected = selectedFrequency == frequency,
                             onClick = { selectedFrequency = frequency }
                         )
-                        Text(text = frequency.label)
+                        Text(text = frequency.label, color = colors.primaryText)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colors.primaryText)
+                    }
+                    TextButton(onClick = { onConfirm(selectedFrequency) }) {
+                        Text("Save", color = colors.primaryText)
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(selectedFrequency) }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }

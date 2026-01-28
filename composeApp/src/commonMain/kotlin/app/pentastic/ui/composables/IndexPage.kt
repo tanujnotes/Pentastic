@@ -31,7 +31,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -405,56 +407,73 @@ fun EditPageNameDialog(
     onConfirm: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf(page.name) }
+    val colors = AppTheme.colors
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit page name") },
-        text = {
-            OutlinedTextField(
-                value = text.take(20),
-                onValueChange = { if (it.length <= 20) text = it },
-                label = { Text("Page ${page.id}.") },
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Edit page name", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = text.take(20),
+                    onValueChange = { if (it.length <= 20) text = it },
+                    label = { Text("Page ${page.id}.") },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences
+                    )
                 )
-            )
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(text) }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colors.primaryText)
+                    }
+                    Button(onClick = { onConfirm(text) }) {
+                        Text("Save")
+                    }
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeletePageConfirmationDialog(
     page: Page,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Delete page") },
-        text = { Text("Are you sure you want to delete page '${page.name}' and all its notes?") },
-        confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("Delete")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+    val colors = AppTheme.colors
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Delete page", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
+                Text("Are you sure you want to delete page '${page.name}' and all its notes?", color = colors.primaryText)
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colors.primaryText)
+                    }
+                    Button(onClick = onConfirm) {
+                        Text("Delete")
+                    }
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeSelectionDialog(
     currentTheme: ThemeMode,
@@ -462,12 +481,17 @@ fun ThemeSelectionDialog(
     onConfirm: (ThemeMode) -> Unit,
 ) {
     var selectedTheme by remember { mutableStateOf(currentTheme) }
+    val colors = AppTheme.colors
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Theme") },
-        text = {
-            Column {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Theme", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
                 ThemeMode.entries.forEach { theme ->
                     Row(
                         modifier = Modifier
@@ -481,22 +505,21 @@ fun ThemeSelectionDialog(
                             selected = selectedTheme == theme,
                             onClick = { selectedTheme = theme }
                         )
-                        Text(text = theme.label)
+                        Text(text = theme.label, color = colors.primaryText)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colors.primaryText)
+                    }
+                    TextButton(onClick = { onConfirm(selectedTheme) }) {
+                        Text("Save", color = colors.primaryText)
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(selectedTheme) }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }
 
 @Preview
