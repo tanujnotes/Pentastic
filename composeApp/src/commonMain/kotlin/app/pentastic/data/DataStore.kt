@@ -26,6 +26,8 @@ object DatastoreKeys {
     val SHOW_RATE_BUTTON = booleanPreferencesKey("show_rate_button")
 
     val MIGRATION_SORT_PAGES_ASC = booleanPreferencesKey("migration_sort_pages_asc")
+
+    val THEME_MODE = intPreferencesKey("theme_mode")
 }
 
 class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
@@ -101,6 +103,16 @@ class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun savePageNames(names: Map<Int, String>) {
         dataStore.edit { preferences ->
             preferences[DatastoreKeys.PAGE_NAMES_MAP] = Json.encodeToString(names)
+        }
+    }
+
+    val themeMode: Flow<Int> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.THEME_MODE] ?: ThemeMode.DAY_NIGHT.ordinal
+    }
+
+    suspend fun saveThemeMode(themeMode: Int) {
+        dataStore.edit { settings ->
+            settings[DatastoreKeys.THEME_MODE] = themeMode
         }
     }
 }

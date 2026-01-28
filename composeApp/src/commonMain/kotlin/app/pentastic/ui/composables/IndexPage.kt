@@ -39,6 +39,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +68,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
+import app.pentastic.data.ThemeMode
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -98,6 +100,7 @@ fun IndexPage(
     var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
     val uriHandler = LocalUriHandler.current
     var showTopMenu by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
@@ -190,6 +193,13 @@ fun IndexPage(
                                 onClick = {
                                     showTopMenu = false
                                     uriHandler.openUri("https://x.com/tanujnotes")
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Theme", color = AppTheme.colors.primaryText) },
+                                onClick = {
+                                    showTopMenu = false
+                                    showThemeDialog = true
                                 }
                             )
                         }
@@ -347,6 +357,17 @@ fun IndexPage(
                 )
             }
 
+            if (showThemeDialog) {
+                ThemeSelectionDialog(
+                    currentTheme = viewModel.themeMode.value,
+                    onDismiss = { showThemeDialog = false },
+                    onConfirm = { selectedTheme ->
+                        viewModel.setThemeMode(selectedTheme)
+                        showThemeDialog = false
+                    }
+                )
+            }
+
             // Top fade-to-edge gradient
             Box(
                 modifier = Modifier
@@ -424,6 +445,50 @@ fun DeletePageConfirmationDialog(
         confirmButton = {
             Button(onClick = onConfirm) {
                 Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun ThemeSelectionDialog(
+    currentTheme: ThemeMode,
+    onDismiss: () -> Unit,
+    onConfirm: (ThemeMode) -> Unit,
+) {
+    var selectedTheme by remember { mutableStateOf(currentTheme) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Theme") },
+        text = {
+            Column {
+                ThemeMode.entries.forEach { theme ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedTheme = theme }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedTheme == theme,
+                            onClick = { selectedTheme = theme }
+                        )
+                        Text(text = theme.label)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedTheme) }) {
+                Text("Save")
             }
         },
         dismissButton = {

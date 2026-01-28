@@ -6,6 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import app.pentastic.data.ThemeMode
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 data class AppColors(
     val background: Color,
@@ -54,11 +59,25 @@ object AppTheme {
         get() = LocalAppColors.current
 }
 
+@OptIn(ExperimentalTime::class)
+@Composable
+fun isDayNightDark(): Boolean {
+    val currentHour = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour
+    return currentHour !in 6..<18
+}
+
 @Composable
 fun AppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
+    themeMode: ThemeMode = ThemeMode.DAY_NIGHT,
+    content: @Composable () -> Unit,
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.DAY_NIGHT -> isDayNightDark()
+    }
+
     val colors = if (darkTheme) DarkColors else LightColors
 
     CompositionLocalProvider(LocalAppColors provides colors) {

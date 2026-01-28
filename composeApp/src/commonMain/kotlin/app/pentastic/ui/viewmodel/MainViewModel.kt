@@ -7,6 +7,7 @@ import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
 import app.pentastic.data.Page
 import app.pentastic.data.RepeatFrequency
+import app.pentastic.data.ThemeMode
 import app.pentastic.utils.calendarDaysSince
 import app.pentastic.utils.hasBeenHours
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,10 +31,14 @@ class MainViewModel(
         loadNotesByPage()
         checkForRateButton()
         resetRepeatingTasksTodo()
+        loadThemeMode()
     }
 
     private val _showRateButton = MutableStateFlow(false)
     val showRateButton: StateFlow<Boolean> = _showRateButton.asStateFlow()
+
+    private val _themeMode = MutableStateFlow(ThemeMode.DAY_NIGHT)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     private val _notesByPage = MutableStateFlow<Map<Long, List<Note>>>(emptyMap())
     val notesByPage: StateFlow<Map<Long, List<Note>>> = _notesByPage.asStateFlow()
@@ -164,6 +169,21 @@ class MainViewModel(
         viewModelScope.launch {
             _showRateButton.value = false
             dataStoreRepository.rateButtonClicked()
+        }
+    }
+
+    private fun loadThemeMode() {
+        viewModelScope.launch {
+            dataStoreRepository.themeMode.collect { ordinal ->
+                _themeMode.value = ThemeMode.fromOrdinal(ordinal)
+            }
+        }
+    }
+
+    fun setThemeMode(themeMode: ThemeMode) {
+        viewModelScope.launch {
+            _themeMode.value = themeMode
+            dataStoreRepository.saveThemeMode(themeMode.ordinal)
         }
     }
 
