@@ -201,17 +201,18 @@ class MainViewModel(
         viewModelScope.launch {
             if (dataStoreRepository.firstLaunch.first()) {
                 dataStoreRepository.setFirstLaunchTime(Clock.System.now().toEpochMilliseconds())
+                dataStoreRepository.firstLaunchDone()
 
                 val page1 = repository.insertPage(Page(name = "Today"))
                 val page2 = repository.insertPage(Page(name = "Later"))
                 repository.insertPage(Page(name = "Page 3"))
                 repository.insertPage(Page(name = "Page 4"))
                 repository.insertPage(Page(name = "Page 5"))
-                repository.insertPage(Page(name = "Page 6"))
+                val page6 = repository.insertPage(Page(name = "2026"))
                 val page7 = repository.insertPage(Page(name = "Don't do"))
                 val page8 = repository.insertPage(Page(name = "Quotes"))
-                val page9 = repository.insertPage(Page(name = "2026"))
-                val page10 = repository.insertPage(Page(name = "YOLO"))
+                repository.insertPage(Page(name = "Books & Movies"))
+                val page10 = repository.insertPage(Page(name = "Long press to rename"))
 
                 repository.insertNote(Note(pageId = page1, text = "Install Pentastic!️", done = true, orderAt = 3L))
                 repository.insertNote(Note(pageId = page1, text = "Double tap to mark a task as done. ✔", orderAt = 2L))
@@ -226,21 +227,21 @@ class MainViewModel(
                 )
                 repository.insertNote(
                     Note(
+                        pageId = page6,
+                        text = "A list of things to accomplish this year. 💪",
+                    )
+                )
+                repository.insertNote(
+                    Note(
                         pageId = page7,
-                        text = "You know you need this list. We all do. 😁",
+                        text = "It's okay... we all need this list. :D",
                         priority = 1,
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = page8,
-                        text = "I highly recommend using lists. I make lists of what I want to accomplish each year, each month, and each day. Lists are very focusing, and they help me with multitasking because I don’t have to keep as much in my head. — Sam Altman",
-                    )
-                )
-                repository.insertNote(
-                    Note(
-                        pageId = page8,
-                        text = "The person who writes down the thing has tremendous power. — Mark Andreessen",
+                        text = "Be the change you wish to see in the world. — Mahatma Gandhi",
                     )
                 )
                 repository.insertNote(
@@ -251,29 +252,22 @@ class MainViewModel(
                 )
                 repository.insertNote(
                     Note(
-                        pageId = page9,
-                        text = "Write down your New Year's resolutions before you forget them, like last year. :D",
+                        pageId = page8,
+                        text = "Plans are worthless, but planning is everything. — Dwight D. Eisenhower",
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page8,
+                        text = "Motivation doesn’t last. Well, neither does bathing, that’s why we recommend it daily. — Zig Zagler",
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = page10,
-                        text = "Write down 3 big things you want to accomplish in your lifetime and just! do! it!",
+                        text = "Press back to go to the Index page.",
                     )
                 )
-
-                dataStoreRepository.firstLaunchDone()
-                dataStoreRepository.pagesReordered()
-            } else if (!dataStoreRepository.pagesReordered.first()) {
-                pages.collect {
-                    if (it.isNotEmpty()) {
-                        val updatedPages = it.mapIndexed { index, page ->
-                            page.copy(orderAt = index.toLong())
-                        }
-                        repository.updatePages(updatedPages)
-                        dataStoreRepository.pagesReordered()
-                    }
-                }
             }
         }
     }

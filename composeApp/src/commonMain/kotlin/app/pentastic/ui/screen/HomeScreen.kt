@@ -53,6 +53,10 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
     val coroutineScope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
 
+    LaunchedEffect(Unit) {
+        viewModel.resetRepeatingTasksTodo()
+    }
+
     LaunchedEffect(editingNote) {
         editingNote?.let { text = it.text }
     }
