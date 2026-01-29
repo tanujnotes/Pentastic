@@ -2,11 +2,11 @@
 
 package app.pentastic.utils
 
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 
 fun Long.hasBeenDays(days: Int): Boolean =
