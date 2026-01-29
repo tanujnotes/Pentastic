@@ -26,13 +26,6 @@ class MainViewModel(
     private val dataStoreRepository: DataStoreRepository,
 ) : ViewModel() {
 
-    init {
-        checkFirstLaunch()
-        loadNotesByPage()
-        checkForRateButton()
-        loadThemeMode()
-    }
-
     private val _showRateButton = MutableStateFlow(false)
     val showRateButton: StateFlow<Boolean> = _showRateButton.asStateFlow()
 
@@ -56,6 +49,13 @@ class MainViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    init {
+        checkFirstLaunch()
+        loadNotesByPage()
+        checkForRateButton()
+        loadThemeMode()
+    }
 
     fun setEditingNote(note: Note?) {
         _editingNote.value = note
