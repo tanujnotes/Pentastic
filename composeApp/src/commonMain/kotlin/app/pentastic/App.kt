@@ -1,6 +1,7 @@
 package app.pentastic
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.rememberNavController
@@ -15,6 +16,10 @@ import org.koin.compose.viewmodel.koinViewModel
 fun App() {
     val viewModel = koinViewModel<MainViewModel>()
     val themeMode by viewModel.themeMode.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.resetRepeatingTasksTodo()
+    }
 
     AppTheme(themeMode = themeMode) {
         val navController = rememberNavController()

@@ -30,7 +30,6 @@ class MainViewModel(
         checkFirstLaunch()
         loadNotesByPage()
         checkForRateButton()
-        resetRepeatingTasksTodo()
         loadThemeMode()
     }
 
@@ -141,7 +140,7 @@ class MainViewModel(
         }
     }
 
-    private fun resetRepeatingTasksTodo() {
+    fun resetRepeatingTasksTodo() {
         viewModelScope.launch {
             val completedRepeatingNotes = repository.getCompletedRepeatingNotes()
             val notesToReset = completedRepeatingNotes.filter { note ->
