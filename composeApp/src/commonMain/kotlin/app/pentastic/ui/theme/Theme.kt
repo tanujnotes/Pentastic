@@ -32,7 +32,7 @@ val LightColors = AppColors(
     priorityText = Color(0xFFD01616),
     menuBackground = Color(0xFFF3F5FA),
     divider = Color(0xFFE9ECEF),
-    icon = Color(0xFFD4D8E0),
+    icon = Color(0xFFA8AFC2),
     hint = Color.LightGray,
     dragging = Color.White.copy(alpha = 0.8f),
     cursor = Color(0x33284283),
