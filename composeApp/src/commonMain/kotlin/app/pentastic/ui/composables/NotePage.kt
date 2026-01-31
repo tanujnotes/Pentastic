@@ -57,6 +57,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -75,6 +76,10 @@ import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.Font
+import pentastic.composeapp.generated.resources.Merriweather_Light
+import pentastic.composeapp.generated.resources.Merriweather_Regular
+import pentastic.composeapp.generated.resources.Res
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.Clock
@@ -136,8 +141,8 @@ fun NotePage(
                 text = page.name,
                 style = TextStyle(
                     color = AppTheme.colors.pageTitle,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Light
+                    fontSize = 36.sp,
+                    fontFamily = FontFamily(Font(Res.font.Merriweather_Light))
                 )
             )
         }
@@ -220,12 +225,13 @@ fun NotePage(
                         ) {
                             Row(Modifier.fillMaxSize()) {
                                 Text(
-                                    modifier = Modifier.padding(start = 12.dp, top = 4.dp).defaultMinSize(minWidth = 28.dp),
+                                    modifier = Modifier.padding(start = 12.dp, top = 5.dp).defaultMinSize(minWidth = 28.dp),
+                                    fontFamily = FontFamily(Font(Res.font.Merriweather_Regular)),
                                     text = (index + 1).toString() + ".",
 //                                    color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
                                     color = colors.primaryText.copy(alpha = 0.33f),
                                     textAlign = TextAlign.Center,
-                                    fontSize = 18.sp,
+                                    fontSize = 16.sp,
                                     lineHeight = 20.sp
                                 )
                                 Text(

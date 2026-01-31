@@ -81,7 +81,9 @@ fun AppTheme(
     val colors = if (darkTheme) DarkColors else LightColors
 
     CompositionLocalProvider(LocalAppColors provides colors) {
-        MaterialTheme {
+        MaterialTheme(
+            typography = interTypography(),
+        ) {
             content()
         }
     }

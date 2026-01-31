@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -31,8 +32,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -62,6 +61,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -71,11 +71,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
 import app.pentastic.data.ThemeMode
-import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.AppTheme.colors
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
+import pentastic.composeapp.generated.resources.Merriweather_Light
+import pentastic.composeapp.generated.resources.Res
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.ExperimentalTime
@@ -135,15 +138,15 @@ fun IndexPage(
             Text(
                 text = if (isReorderMode) "Reorder" else "Index",
                 style = TextStyle(
-                    color = AppTheme.colors.pageTitle,
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Light
+                    color = colors.pageTitle,
+                    fontSize = 36.sp,
+                    fontFamily = FontFamily(Font(Res.font.Merriweather_Light))
                 )
             )
             if (isReorderMode) {
                 Text(
                     text = "Done",
-                    style = TextStyle(color = AppTheme.colors.primaryText, fontWeight = FontWeight.Medium),
+                    style = TextStyle(color = colors.primaryText, fontWeight = FontWeight.Medium),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp).clickable(onClick = {
                         isReorderMode = false
                     })
@@ -164,17 +167,17 @@ fun IndexPage(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = "Options",
-                                tint = AppTheme.colors.hint
+                                tint = colors.hint
                             )
                         }
                         DropdownMenu(
                             expanded = showTopMenu,
                             onDismissRequest = { showTopMenu = false },
-                            modifier = Modifier.background(color = AppTheme.colors.menuBackground),
+                            modifier = Modifier.background(color = colors.menuBackground),
                             offset = DpOffset(x = (-12).dp, y = (-4).dp),
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Rate", color = AppTheme.colors.primaryText) },
+                                text = { Text("Rate", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     viewModel.onRateClicked()
@@ -182,7 +185,7 @@ fun IndexPage(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Share", color = AppTheme.colors.primaryText) },
+                                text = { Text("Share", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     coroutineScope.launch {
@@ -191,14 +194,14 @@ fun IndexPage(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Follow", color = AppTheme.colors.primaryText) },
+                                text = { Text("Follow", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     uriHandler.openUri("https://x.com/tanujnotes")
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Theme", color = AppTheme.colors.primaryText) },
+                                text = { Text("Theme", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     showThemeDialog = true
@@ -225,7 +228,7 @@ fun IndexPage(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (isDragging) AppTheme.colors.dragging else Color.Transparent)
+                                .background(if (isDragging) colors.dragging else Color.Transparent)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -245,9 +248,11 @@ fun IndexPage(
                             ) {
                                 Text(
                                     text = "${index + 1}.",
-                                    fontSize = 18.sp,
-                                    color = AppTheme.colors.hint,
-                                    modifier = Modifier.defaultMinSize(minWidth = 32.dp)
+                                    fontSize = 16.sp,
+                                    lineHeight = 20.sp,
+                                    fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+                                    color = colors.primaryText.copy(alpha = 0.33f),
+                                    modifier = Modifier.padding(top = 1.dp).defaultMinSize(minWidth = 32.dp)
                                 )
                                 Spacer(Modifier.width(8.dp))
 
@@ -255,7 +260,7 @@ fun IndexPage(
                                     text = page.name.take(20),
                                     fontSize = 18.sp,
                                     maxLines = 1,
-                                    color = AppTheme.colors.primaryText,
+                                    color = colors.primaryText,
                                     overflow = TextOverflow.Ellipsis,
                                 )
 
@@ -264,7 +269,7 @@ fun IndexPage(
                                 if (!isReorderMode) {
                                     Text(
                                         text = "................................................................................................................... ",
-                                        color = AppTheme.colors.hint,
+                                        color = colors.hint,
                                         maxLines = 1,
                                         modifier = Modifier.weight(1f)
                                     )
@@ -278,9 +283,9 @@ fun IndexPage(
                                                     (notesCountByPage[page.id] ?: 0)
                                                 ).toString(),
                                         fontSize = 18.sp,
-                                        color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) AppTheme.colors.priorityText
-                                        else if ((notesCountByPage[page.id] ?: 0) > 0) AppTheme.colors.icon
-                                        else AppTheme.colors.hint,
+                                        color = if ((priorityNotesCountByPage[page.id] ?: 0) > 0) colors.priorityText
+                                        else if ((notesCountByPage[page.id] ?: 0) > 0) colors.icon
+                                        else colors.hint,
                                         textAlign = TextAlign.Center
                                     )
                                 } else {
@@ -288,7 +293,7 @@ fun IndexPage(
                                     Icon(
                                         imageVector = Icons.Default.DragHandle,
                                         contentDescription = "Reorder",
-                                        tint = AppTheme.colors.hint,
+                                        tint = colors.hint,
                                         modifier = Modifier.draggableHandle(
                                             onDragStopped = {
                                                 onPageOrderChange(localPages)
@@ -303,33 +308,33 @@ fun IndexPage(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
                                 offset = DpOffset(x = 80.dp, y = 0.dp),
-                                modifier = Modifier.background(color = AppTheme.colors.menuBackground),
+                                modifier = Modifier.background(color = colors.menuBackground),
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Rename", color = AppTheme.colors.primaryText) },
+                                    text = { Text("Rename", color = colors.primaryText) },
                                     onClick = {
                                         showMenu = false
                                         pageToRename = page
                                         showRenameDialog = true
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Edit, tint = AppTheme.colors.icon, contentDescription = null) }
+                                    leadingIcon = { Icon(Icons.Default.Edit, tint = colors.icon, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Reorder", color = AppTheme.colors.primaryText) },
+                                    text = { Text("Reorder", color = colors.primaryText) },
                                     onClick = {
                                         showMenu = false
                                         isReorderMode = true
                                     },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, tint = AppTheme.colors.icon, contentDescription = null) }
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, tint = colors.icon, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Delete", color = AppTheme.colors.primaryText) },
+                                    text = { Text("Delete", color = colors.primaryText) },
                                     onClick = {
                                         showMenu = false
                                         pageToDelete = page
                                         showDeleteDialog = true
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Delete, tint = AppTheme.colors.icon, contentDescription = null) }
+                                    leadingIcon = { Icon(Icons.Default.Delete, tint = colors.icon, contentDescription = null) }
                                 )
                             }
                         }
@@ -377,7 +382,7 @@ fun IndexPage(
                     .height(10.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(AppTheme.colors.background, Color.Transparent)
+                            colors = listOf(colors.background, Color.Transparent)
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -390,7 +395,7 @@ fun IndexPage(
                     .height(24.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, AppTheme.colors.background)
+                            colors = listOf(Color.Transparent, colors.background)
                         )
                     ).align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center
@@ -407,7 +412,7 @@ fun EditPageNameDialog(
     onConfirm: (String) -> Unit,
 ) {
     var text by remember { mutableStateOf(page.name) }
-    val colors = AppTheme.colors
+    val colors = colors
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -447,7 +452,7 @@ fun DeletePageConfirmationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val colors = AppTheme.colors
+    val colors = colors
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -481,7 +486,7 @@ fun ThemeSelectionDialog(
     onConfirm: (ThemeMode) -> Unit,
 ) {
     var selectedTheme by remember { mutableStateOf(currentTheme) }
-    val colors = AppTheme.colors
+    val colors = colors
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
