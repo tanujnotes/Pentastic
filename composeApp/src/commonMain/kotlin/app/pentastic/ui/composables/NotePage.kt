@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -149,7 +150,7 @@ fun NotePage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 18.dp, top = 16.dp, bottom = if (subPages.isEmpty()) 24.dp else 12.dp, end = 8.dp),
+                .padding(start = 18.dp, top = 16.dp, bottom = if (subPages.isEmpty()) 24.dp else 16.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -163,7 +164,6 @@ fun NotePage(
         }
 
         if (subPages.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
             SubPageTabs(
                 subPages = subPages,
                 selectedSubPageId = selectedSubPageId,
@@ -355,9 +355,8 @@ private fun SubPageTabs(
     val colors = AppTheme.colors
 
     LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(subPages, key = { it.id }) { subPage ->
