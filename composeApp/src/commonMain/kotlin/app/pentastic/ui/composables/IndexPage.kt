@@ -107,6 +107,7 @@ fun IndexPage(
     var pageToDelete: Page? by remember { mutableStateOf(null) }
     var showAddSubPageDialog by remember { mutableStateOf(false) }
     var parentPageForSubPage: Page? by remember { mutableStateOf(null) }
+    var showSubPageLimitDialog by remember { mutableStateOf(false) }
 
     var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
     val uriHandler = LocalUriHandler.current
@@ -213,6 +214,13 @@ fun IndexPage(
                                     showThemeDialog = true
                                 }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Reorder", color = colors.primaryText) },
+                                onClick = {
+                                    showTopMenu = false
+                                    isReorderMode = true
+                                }
+                            )
                         }
                     }
                 }
@@ -315,6 +323,22 @@ fun IndexPage(
                                 offset = DpOffset(x = 80.dp, y = 0.dp),
                                 modifier = Modifier.background(color = colors.menuBackground),
                             ) {
+                                if (page.parentId == null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Add sub-page", color = colors.primaryText) },
+                                        onClick = {
+                                            showMenu = false
+                                            val subPagesCount = subPagesByParent[page.id]?.size ?: 0
+                                            if (subPagesCount < 10) {
+                                                parentPageForSubPage = page
+                                                showAddSubPageDialog = true
+                                            } else {
+                                                showSubPageLimitDialog = true
+                                            }
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Add, tint = colors.icon, contentDescription = null) }
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Rename", color = colors.primaryText) },
                                     onClick = {
@@ -324,25 +348,6 @@ fun IndexPage(
                                         showRenameDialog = true
                                     },
                                     leadingIcon = { Icon(Icons.Default.Edit, tint = colors.icon, contentDescription = null) }
-                                )
-                                if (page.parentId == null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Add sub-page", color = colors.primaryText) },
-                                        onClick = {
-                                            showMenu = false
-                                            parentPageForSubPage = page
-                                            showAddSubPageDialog = true
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Add, tint = colors.icon, contentDescription = null) }
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = { Text("Reorder", color = colors.primaryText) },
-                                    onClick = {
-                                        showMenu = false
-                                        isReorderMode = true
-                                    },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, tint = colors.icon, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Delete", color = colors.primaryText) },
@@ -357,26 +362,28 @@ fun IndexPage(
                         }
                     }
 
-                    // Sub-pages for this parent
-                    val subPages = subPagesByParent[page.id] ?: emptyList()
-                    subPages.forEachIndexed { subIndex, subPage ->
-                        SubPageItem(
-                            subPage = subPage,
-                            parentIndex = index + 1,
-                            subIndex = subIndex + 1,
-                            notesCount = notesCountByPage[subPage.id] ?: 0,
-                            priorityNotesCount = priorityNotesCountByPage[subPage.id] ?: 0,
-                            onPageClick = onPageClick,
-                            onRename = {
-                                pageToRename = subPage
-                                pageToRenameIndexLabel = "${index + 1}.${subIndex + 1}"
-                                showRenameDialog = true
-                            },
-                            onDelete = {
-                                pageToDelete = subPage
-                                showDeleteDialog = true
-                            }
-                        )
+                    // Sub-pages for this parent (hide during reorder mode)
+                    if (!isReorderMode) {
+                        val subPages = subPagesByParent[page.id] ?: emptyList()
+                        subPages.forEachIndexed { subIndex, subPage ->
+                            SubPageItem(
+                                subPage = subPage,
+                                parentIndex = index + 1,
+                                subIndex = subIndex + 1,
+                                notesCount = notesCountByPage[subPage.id] ?: 0,
+                                priorityNotesCount = priorityNotesCountByPage[subPage.id] ?: 0,
+                                onPageClick = onPageClick,
+                                onRename = {
+                                    pageToRename = subPage
+                                    pageToRenameIndexLabel = "${index + 1}.${subIndex + 1}"
+                                    showRenameDialog = true
+                                },
+                                onDelete = {
+                                    pageToDelete = subPage
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -423,6 +430,12 @@ fun IndexPage(
                         onAddSubPage(parentPageForSubPage!!.id, subPageName.ifBlank { "Sub-page" })
                         showAddSubPageDialog = false
                     }
+                )
+            }
+
+            if (showSubPageLimitDialog) {
+                SubPageLimitDialog(
+                    onDismiss = { showSubPageLimitDialog = false }
                 )
             }
 
@@ -653,6 +666,34 @@ fun AddSubPageDialog(
                     }
                     Button(onClick = { onConfirm(text) }) {
                         Text("Add")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SubPageLimitDialog(
+    onDismiss: () -> Unit,
+) {
+    val colors = colors
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Limit reached", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
+                Text("You can only add 10 sub-pages per page.", color = colors.primaryText)
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Button(onClick = onDismiss) {
+                        Text("OK")
                     }
                 }
             }
