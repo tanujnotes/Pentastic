@@ -230,6 +230,8 @@ class MainViewModel(
                 repository.insertPage(Page(name = "Page 4"))
                 repository.insertPage(Page(name = "Page 5"))
                 val page6 = repository.insertPage(Page(name = "2026"))
+                val subPage61 = repository.insertPage(Page(name = "Health goals", parentId = page6))
+                val subPage62 = repository.insertPage(Page(name = "Wealth goals", parentId = page6))
                 val page7 = repository.insertPage(Page(name = "Don't do"))
                 val page8 = repository.insertPage(Page(name = "Quotes"))
                 repository.insertPage(Page(name = "Books & Movies"))
@@ -248,8 +250,20 @@ class MainViewModel(
                 )
                 repository.insertNote(
                     Note(
+                        pageId = subPage62,
+                        text = "Add your wealth goals! 💰",
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = subPage61,
+                        text = "Add your health goals! 💪",
+                    )
+                )
+                repository.insertNote(
+                    Note(
                         pageId = page6,
-                        text = "A list of things to accomplish this year. 💪",
+                        text = "A list of things to accomplish this year. ✅",
                     )
                 )
                 repository.insertNote(
