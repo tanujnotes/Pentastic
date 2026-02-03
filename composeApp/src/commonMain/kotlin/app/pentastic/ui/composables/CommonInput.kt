@@ -2,6 +2,7 @@ package app.pentastic.ui.composables
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -98,7 +99,7 @@ fun CommonInput(
                     tint = AppTheme.colors.icon
                 )
             } else {
-                val iconColor = AppTheme.colors.primaryText.copy(alpha = 0.7f)
+                val iconColor = AppTheme.colors.icon
                 Canvas(modifier = Modifier.size(48.dp)) {
                     val strokeWidth = 1.5.dp.toPx()
                     val center = size.width / 2

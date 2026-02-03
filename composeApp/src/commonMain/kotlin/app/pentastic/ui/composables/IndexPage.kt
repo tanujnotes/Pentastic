@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -185,7 +186,7 @@ fun IndexPage(
                             expanded = showTopMenu,
                             onDismissRequest = { showTopMenu = false },
                             modifier = Modifier.background(color = colors.menuBackground),
-                            offset = DpOffset(x = (-12).dp, y = (-4).dp),
+                            offset = DpOffset(x = (-16).dp, y = (-4).dp),
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Rate", color = colors.primaryText) },
@@ -194,7 +195,14 @@ fun IndexPage(
                                     viewModel.onRateClicked()
                                     uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
                                 },
-                                leadingIcon = { Icon(Icons.Default.Star, tint = colors.icon, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Star,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("Share", color = colors.primaryText) },
@@ -204,7 +212,14 @@ fun IndexPage(
                                         clipboardManager.setText(AnnotatedString("Minimal Todo Lists - Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
                                     }
                                 },
-                                leadingIcon = { Icon(Icons.Default.Share, tint = colors.icon, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Share,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("Follow", color = colors.primaryText) },
@@ -212,7 +227,14 @@ fun IndexPage(
                                     showTopMenu = false
                                     uriHandler.openUri("https://x.com/tanujnotes")
                                 },
-                                leadingIcon = { Icon(Icons.Default.PersonAdd, tint = colors.icon, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.PersonAdd,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("Theme", color = colors.primaryText) },
@@ -220,7 +242,14 @@ fun IndexPage(
                                     showTopMenu = false
                                     showThemeDialog = true
                                 },
-                                leadingIcon = { Icon(Icons.Default.Palette, tint = colors.icon, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Palette,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("Reorder", color = colors.primaryText) },
@@ -228,7 +257,14 @@ fun IndexPage(
                                     showTopMenu = false
                                     isReorderMode = true
                                 },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, tint = colors.icon, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Sort,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
                             )
                         }
                     }
@@ -345,7 +381,12 @@ fun IndexPage(
                                                 showSubPageLimitDialog = true
                                             }
                                         },
-                                        leadingIcon = { Icon(Icons.Default.Add, tint = colors.icon, contentDescription = null) }
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Add, tint = colors.icon, contentDescription = null,
+                                                modifier = Modifier.padding(end = 4.dp).size(24.dp)
+                                            )
+                                        }
                                     )
                                 }
                                 DropdownMenuItem(
@@ -356,7 +397,12 @@ fun IndexPage(
                                         pageToRenameIndexLabel = "${index + 1}."
                                         showRenameDialog = true
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Edit, tint = colors.icon, contentDescription = null) }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Edit, tint = colors.icon, contentDescription = null,
+                                            modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                        )
+                                    }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Delete", color = colors.primaryText) },
@@ -365,7 +411,12 @@ fun IndexPage(
                                         pageToDelete = page
                                         showDeleteDialog = true
                                     },
-                                    leadingIcon = { Icon(Icons.Default.Delete, tint = colors.icon, contentDescription = null) }
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete, tint = colors.icon, contentDescription = null,
+                                            modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -550,7 +601,12 @@ private fun SubPageItem(
                     showMenu = false
                     onRename()
                 },
-                leadingIcon = { Icon(Icons.Default.Edit, tint = colors.icon, contentDescription = null) }
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Edit, tint = colors.icon, contentDescription = null,
+                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                    )
+                }
             )
             DropdownMenuItem(
                 text = { Text("Delete", color = colors.primaryText) },
@@ -558,7 +614,12 @@ private fun SubPageItem(
                     showMenu = false
                     onDelete()
                 },
-                leadingIcon = { Icon(Icons.Default.Delete, tint = colors.icon, contentDescription = null) }
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Delete, tint = colors.icon, contentDescription = null,
+                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                    )
+                }
             )
         }
     }
