@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
@@ -649,7 +648,7 @@ fun AddSubPageDialog(
             Column(modifier = Modifier.padding(24.dp)) {
                 Text("Add sub-page", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("Parent: ${parentPage.name}", color = colors.hint, fontSize = 14.sp)
+                Text("to page ${parentPage.name}", color = colors.primaryText.copy(alpha = 0.5f), fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = text.take(20),
