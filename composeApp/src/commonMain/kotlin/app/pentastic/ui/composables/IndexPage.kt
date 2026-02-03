@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
@@ -87,6 +88,7 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun IndexPage(
     pages: List<Page>,
+    subPagesByParent: Map<Long, List<Page>>,
     notesCountByPage: Map<Long, Int>,
     priorityNotesCountByPage: Map<Long, Int>,
     showRateButton: Boolean,
@@ -94,13 +96,17 @@ fun IndexPage(
     onPageNameChange: (Page, String) -> Unit,
     onPageOrderChange: (List<Page>) -> Unit,
     onPageDelete: (Page) -> Unit,
+    onAddSubPage: (Long, String) -> Unit,
 ) {
     val viewModel = koinViewModel<MainViewModel>()
 
     var showRenameDialog by remember { mutableStateOf(false) }
     var pageToRename: Page? by remember { mutableStateOf(null) }
+    var pageToRenameIndexLabel by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var pageToDelete: Page? by remember { mutableStateOf(null) }
+    var showAddSubPageDialog by remember { mutableStateOf(false) }
+    var parentPageForSubPage: Page? by remember { mutableStateOf(null) }
 
     var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
     val uriHandler = LocalUriHandler.current
@@ -254,7 +260,6 @@ fun IndexPage(
                                     color = colors.primaryText.copy(alpha = 0.33f),
                                     modifier = Modifier.padding(top = 1.dp).defaultMinSize(minWidth = 32.dp)
                                 )
-                                Spacer(Modifier.width(8.dp))
 
                                 Text(
                                     text = page.name.take(20),
@@ -315,10 +320,22 @@ fun IndexPage(
                                     onClick = {
                                         showMenu = false
                                         pageToRename = page
+                                        pageToRenameIndexLabel = "${index + 1}."
                                         showRenameDialog = true
                                     },
                                     leadingIcon = { Icon(Icons.Default.Edit, tint = colors.icon, contentDescription = null) }
                                 )
+                                if (page.parentId == null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Add sub-page", color = colors.primaryText) },
+                                        onClick = {
+                                            showMenu = false
+                                            parentPageForSubPage = page
+                                            showAddSubPageDialog = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Add, tint = colors.icon, contentDescription = null) }
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Reorder", color = colors.primaryText) },
                                     onClick = {
@@ -339,12 +356,35 @@ fun IndexPage(
                             }
                         }
                     }
+
+                    // Sub-pages for this parent
+                    val subPages = subPagesByParent[page.id] ?: emptyList()
+                    subPages.forEachIndexed { subIndex, subPage ->
+                        SubPageItem(
+                            subPage = subPage,
+                            parentIndex = index + 1,
+                            subIndex = subIndex + 1,
+                            notesCount = notesCountByPage[subPage.id] ?: 0,
+                            priorityNotesCount = priorityNotesCountByPage[subPage.id] ?: 0,
+                            onPageClick = onPageClick,
+                            onRename = {
+                                pageToRename = subPage
+                                pageToRenameIndexLabel = "${index + 1}.${subIndex + 1}"
+                                showRenameDialog = true
+                            },
+                            onDelete = {
+                                pageToDelete = subPage
+                                showDeleteDialog = true
+                            }
+                        )
+                    }
                 }
             }
 
             if (showRenameDialog && pageToRename != null) {
                 EditPageNameDialog(
                     page = pageToRename!!,
+                    indexLabel = pageToRenameIndexLabel,
                     onDismiss = { showRenameDialog = false },
                     onConfirm = { newName ->
                         onPageNameChange(pageToRename!!, newName.ifBlank { "Page" })
@@ -371,6 +411,17 @@ fun IndexPage(
                     onConfirm = { selectedTheme ->
                         viewModel.setThemeMode(selectedTheme)
                         showThemeDialog = false
+                    }
+                )
+            }
+
+            if (showAddSubPageDialog && parentPageForSubPage != null) {
+                AddSubPageDialog(
+                    parentPage = parentPageForSubPage!!,
+                    onDismiss = { showAddSubPageDialog = false },
+                    onConfirm = { subPageName ->
+                        onAddSubPage(parentPageForSubPage!!.id, subPageName.ifBlank { "Sub-page" })
+                        showAddSubPageDialog = false
                     }
                 )
             }
@@ -404,10 +455,98 @@ fun IndexPage(
     }
 }
 
+@Composable
+private fun SubPageItem(
+    subPage: Page,
+    parentIndex: Int,
+    subIndex: Int,
+    notesCount: Int,
+    priorityNotesCount: Int,
+    onPageClick: (Long) -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 48.dp, top = 8.dp, bottom = 8.dp, end = 16.dp)
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = { onPageClick(subPage.id) },
+                    onLongClick = { showMenu = true }
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$parentIndex.$subIndex",
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+                color = colors.primaryText.copy(alpha = 0.33f),
+                modifier = Modifier.defaultMinSize(minWidth = 32.dp)
+            )
+            Text(
+                text = subPage.name.take(20),
+                fontSize = 16.sp,
+                maxLines = 1,
+                color = colors.primaryText.copy(alpha = 0.8f),
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "................................................................................................................... ",
+                color = colors.hint,
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                modifier = Modifier.defaultMinSize(minWidth = 16.dp),
+                text = (if (priorityNotesCount > 0) priorityNotesCount else notesCount).toString(),
+                fontSize = 16.sp,
+                color = if (priorityNotesCount > 0) colors.priorityText
+                else if (notesCount > 0) colors.icon
+                else colors.hint,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            offset = DpOffset(x = 80.dp, y = 0.dp),
+            modifier = Modifier.background(color = colors.menuBackground),
+        ) {
+            DropdownMenuItem(
+                text = { Text("Rename", color = colors.primaryText) },
+                onClick = {
+                    showMenu = false
+                    onRename()
+                },
+                leadingIcon = { Icon(Icons.Default.Edit, tint = colors.icon, contentDescription = null) }
+            )
+            DropdownMenuItem(
+                text = { Text("Delete", color = colors.primaryText) },
+                onClick = {
+                    showMenu = false
+                    onDelete()
+                },
+                leadingIcon = { Icon(Icons.Default.Delete, tint = colors.icon, contentDescription = null) }
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditPageNameDialog(
     page: Page,
+    indexLabel: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
@@ -426,7 +565,7 @@ fun EditPageNameDialog(
                 OutlinedTextField(
                     value = text.take(20),
                     onValueChange = { if (it.length <= 20) text = it },
-                    label = { Text("Page ${page.id}.") },
+                    label = { Text("Page $indexLabel") },
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences
                     )
@@ -471,6 +610,49 @@ fun DeletePageConfirmationDialog(
                     }
                     Button(onClick = onConfirm) {
                         Text("Delete")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddSubPageDialog(
+    parentPage: Page,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    val colors = colors
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Add sub-page", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("Parent: ${parentPage.name}", color = colors.hint, fontSize = 14.sp)
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = text.take(20),
+                    onValueChange = { if (it.length <= 20) text = it },
+                    label = { Text("Sub-page name") },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences
+                    )
+                )
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colors.primaryText)
+                    }
+                    Button(onClick = { onConfirm(text) }) {
+                        Text("Add")
                     }
                 }
             }
@@ -532,20 +714,22 @@ fun ThemeSelectionDialog(
 fun IndexPagePreview() {
     Surface(color = Color.White) {
         IndexPage(
-            listOf(Page(1, name = "Default"), Page(2, name = "Todo later"), Page(5, name = "Pro Launcher")),
-            mapOf(
+            pages = listOf(Page(1, name = "Default"), Page(2, name = "Todo later"), Page(5, name = "Pro Launcher")),
+            subPagesByParent = mapOf(1L to listOf(Page(10, name = "Sub 1", parentId = 1), Page(11, name = "Sub 2", parentId = 1))),
+            notesCountByPage = mapOf(
                 1L to 5,
                 2L to 3,
                 5L to 18,
                 8L to 1,
                 10L to 12
             ),
-            mapOf(1L to 4),
-            false,
+            priorityNotesCountByPage = mapOf(1L to 4),
+            showRateButton = false,
             onPageClick = {},
             onPageNameChange = { _, _ -> },
             onPageOrderChange = {},
-            {},
+            onPageDelete = {},
+            onAddSubPage = { _, _ -> },
         )
     }
 }

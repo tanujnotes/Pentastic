@@ -51,6 +51,14 @@ class MyRepository(
         return pageDao.getAllPages()
     }
 
+    fun getRootPages(): Flow<List<Page>> {
+        return pageDao.getRootPages()
+    }
+
+    fun getSubPages(parentId: Long): Flow<List<Page>> {
+        return pageDao.getSubPages(parentId)
+    }
+
     suspend fun getPageById(id: Long): Page? {
         return pageDao.getPageById(id)
     }

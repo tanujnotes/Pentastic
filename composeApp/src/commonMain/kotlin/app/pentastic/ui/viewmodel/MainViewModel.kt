@@ -44,7 +44,10 @@ class MainViewModel(
     private val _editingNote = MutableStateFlow<Note?>(null)
     val editingNote: StateFlow<Note?> = _editingNote.asStateFlow()
 
-    val pages: StateFlow<List<Page>> = repository.getAllPages().stateIn(
+    private val _subPagesByParent = MutableStateFlow<Map<Long, List<Page>>>(emptyMap())
+    val subPagesByParent: StateFlow<Map<Long, List<Page>>> = _subPagesByParent.asStateFlow()
+
+    val pages: StateFlow<List<Page>> = repository.getRootPages().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -53,6 +56,7 @@ class MainViewModel(
     init {
         checkFirstLaunch()
         loadNotesByPage()
+        loadSubPages()
         checkForRateButton()
         loadThemeMode()
     }
@@ -64,8 +68,14 @@ class MainViewModel(
     fun addPage(pageName: String) {
         viewModelScope.launch {
             if (pages.value.size < 100) {
-                repository.insertPage(Page(name = pageName))
+                repository.insertPage(Page(name = pageName, parentId = null))
             }
+        }
+    }
+
+    fun addSubPage(parentId: Long, pageName: String) {
+        viewModelScope.launch {
+            repository.insertPage(Page(name = pageName, parentId = parentId))
         }
     }
 
@@ -97,6 +107,17 @@ class MainViewModel(
                 _notesByPage.emit(groupedNotes)
                 _notesCountByPage.emit(groupedNotes.mapValues { (_, notes) -> notes.count { !it.done } })
                 _priorityNotesCountByPage.emit(groupedNotes.mapValues { (_, notes) -> notes.count { it.priority > 0 && !it.done } })
+            }
+        }
+    }
+
+    private fun loadSubPages() {
+        viewModelScope.launch {
+            repository.getAllPages().collect { allPages ->
+                val subPagesMap = allPages
+                    .filter { it.parentId != null }
+                    .groupBy { it.parentId!! }
+                _subPagesByParent.emit(subPagesMap)
             }
         }
     }

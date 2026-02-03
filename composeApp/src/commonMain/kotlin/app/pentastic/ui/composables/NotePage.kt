@@ -3,6 +3,7 @@
 package app.pentastic.ui.composables
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -88,10 +92,14 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun NotePage(
     notes: List<Note>,
+    notesByPage: Map<Long, List<Note>>,
     onUpdateNote: (Note) -> Unit,
     onDeleteNote: (Note) -> Unit,
     toggleNoteDone: (Note) -> Unit,
     page: Page,
+    subPages: List<Page>,
+    selectedSubPageId: Long?,
+    onSelectedSubPageChange: (Long?) -> Unit,
     setEditingNote: (Note?) -> Unit,
     onSetRepeatFrequency: (Note, RepeatFrequency) -> Unit,
 ) {
@@ -101,7 +109,14 @@ fun NotePage(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
 
-    var list by remember { mutableStateOf(notes) }
+    val displayedNotes = remember(notes, selectedSubPageId, notesByPage) {
+        if (selectedSubPageId == null)
+            notes
+        else
+            notesByPage[selectedSubPageId] ?: emptyList()
+    }
+
+    var list by remember { mutableStateOf(displayedNotes) }
     val lazyListState = rememberLazyListState()
     val reorderableLazyColumnState = rememberReorderableLazyListState(lazyListState) { from, to ->
         list = list.toMutableList().apply {
@@ -123,9 +138,9 @@ fun NotePage(
         }
     }
 
-    LaunchedEffect(notes) {
-        list = notes
-        if (notes.isNotEmpty()) {
+    LaunchedEffect(displayedNotes) {
+        list = displayedNotes
+        if (displayedNotes.isNotEmpty()) {
             lazyListState.animateScrollToItem(0)
         }
     }
@@ -134,7 +149,7 @@ fun NotePage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 18.dp, top = 16.dp, bottom = 24.dp, end = 8.dp),
+                .padding(start = 18.dp, top = 16.dp, bottom = if (subPages.isEmpty()) 24.dp else 12.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -146,6 +161,17 @@ fun NotePage(
                 )
             )
         }
+
+        if (subPages.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            SubPageTabs(
+                subPages = subPages,
+                selectedSubPageId = selectedSubPageId,
+                onSubPageClick = onSelectedSubPageChange
+            )
+            Spacer(Modifier.height(18.dp))
+        }
+
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -228,7 +254,7 @@ fun NotePage(
                                     modifier = Modifier.padding(start = 12.dp, top = 5.dp).defaultMinSize(minWidth = 28.dp),
                                     fontFamily = FontFamily(Font(Res.font.Merriweather_Regular)),
                                     text = (index + 1).toString() + ".",
-//                                    color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
+                                    // color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
                                     color = colors.primaryText.copy(alpha = 0.33f),
                                     textAlign = TextAlign.Center,
                                     fontSize = 16.sp,
@@ -314,6 +340,54 @@ fun NotePage(
                         onSetRepeatFrequency(noteForRepeatDialog!!, frequency)
                         noteForRepeatDialog = null
                     }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubPageTabs(
+    subPages: List<Page>,
+    selectedSubPageId: Long?,
+    onSubPageClick: (Long?) -> Unit,
+) {
+    val colors = AppTheme.colors
+
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(subPages, key = { it.id }) { subPage ->
+            val isSelected = selectedSubPageId == subPage.id
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isSelected) colors.primaryText.copy(alpha = 0.15f) else Color.Transparent)
+                    .border(
+                        width = 0.5.dp,
+                        color = colors.primaryText.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onSubPageClick(if (isSelected) null else subPage.id)
+                    }
+            ) {
+                Text(
+                    text = subPage.name,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    style = TextStyle(
+                        color = colors.primaryText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

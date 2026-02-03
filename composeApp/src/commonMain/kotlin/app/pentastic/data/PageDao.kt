@@ -21,6 +21,12 @@ interface PageDao {
     @Query("SELECT * FROM page ORDER BY orderAt")
     fun getAllPages(): Flow<List<Page>>
 
+    @Query("SELECT * FROM page WHERE parentId IS NULL ORDER BY orderAt")
+    fun getRootPages(): Flow<List<Page>>
+
+    @Query("SELECT * FROM page WHERE parentId = :parentId ORDER BY orderAt")
+    fun getSubPages(parentId: Long): Flow<List<Page>>
+
     @Query("SELECT * FROM page WHERE id = :id")
     suspend fun getPageById(id: Long): Page?
 
