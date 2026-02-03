@@ -27,11 +27,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -188,7 +193,8 @@ fun IndexPage(
                                     showTopMenu = false
                                     viewModel.onRateClicked()
                                     uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
-                                }
+                                },
+                                leadingIcon = { Icon(Icons.Default.Star, tint = colors.icon, contentDescription = null) }
                             )
                             DropdownMenuItem(
                                 text = { Text("Share", color = colors.primaryText) },
@@ -197,28 +203,32 @@ fun IndexPage(
                                     coroutineScope.launch {
                                         clipboardManager.setText(AnnotatedString("Minimal Todo Lists - Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
                                     }
-                                }
+                                },
+                                leadingIcon = { Icon(Icons.Default.Share, tint = colors.icon, contentDescription = null) }
                             )
                             DropdownMenuItem(
                                 text = { Text("Follow", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     uriHandler.openUri("https://x.com/tanujnotes")
-                                }
+                                },
+                                leadingIcon = { Icon(Icons.Default.PersonAdd, tint = colors.icon, contentDescription = null) }
                             )
                             DropdownMenuItem(
                                 text = { Text("Theme", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     showThemeDialog = true
-                                }
+                                },
+                                leadingIcon = { Icon(Icons.Default.Palette, tint = colors.icon, contentDescription = null) }
                             )
                             DropdownMenuItem(
                                 text = { Text("Reorder", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     isReorderMode = true
-                                }
+                                },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, tint = colors.icon, contentDescription = null) }
                             )
                         }
                     }
