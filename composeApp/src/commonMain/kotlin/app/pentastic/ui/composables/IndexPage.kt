@@ -173,7 +173,7 @@ fun IndexPage(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = "Options",
-                                tint = colors.hint
+                                tint = colors.icon
                             )
                         }
                         DropdownMenu(
@@ -648,7 +648,7 @@ fun AddSubPageDialog(
             Column(modifier = Modifier.padding(24.dp)) {
                 Text("Add sub-page", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("to page ${parentPage.name}", color = colors.primaryText.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text("to ${parentPage.name}", color = colors.primaryText.copy(alpha = 0.5f), fontSize = 14.sp)
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = text.take(20),
