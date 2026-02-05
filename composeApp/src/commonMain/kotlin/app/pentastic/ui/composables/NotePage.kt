@@ -82,14 +82,6 @@ import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.Font
-import pentastic.composeapp.generated.resources.Merriweather_Light
-import pentastic.composeapp.generated.resources.Merriweather_Regular
-import pentastic.composeapp.generated.resources.Res
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -98,6 +90,14 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.Font
+import pentastic.composeapp.generated.resources.Merriweather_Light
+import pentastic.composeapp.generated.resources.Merriweather_Regular
+import pentastic.composeapp.generated.resources.Res
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Composable
 fun NotePage(
@@ -486,6 +486,41 @@ private fun NoteActionsMenu(
     val currentFrequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
     val hasReminder = note.reminderAt > 0 && note.reminderEnabled == 1
 
+    // Format reminder time for display
+    val reminderLabel = if (hasReminder) {
+        val timeZone = TimeZone.currentSystemDefault()
+        val now = Clock.System.now().toLocalDateTime(timeZone)
+        val reminderDateTime = Instant.fromEpochMilliseconds(note.reminderAt)
+            .toLocalDateTime(timeZone)
+
+        when {
+            // Same day - show time only
+            reminderDateTime.date == now.date -> {
+                val hour = reminderDateTime.hour
+                val minute = reminderDateTime.minute
+                val amPm = if (hour < 12) "AM" else "PM"
+                val hour12 = when {
+                    hour == 0 -> 12
+                    hour > 12 -> hour - 12
+                    else -> hour
+                }
+                "$hour12:${minute.toString().padStart(2, '0')} $amPm"
+            }
+            // Same year - show month and date
+            reminderDateTime.year == now.year -> {
+                val day = reminderDateTime.dayOfMonth
+                val month = reminderDateTime.month.name.take(3).lowercase()
+                    .replaceFirstChar { it.uppercase() }
+                "$day $month"
+            }
+            // Different year - show year only
+            else -> {
+                reminderDateTime.year.toString()
+            }
+        }
+    } else
+        "Reminder"
+
     data class MenuAction(
         val label: String,
         val icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -519,22 +554,22 @@ private fun NoteActionsMenu(
             onClick = { onEdit(); onDismissRequest() }
         ),
         MenuAction(
-            label = "Delete",
-            icon = Icons.Default.Delete,
-            tint = colors.primaryText,
-            onClick = { onDelete(); onDismissRequest() }
-        ),
-        MenuAction(
             label = if (currentFrequency == RepeatFrequency.NONE) "Repeat" else currentFrequency.label,
             icon = Icons.Default.Repeat,
             tint = colors.primaryText,
             onClick = { onSetRepeat(); onDismissRequest() }
         ),
         MenuAction(
-            label = if (hasReminder) "Reminder" else "Remind",
+            label = reminderLabel,
             icon = Icons.Default.Notifications,
-            tint = if (hasReminder) colors.priorityText else colors.primaryText,
+            tint = colors.primaryText,
             onClick = { onSetReminder(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = "Delete",
+            icon = Icons.Default.Delete,
+            tint = colors.primaryText,
+            onClick = { onDelete(); onDismissRequest() }
         ),
     )
 
