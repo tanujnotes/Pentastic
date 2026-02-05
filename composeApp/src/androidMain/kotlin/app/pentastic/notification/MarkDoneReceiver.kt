@@ -33,6 +33,7 @@ class MarkDoneReceiver : BroadcastReceiver(), KoinComponent {
                     done = true,
                     taskLastDoneAt = Clock.System.now().toEpochMilliseconds(),
                     updatedAt = Clock.System.now().toEpochMilliseconds(),
+                    orderAt = Clock.System.now().toEpochMilliseconds(),
                     // Disable reminder after marking done (unless it's a repeating task)
                     reminderEnabled = if (note.repeatFrequency > 0) note.reminderEnabled else 0
                 )
