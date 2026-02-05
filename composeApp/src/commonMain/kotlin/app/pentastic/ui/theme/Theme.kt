@@ -80,6 +80,9 @@ fun AppTheme(
 
     val colors = if (darkTheme) DarkColors else LightColors
 
+    // Update system bar style based on theme
+    SystemBarEffect(isDarkTheme = darkTheme)
+
     CompositionLocalProvider(LocalAppColors provides colors) {
         MaterialTheme(
             typography = interTypography(),
