@@ -26,6 +26,7 @@ import androidx.compose.ui.backhandler.BackHandler
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import app.pentastic.data.Note
+import app.pentastic.navigation.getDeepLinkPageId
 import app.pentastic.ui.composables.CommonInput
 import app.pentastic.ui.composables.IndexPage
 import app.pentastic.ui.composables.NotePage
@@ -56,8 +57,37 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
     var text by remember { mutableStateOf("") }
     var selectedSubPageByParent by remember { mutableStateOf<Map<Long, Long?>>(emptyMap()) }
 
+    // Handle deep link navigation from notification
+    val deepLinkPageId = getDeepLinkPageId()
+    var hasNavigatedFromDeepLink by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         viewModel.resetRepeatingTasksTodo()
+    }
+
+    // Navigate to the page from deep link (notification tap)
+    LaunchedEffect(deepLinkPageId, pages, hasNavigatedFromDeepLink) {
+        if (deepLinkPageId != null && pages.isNotEmpty() && !hasNavigatedFromDeepLink) {
+            // Find if it's a root page
+            val rootPageIndex = pages.indexOfFirst { it.id == deepLinkPageId }
+            if (rootPageIndex >= 0) {
+                pagerState.scrollToPage(rootPageIndex + 1)
+                hasNavigatedFromDeepLink = true
+            } else {
+                // Check if it's a sub-page
+                val parentPage = pages.find { parent ->
+                    subPagesByParent[parent.id]?.any { it.id == deepLinkPageId } == true
+                }
+                if (parentPage != null) {
+                    val parentIndex = pages.indexOf(parentPage)
+                    selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
+                        put(parentPage.id, deepLinkPageId)
+                    }
+                    pagerState.scrollToPage(parentIndex + 1)
+                    hasNavigatedFromDeepLink = true
+                }
+            }
+        }
     }
 
     LaunchedEffect(editingNote) {
@@ -179,6 +209,8 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                             },
                             setEditingNote = { note -> viewModel.setEditingNote(note) },
                             onSetRepeatFrequency = { note, frequency -> viewModel.setNoteRepeatFrequency(note, frequency) },
+                            onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
+                            onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
                         )
                     }
                 }

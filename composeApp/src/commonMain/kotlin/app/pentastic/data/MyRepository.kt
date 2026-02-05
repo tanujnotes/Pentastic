@@ -27,6 +27,14 @@ class MyRepository(
         return noteDao.getCompletedRepeatingNotes()
     }
 
+    suspend fun getNotesWithActiveReminders(): List<Note> {
+        return noteDao.getNotesWithActiveReminders()
+    }
+
+    suspend fun getNoteById(id: Long): Note? {
+        return noteDao.getNoteById(id)
+    }
+
     fun getAllNotesByPage(pageId: Long): Flow<List<Note>> {
         return noteDao.getAllNotesByPage(pageId)
     }

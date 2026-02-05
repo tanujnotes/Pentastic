@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -89,6 +90,14 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun NotePage(
@@ -103,9 +112,12 @@ fun NotePage(
     onSelectedSubPageChange: (Long?) -> Unit,
     setEditingNote: (Note?) -> Unit,
     onSetRepeatFrequency: (Note, RepeatFrequency) -> Unit,
+    onSetReminder: (Note, Long, Boolean) -> Unit,
+    onRemoveReminder: (Note) -> Unit,
 ) {
     val noteMovedToIndex = remember { mutableStateOf(-1) }
     var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
+    var noteForReminderDialog by remember { mutableStateOf<Note?>(null) }
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -297,7 +309,8 @@ fun NotePage(
                                     )
                                 },
                                 onEdit = { setEditingNote(note) },
-                                onSetRepeat = { noteForRepeatDialog = note }
+                                onSetRepeat = { noteForRepeatDialog = note },
+                                onSetReminder = { noteForReminderDialog = note }
                             )
                         }
                     }
@@ -341,6 +354,69 @@ fun NotePage(
                         noteForRepeatDialog = null
                     }
                 )
+            }
+
+            if (noteForReminderDialog != null) {
+                val note = noteForReminderDialog!!
+                val permissionHandler = rememberReminderPermissionHandler()
+                var showDatePicker by remember { mutableStateOf(false) }
+
+                // Check if we already have all permissions
+                LaunchedEffect(note) {
+                    if (permissionHandler.hasAllReminderPermissions()) {
+                        showDatePicker = true
+                    }
+                }
+
+                // Show permission flow if we don't have all permissions
+                if (!showDatePicker && !permissionHandler.hasAllReminderPermissions()) {
+                    ReminderPermissionFlow(
+                        permissionHandler = permissionHandler,
+                        onPermissionsGranted = {
+                            showDatePicker = true
+                        },
+                        onDismiss = {
+                            noteForReminderDialog = null
+                        }
+                    )
+                }
+
+                // Show date picker once permissions are handled
+                if (showDatePicker) {
+                    val timeZone = TimeZone.currentSystemDefault()
+                    val now = Clock.System.now()
+
+                    // Calculate initial date/time from existing reminder or default to tomorrow 9 AM
+                    val initialDateTime = remember(note.reminderAt) {
+                        if (note.reminderAt > 0) {
+                            Instant.fromEpochMilliseconds(note.reminderAt)
+                                .toLocalDateTime(timeZone)
+                        } else {
+                            val tomorrow = now.toLocalDateTime(timeZone).date
+                                .plus(1, DateTimeUnit.DAY)
+                            LocalDateTime(tomorrow, LocalTime(9, 0))
+                        }
+                    }
+
+                    DateTimePickerDialog(
+                        initialDate = initialDateTime.date,
+                        initialHour = initialDateTime.hour,
+                        initialMinute = initialDateTime.minute,
+                        hasExistingReminder = note.reminderAt > 0,
+                        onDismiss = { noteForReminderDialog = null },
+                        onConfirm = { date, hour, minute ->
+                            val reminderTime = LocalDateTime(
+                                date,
+                                LocalTime(hour, minute)
+                            ).toInstant(timeZone).toEpochMilliseconds()
+                            onSetReminder(note, reminderTime, true)
+                            noteForReminderDialog = null
+                        },
+                        onClear = {
+                            onRemoveReminder(note)
+                        }
+                    )
+                }
             }
         }
     }
@@ -404,9 +480,11 @@ private fun NoteActionsMenu(
     onSetPriority: () -> Unit,
     onEdit: () -> Unit,
     onSetRepeat: () -> Unit,
+    onSetReminder: () -> Unit,
 ) {
     val colors = AppTheme.colors
     val currentFrequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+    val hasReminder = note.reminderAt > 0 && note.reminderEnabled == 1
 
     data class MenuAction(
         val label: String,
@@ -451,6 +529,12 @@ private fun NoteActionsMenu(
             icon = Icons.Default.Repeat,
             tint = colors.primaryText,
             onClick = { onSetRepeat(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = if (hasReminder) "Reminder" else "Remind",
+            icon = Icons.Default.Notifications,
+            tint = if (hasReminder) colors.priorityText else colors.primaryText,
+            onClick = { onSetReminder(); onDismissRequest() }
         ),
     )
 

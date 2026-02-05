@@ -28,6 +28,15 @@ interface NoteDao {
     @Query("SELECT * FROM note WHERE repeatFrequency > 0 AND taskLastDoneAt > 0 AND done = 1")
     suspend fun getCompletedRepeatingNotes(): List<Note>
 
+    @Query("SELECT * FROM note WHERE reminderEnabled = 1 AND reminderAt > 0")
+    suspend fun getNotesWithActiveReminders(): List<Note>
+
+    @Query("SELECT * FROM note WHERE id = :id")
+    suspend fun getNoteById(id: Long): Note?
+
+    @Query("SELECT * FROM note WHERE uuid = :uuid")
+    suspend fun getNoteByUuid(uuid: String): Note?
+
     @Query("DELETE FROM note WHERE id = :id")
     suspend fun deleteNote(id: Long)
 }

@@ -40,6 +40,11 @@ data class Note(
     @ColumnInfo(defaultValue = "0")
     val taskLastDoneAt: Long = 0,
 
+    @ColumnInfo(defaultValue = "0")
+    val reminderAt: Long = 0,  // Timestamp when reminder should fire (0 = no reminder)
+    @ColumnInfo(defaultValue = "0")
+    val reminderEnabled: Int = 0,  // 0 = disabled, 1 = enabled
+
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val updatedAt: Long = Clock.System.now().toEpochMilliseconds(),
 )

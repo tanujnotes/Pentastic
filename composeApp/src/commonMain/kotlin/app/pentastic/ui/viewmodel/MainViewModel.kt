@@ -8,6 +8,7 @@ import app.pentastic.data.Note
 import app.pentastic.data.Page
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.ThemeMode
+import app.pentastic.notification.ReminderScheduler
 import app.pentastic.utils.calendarDaysSince
 import app.pentastic.utils.hasBeenHours
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,7 @@ import kotlin.time.ExperimentalTime
 class MainViewModel(
     private val repository: MyRepository,
     private val dataStoreRepository: DataStoreRepository,
+    private val reminderScheduler: ReminderScheduler,
 ) : ViewModel() {
 
     private val _showRateButton = MutableStateFlow(false)
@@ -59,6 +61,13 @@ class MainViewModel(
         loadSubPages()
         checkForRateButton()
         loadThemeMode()
+        rescheduleRemindersOnStart()
+    }
+
+    private fun rescheduleRemindersOnStart() {
+        viewModelScope.launch {
+            reminderScheduler.rescheduleAllReminders()
+        }
     }
 
     fun setEditingNote(note: Note?) {
@@ -138,11 +147,21 @@ class MainViewModel(
     fun toggleNoteDone(note: Note) {
         viewModelScope.launch {
             val now = Clock.System.now().toEpochMilliseconds()
+            val newDoneState = !note.done
+            val isRepeatingTask = note.repeatFrequency > 0
+
+            // Cancel reminder when marking as done (except for repeating tasks)
+            if (newDoneState && note.reminderEnabled == 1 && !isRepeatingTask) {
+                reminderScheduler.cancelReminder(note.id, note.uuid)
+            }
+
             repository.updateNote(
                 note.copy(
-                    done = !note.done,
+                    done = newDoneState,
                     orderAt = now,
-                    taskLastDoneAt = if (note.done) note.taskLastDoneAt else now
+                    taskLastDoneAt = if (note.done) note.taskLastDoneAt else now,
+                    // Disable reminder when done (except for repeating tasks)
+                    reminderEnabled = if (newDoneState && !isRepeatingTask) 0 else note.reminderEnabled
                 )
             )
         }
@@ -182,8 +201,49 @@ class MainViewModel(
     }
 
     fun deleteNote(note: Note) {
-        viewModelScope.launch { repository.deleteNote(note.id) }
+        viewModelScope.launch {
+            // Cancel any scheduled reminder before deleting the note
+            if (note.reminderEnabled == 1) {
+                reminderScheduler.cancelReminder(note.id, note.uuid)
+            }
+            repository.deleteNote(note.id)
+        }
     }
+
+    fun setNoteReminder(note: Note, reminderAt: Long, enabled: Boolean) {
+        viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
+            val updatedNote = note.copy(
+                reminderAt = reminderAt,
+                reminderEnabled = if (enabled) 1 else 0,
+                updatedAt = now
+            )
+            repository.updateNote(updatedNote)
+
+            if (enabled && reminderAt > now) {
+                reminderScheduler.scheduleReminder(updatedNote)
+            } else {
+                reminderScheduler.cancelReminder(note.id, note.uuid)
+            }
+        }
+    }
+
+    fun removeNoteReminder(note: Note) {
+        viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
+            val updatedNote = note.copy(
+                reminderAt = 0,
+                reminderEnabled = 0,
+                updatedAt = now
+            )
+            repository.updateNote(updatedNote)
+            reminderScheduler.cancelReminder(note.id, note.uuid)
+        }
+    }
+
+    fun hasNotificationPermission(): Boolean = reminderScheduler.hasNotificationPermission()
+
+    suspend fun requestNotificationPermission(): Boolean = reminderScheduler.requestNotificationPermission()
 
     fun onRateClicked() {
         viewModelScope.launch {
