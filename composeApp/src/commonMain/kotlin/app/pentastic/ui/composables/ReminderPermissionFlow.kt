@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package app.pentastic.ui.composables
 
 import androidx.compose.foundation.layout.Arrangement
@@ -7,10 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -20,12 +23,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.unit.sp
 import app.pentastic.notification.PermissionHandler
+import app.pentastic.ui.theme.AppTheme
 
 enum class ReminderPermissionState {
     CHECKING,
@@ -118,26 +121,27 @@ private fun ExplanationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    val colors = AppTheme.colors
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "Permission Required",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    text = "Permission required",
+                    color = colors.primaryText,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 18.sp
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "To set reminders, we need permission to send notifications and schedule alarms. This allows us to remind you about your tasks at the right time.",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "To set reminders, we need permission to send notifications and schedule alarms.",
+                    color = colors.primaryText
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -147,12 +151,16 @@ private fun ExplanationDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text("Cancel", color = colors.primaryText)
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(onClick = onConfirm) {
+                    Button(
+                        onClick = onConfirm,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
                         Text("Continue")
                     }
                 }

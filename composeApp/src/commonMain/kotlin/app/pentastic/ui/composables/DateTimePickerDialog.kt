@@ -4,6 +4,7 @@ package app.pentastic.ui.composables
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -63,6 +65,17 @@ fun DateTimePickerDialog(
     var selectedDate by remember { mutableStateOf(initialDate) }
     var selectedHour by remember { mutableStateOf(initialHour) }
     var selectedMinute by remember { mutableStateOf(initialMinute) }
+
+    // Check if selected date/time is in the past
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    val selectedDateTime = LocalDateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.dayOfMonth,
+        selectedHour,
+        selectedMinute
+    )
+    val isInPast = selectedDateTime < now
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -119,7 +132,7 @@ fun DateTimePickerDialog(
                         Spacer(Modifier.width(1.dp))
                     }
 
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onDismiss) {
                             Text("Cancel", color = colors.primaryText)
                         }
@@ -128,9 +141,12 @@ fun DateTimePickerDialog(
                             onClick = {
                                 onConfirm(selectedDate, selectedHour, selectedMinute)
                             },
+                            enabled = !isInPast,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.primaryText,
-                                contentColor = colors.menuBackground
+                                contentColor = colors.menuBackground,
+                                disabledContainerColor = colors.primaryText.copy(alpha = 0.3f),
+                                disabledContentColor = colors.menuBackground.copy(alpha = 0.5f)
                             ),
                             shape = RoundedCornerShape(20.dp)
                         ) {
@@ -296,7 +312,10 @@ private fun WheelPicker(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(itemHeight)
-                        .clickable {
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
                             val index = items.indexOf(item)
                             onItemSelected(item)
                             coroutineScope.launch {
@@ -479,7 +498,10 @@ private fun <T> WheelPickerGeneric(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(itemHeight)
-                        .clickable {
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
                             onItemSelected(item)
                             coroutineScope.launch {
                                 listState.animateScrollToItem(index)
