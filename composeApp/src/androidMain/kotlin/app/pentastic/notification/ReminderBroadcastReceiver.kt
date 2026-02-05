@@ -46,8 +46,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(noteText.take(100))
-            .setContentText("Reminder")
+            .setContentTitle("Reminder")
+            .setContentText(noteText.take(100))
             .setStyle(NotificationCompat.BigTextStyle().bigText(noteText))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
