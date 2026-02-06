@@ -170,7 +170,7 @@ fun NotePage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 18.dp, top = 16.dp, bottom = if (subPages.isEmpty()) 24.dp else 16.dp, end = 8.dp),
+                .padding(start = 18.dp, top = 16.dp, bottom = if (subPages.isEmpty()) 16.dp else 12.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -189,7 +189,7 @@ fun NotePage(
                 selectedSubPageId = selectedSubPageId,
                 onSubPageClick = onSelectedSubPageChange
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
         }
 
         Box(modifier = Modifier.weight(1f)) {
@@ -198,8 +198,6 @@ fun NotePage(
                 state = lazyListState,
             ) {
                 itemsIndexed(list, key = { _, it -> it.id }) { index, note ->
-                    if (note.done) Spacer(modifier = Modifier.height(14.dp))
-
                     ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
                         val interactionSource = remember { MutableInteractionSource() }
                         var showMenu by remember { mutableStateOf(false) }
@@ -226,6 +224,7 @@ fun NotePage(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .padding(vertical = 8.dp)
                                 .pointerInput(note) {
                                     detectTapGestures(
                                         onTap = {
@@ -322,8 +321,6 @@ fun NotePage(
                             )
                         }
                     }
-                    if (!note.done)
-                        Spacer(modifier = Modifier.height(14.dp))
                 }
             }
 
