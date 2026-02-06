@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.launch
+import app.pentastic.data.RepeatFrequency
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -56,9 +57,12 @@ fun DateTimePickerDialog(
     initialHour: Int,
     initialMinute: Int,
     hasExistingReminder: Boolean,
+    isRepeatingTask: Boolean = false,
+    repeatFrequency: RepeatFrequency = RepeatFrequency.NONE,
     onDismiss: () -> Unit,
     onConfirm: (date: LocalDate, hour: Int, minute: Int) -> Unit,
     onClear: () -> Unit,
+    onOpenRepeatDialog: () -> Unit = {},
 ) {
     val colors = AppTheme.colors
 
@@ -94,23 +98,66 @@ fun DateTimePickerDialog(
 
                 Spacer(Modifier.height(20.dp))
 
-                // Date wheel picker
-                DateWheelPicker(
-                    selectedDate = selectedDate,
-                    onDateSelected = { selectedDate = it }
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                // Time picker inline
-                CompactTimePicker(
-                    selectedHour = selectedHour,
-                    selectedMinute = selectedMinute,
-                    onTimeSelected = { hour, minute ->
-                        selectedHour = hour
-                        selectedMinute = minute
+                if (isRepeatingTask) {
+                    // Show info text for repeating tasks instead of date picker
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onDismiss()
+                                onOpenRepeatDialog()
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        color = colors.primaryText.copy(alpha = 0.08f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "This is a ${repeatFrequency.label.lowercase()} repeating task",
+                                color = colors.primaryText,
+                                fontSize = 14.sp
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Tap to edit repeat settings",
+                                color = colors.primaryText.copy(alpha = 0.6f),
+                                fontSize = 12.sp
+                            )
+                        }
                     }
-                )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Time picker only for repeating tasks
+                    CompactTimePicker(
+                        selectedHour = selectedHour,
+                        selectedMinute = selectedMinute,
+                        onTimeSelected = { hour, minute ->
+                            selectedHour = hour
+                            selectedMinute = minute
+                        }
+                    )
+                } else {
+                    // Date wheel picker for non-repeating tasks
+                    DateWheelPicker(
+                        selectedDate = selectedDate,
+                        onDateSelected = { selectedDate = it }
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Time picker inline
+                    CompactTimePicker(
+                        selectedHour = selectedHour,
+                        selectedMinute = selectedMinute,
+                        onTimeSelected = { hour, minute ->
+                            selectedHour = hour
+                            selectedMinute = minute
+                        }
+                    )
+                }
 
                 Spacer(Modifier.height(20.dp))
 

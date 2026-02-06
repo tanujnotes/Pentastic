@@ -167,16 +167,30 @@ class MainViewModel(
         }
     }
 
-    fun setNoteRepeatFrequency(note: Note, frequency: RepeatFrequency) {
+    fun setNoteRepeatFrequency(
+        note: Note,
+        frequency: RepeatFrequency,
+        startDate: Long,
+        reminderTime: Long?,
+        reminderEnabled: Boolean,
+    ) {
         viewModelScope.launch {
             val now = Clock.System.now().toEpochMilliseconds()
-            repository.updateNote(
-                note.copy(
-                    repeatFrequency = frequency.ordinal,
-                    updatedAt = now,
-                    repeatTaskStartFrom = if (frequency != RepeatFrequency.NONE) now else 0L
-                )
+            val updatedNote = note.copy(
+                repeatFrequency = frequency.ordinal,
+                updatedAt = now,
+                repeatTaskStartFrom = if (frequency != RepeatFrequency.NONE) startDate else 0L,
+                reminderAt = reminderTime ?: 0L,
+                reminderEnabled = if (reminderEnabled && frequency != RepeatFrequency.NONE) 1 else 0
             )
+            repository.updateNote(updatedNote)
+
+            // Schedule or cancel reminder based on settings
+            if (reminderEnabled && frequency != RepeatFrequency.NONE && reminderTime != null && reminderTime > 0) {
+                reminderScheduler.scheduleReminder(updatedNote)
+            } else if (!reminderEnabled || frequency == RepeatFrequency.NONE) {
+                reminderScheduler.cancelReminder(note.id, note.uuid)
+            }
         }
     }
 

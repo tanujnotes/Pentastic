@@ -208,7 +208,9 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                                 }
                             },
                             setEditingNote = { note -> viewModel.setEditingNote(note) },
-                            onSetRepeatFrequency = { note, frequency -> viewModel.setNoteRepeatFrequency(note, frequency) },
+                            onSetRepeatFrequency = { note, frequency, startDate, reminderTime, reminderEnabled ->
+                                viewModel.setNoteRepeatFrequency(note, frequency, startDate, reminderTime, reminderEnabled)
+                            },
                             onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
                             onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
                         )
