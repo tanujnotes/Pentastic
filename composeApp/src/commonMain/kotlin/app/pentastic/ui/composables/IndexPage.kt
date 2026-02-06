@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
 import app.pentastic.data.ThemeMode
+import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.theme.AppTheme.colors
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -140,7 +141,7 @@ fun IndexPage(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

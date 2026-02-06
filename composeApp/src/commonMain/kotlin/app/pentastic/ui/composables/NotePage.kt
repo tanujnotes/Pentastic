@@ -166,7 +166,7 @@ fun NotePage(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
