@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -546,7 +547,7 @@ private fun SubPageItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 48.dp, top = 8.dp, bottom = 8.dp, end = 16.dp)
+                .padding(start = 48.dp, top = 4.dp, bottom = 12.dp, end = 16.dp)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -658,7 +659,13 @@ fun EditPageNameDialog(
                     TextButton(onClick = onDismiss) {
                         Text("Cancel", color = colors.primaryText)
                     }
-                    Button(onClick = { onConfirm(text) }) {
+                    Button(
+                        onClick = { onConfirm(text) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
                         Text("Save")
                     }
                 }
@@ -691,7 +698,13 @@ fun DeletePageConfirmationDialog(
                     TextButton(onClick = onDismiss) {
                         Text("Cancel", color = colors.primaryText)
                     }
-                    Button(onClick = onConfirm) {
+                    Button(
+                        onClick = onConfirm,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
                         Text("Delete")
                     }
                 }
@@ -734,7 +747,13 @@ fun AddSubPageDialog(
                     TextButton(onClick = onDismiss) {
                         Text("Cancel", color = colors.primaryText)
                     }
-                    Button(onClick = { onConfirm(text) }) {
+                    Button(
+                        onClick = { onConfirm(text) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
                         Text("Add")
                     }
                 }
@@ -762,7 +781,13 @@ fun SubPageLimitDialog(
                 Text("You can only add 10 sub-pages per page.", color = colors.primaryText)
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Button(onClick = onDismiss) {
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
                         Text("OK")
                     }
                 }
@@ -811,8 +836,14 @@ fun ThemeSelectionDialog(
                     TextButton(onClick = onDismiss) {
                         Text("Cancel", color = colors.primaryText)
                     }
-                    TextButton(onClick = { onConfirm(selectedTheme) }) {
-                        Text("Save", color = colors.primaryText)
+                    Button(
+                        onClick = { onConfirm(selectedTheme) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
+                        Text("Save")
                     }
                 }
             }
