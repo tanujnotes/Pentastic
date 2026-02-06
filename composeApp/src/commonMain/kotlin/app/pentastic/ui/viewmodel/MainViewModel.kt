@@ -9,8 +9,8 @@ import app.pentastic.data.Page
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.ThemeMode
 import app.pentastic.notification.ReminderScheduler
-import app.pentastic.utils.calendarDaysSince
 import app.pentastic.utils.hasBeenHours
+import app.pentastic.utils.hasRepeatIntervalPassed
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -185,7 +185,7 @@ class MainViewModel(
             val completedRepeatingNotes = repository.getCompletedRepeatingNotes()
             val notesToReset = completedRepeatingNotes.filter { note ->
                 val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
-                note.taskLastDoneAt.calendarDaysSince() >= frequency.days
+                note.taskLastDoneAt.hasRepeatIntervalPassed(frequency)
             }
             if (notesToReset.isNotEmpty()) {
                 val now = Clock.System.now().toEpochMilliseconds()
@@ -202,7 +202,6 @@ class MainViewModel(
 
     fun deleteNote(note: Note) {
         viewModelScope.launch {
-            // Cancel any scheduled reminder before deleting the note
             if (note.reminderEnabled == 1) {
                 reminderScheduler.cancelReminder(note.id, note.uuid)
             }
