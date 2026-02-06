@@ -291,8 +291,9 @@ fun NotePage(
                                 )
                                 // Icons for reminder and repeat
                                 val isRepeating = note.repeatFrequency > 0
-                                val hasReminder = note.reminderAt > 0 && note.reminderEnabled == 1
-                                if (isRepeating || hasReminder) {
+                                val nowMillis = Clock.System.now().toEpochMilliseconds()
+                                val hasUpcomingReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
+                                if (isRepeating || hasUpcomingReminder) {
                                     Row(
                                         modifier = Modifier.padding(top = 8.dp, end = 8.dp),
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -305,10 +306,10 @@ fun NotePage(
                                                 tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
                                             )
                                         }
-                                        if (hasReminder) {
+                                        if (hasUpcomingReminder) {
                                             Icon(
                                                 imageVector = Icons.Outlined.Notifications,
-                                                contentDescription = "Has reminder",
+                                                contentDescription = "Upcoming reminder",
                                                 modifier = Modifier.size(14.dp),
                                                 tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
                                             )
