@@ -5,6 +5,7 @@ enum class RepeatFrequency(val days: Int, val label: String) {
     DAILY(1, "Daily"),
     WEEKLY(7, "Weekly"),
     MONTHLY(30, "Monthly"),
+    QUARTERLY(90, "Quarterly"),
     YEARLY(365, "Yearly");
 
     companion object {

@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -680,29 +682,52 @@ private fun RepeatFrequencyDialog(
             Column(modifier = Modifier.padding(24.dp)) {
                 Text("Repeat task", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(16.dp))
-                RepeatFrequency.entries.forEach { frequency ->
+
+                // 2 column grid
+                RepeatFrequency.entries.chunked(2).forEach { rowItems ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedFrequency = frequency }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        RadioButton(
-                            selected = selectedFrequency == frequency,
-                            onClick = { selectedFrequency = frequency }
-                        )
-                        Text(text = frequency.label, color = colors.primaryText)
+                        rowItems.forEach { frequency ->
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { selectedFrequency = frequency }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selectedFrequency == frequency,
+                                    onClick = { selectedFrequency = frequency }
+                                )
+                                Text(text = frequency.label, color = colors.primaryText)
+                            }
+                        }
+                        // Add empty space if odd number of items in last row
+                        if (rowItems.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
+
                 Spacer(Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
                         Text("Cancel", color = colors.primaryText)
                     }
-                    TextButton(onClick = { onConfirm(selectedFrequency) }) {
-                        Text("Save", color = colors.primaryText)
+                    Button(
+                        onClick = { onConfirm(selectedFrequency) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
+                        Text("Save")
                     }
                 }
             }
