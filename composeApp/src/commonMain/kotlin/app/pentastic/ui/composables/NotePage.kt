@@ -268,9 +268,9 @@ fun NotePage(
                                     interactionSource = interactionSource,
                                 ).animateItem(),
                         ) {
-                            Row(Modifier.fillMaxSize()) {
+                            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
                                 Text(
-                                    modifier = Modifier.padding(start = 12.dp, top = 5.dp).defaultMinSize(minWidth = 28.dp),
+                                    modifier = Modifier.padding(start = 12.dp, top = 6.dp).defaultMinSize(minWidth = 28.dp),
                                     fontFamily = FontFamily(Font(Res.font.Merriweather_Regular)),
                                     text = (index + 1).toString() + ".",
                                     // color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
@@ -280,7 +280,7 @@ fun NotePage(
                                     lineHeight = 20.sp
                                 )
                                 Text(
-                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp).weight(1f),
+                                    modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp).weight(1f),
                                     text = styledText.value,
                                     color = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
                                     fontSize = 18.sp,
@@ -289,6 +289,32 @@ fun NotePage(
                                     maxLines = if (showMenu) Int.MAX_VALUE else if (note.done) 1 else 3,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                // Icons for reminder and repeat
+                                val isRepeating = note.repeatFrequency > 0
+                                val hasReminder = note.reminderAt > 0 && note.reminderEnabled == 1
+                                if (isRepeating || hasReminder) {
+                                    Row(
+                                        modifier = Modifier.padding(top = 8.dp, end = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        if (isRepeating) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Repeat,
+                                                contentDescription = "Repeating task",
+                                                modifier = Modifier.size(14.dp),
+                                                tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
+                                            )
+                                        }
+                                        if (hasReminder) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Notifications,
+                                                contentDescription = "Has reminder",
+                                                modifier = Modifier.size(14.dp),
+                                                tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                             val clipboardManager = LocalClipboardManager.current
                             NoteActionsMenu(
