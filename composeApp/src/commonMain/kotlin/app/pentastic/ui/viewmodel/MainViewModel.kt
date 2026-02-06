@@ -144,6 +144,17 @@ class MainViewModel(
         }
     }
 
+    fun moveNoteToPage(note: Note, targetPageId: Long) {
+        viewModelScope.launch {
+            repository.updateNote(
+                note.copy(
+                    pageId = targetPageId,
+                    orderAt = Clock.System.now().toEpochMilliseconds()
+                )
+            )
+        }
+    }
+
     fun toggleNoteDone(note: Note) {
         viewModelScope.launch {
             val now = Clock.System.now().toEpochMilliseconds()

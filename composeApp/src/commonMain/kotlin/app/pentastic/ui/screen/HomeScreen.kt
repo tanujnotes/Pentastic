@@ -232,6 +232,9 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                                 },
                                 onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
                                 onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
+                                allPages = pages,
+                                allSubPagesByParent = subPagesByParent,
+                                onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
                             )
                         }
                     }

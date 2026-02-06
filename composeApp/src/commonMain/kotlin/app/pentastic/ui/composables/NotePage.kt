@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.outlined.ArrowOutward
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.BasicAlertDialog
@@ -122,10 +123,14 @@ fun NotePage(
     onSetRepeatFrequency: (Note, RepeatFrequency, Long, Long?, Boolean) -> Unit,
     onSetReminder: (Note, Long, Boolean) -> Unit,
     onRemoveReminder: (Note) -> Unit,
+    allPages: List<Page> = emptyList(),
+    allSubPagesByParent: Map<Long, List<Page>> = emptyMap(),
+    onMoveNote: (Note, Long) -> Unit = { _, _ -> },
 ) {
     val noteMovedToIndex = remember { mutableStateOf(-1) }
     var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
     var noteForReminderDialog by remember { mutableStateOf<Note?>(null) }
+    var noteForMoveDialog by remember { mutableStateOf<Note?>(null) }
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -344,7 +349,8 @@ fun NotePage(
                                 },
                                 onEdit = { setEditingNote(note) },
                                 onSetRepeat = { noteForRepeatDialog = note },
-                                onSetReminder = { noteForReminderDialog = note }
+                                onSetReminder = { noteForReminderDialog = note },
+                                onMoveTo = { noteForMoveDialog = note }
                             )
                         }
                     }
@@ -462,6 +468,20 @@ fun NotePage(
                     )
                 }
             }
+
+            if (noteForMoveDialog != null) {
+                val note = noteForMoveDialog!!
+                MoveToDialog(
+                    currentPageId = note.pageId,
+                    pages = allPages,
+                    subPagesByParent = allSubPagesByParent,
+                    onDismiss = { noteForMoveDialog = null },
+                    onConfirm = { targetPageId ->
+                        onMoveNote(note, targetPageId)
+                        noteForMoveDialog = null
+                    }
+                )
+            }
         }
     }
 }
@@ -525,6 +545,7 @@ private fun NoteActionsMenu(
     onEdit: () -> Unit,
     onSetRepeat: () -> Unit,
     onSetReminder: () -> Unit,
+    onMoveTo: () -> Unit,
 ) {
     val colors = AppTheme.colors
     val currentFrequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
@@ -616,6 +637,12 @@ private fun NoteActionsMenu(
             icon = Icons.Default.Delete,
             tint = colors.primaryText,
             onClick = { onDelete(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = "Move to",
+            icon = Icons.Outlined.ArrowOutward,
+            tint = colors.primaryText,
+            onClick = { onMoveTo(); onDismissRequest() },
         ),
     )
 
@@ -1444,6 +1471,120 @@ private fun <T> StartDateWheelPicker(
                         fontSize = if (isSelected) 18.sp else 14.sp,
                         fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoveToDialog(
+    currentPageId: Long,
+    pages: List<Page>,
+    subPagesByParent: Map<Long, List<Page>>,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit,
+) {
+    val colors = AppTheme.colors
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Move to",
+                    color = colors.primaryText,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 18.sp
+                )
+                Spacer(Modifier.height(16.dp))
+
+                LazyColumn(
+                    modifier = Modifier.height(300.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    pages.forEach { page ->
+                        val subPages = subPagesByParent[page.id] ?: emptyList()
+                        val isCurrentPage = page.id == currentPageId
+
+                        // Parent page item
+                        item(key = "page_${page.id}") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isCurrentPage) colors.primaryText.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .clickable(enabled = !isCurrentPage) { onConfirm(page.id) }
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = page.name,
+                                    color = if (isCurrentPage) colors.primaryText.copy(alpha = 0.5f)
+                                    else colors.primaryText,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (isCurrentPage) {
+                                    Spacer(Modifier.weight(1f))
+                                    Text(
+                                        text = "Current",
+                                        color = colors.primaryText.copy(alpha = 0.4f),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Sub-pages
+                        items(subPages, key = { "subpage_${it.id}" }) { subPage ->
+                            val isCurrentSubPage = subPage.id == currentPageId
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 24.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isCurrentSubPage) colors.primaryText.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .clickable(enabled = !isCurrentSubPage) { onConfirm(subPage.id) }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = subPage.name,
+                                    color = if (isCurrentSubPage) colors.primaryText.copy(alpha = 0.5f)
+                                    else colors.primaryText,
+                                    fontSize = 14.sp
+                                )
+                                if (isCurrentSubPage) {
+                                    Spacer(Modifier.weight(1f))
+                                    Text(
+                                        text = "Current",
+                                        color = colors.primaryText.copy(alpha = 0.4f),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colors.primaryText)
+                    }
                 }
             }
         }
