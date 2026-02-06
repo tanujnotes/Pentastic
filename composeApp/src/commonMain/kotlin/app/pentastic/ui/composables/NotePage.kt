@@ -33,9 +33,9 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -74,7 +75,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -570,8 +570,14 @@ private fun NoteActionsMenu(
             onClick = { onCopy(); onDismissRequest() }
         ),
         MenuAction(
+            label = reminderLabel,
+            icon = Icons.Outlined.Notifications,
+            tint = colors.primaryText,
+            onClick = { onSetReminder(); onDismissRequest() }
+        ),
+        MenuAction(
             label = "Edit",
-            icon = Icons.Default.Edit,
+            icon = Icons.Outlined.EditNote,
             tint = colors.primaryText,
             onClick = { onEdit(); onDismissRequest() }
         ),
@@ -580,12 +586,6 @@ private fun NoteActionsMenu(
             icon = Icons.Default.Repeat,
             tint = colors.primaryText,
             onClick = { onSetRepeat(); onDismissRequest() }
-        ),
-        MenuAction(
-            label = reminderLabel,
-            icon = Icons.Default.Notifications,
-            tint = colors.primaryText,
-            onClick = { onSetReminder(); onDismissRequest() }
         ),
         MenuAction(
             label = "Delete",
@@ -859,42 +859,47 @@ private fun RepeatFrequencyDialog(
                                 val startDateMillis = LocalDateTime(selectedStartDate, LocalTime(0, 0))
                                     .toInstant(timeZone).toEpochMilliseconds()
                                 val reminderTimeMillis = if (reminderEnabled && selectedFrequency != RepeatFrequency.NONE) {
-                                // Calculate the actual future reminder timestamp
-                                // Use start date with the selected reminder time
-                                val reminderDateTime = LocalDateTime(
-                                    selectedStartDate,
-                                    LocalTime(selectedReminderHour, selectedReminderMinute)
-                                )
-                                var reminderTimestamp = reminderDateTime.toInstant(timeZone).toEpochMilliseconds()
-
-                                // If the reminder time is in the past, schedule for the next occurrence
-                                val nowMillis = now.toEpochMilliseconds()
-                                if (reminderTimestamp <= nowMillis) {
-                                    // Add the frequency interval to get the next future occurrence
-                                    val nextDate = when (selectedFrequency) {
-                                        RepeatFrequency.DAILY -> selectedStartDate.plus(1, DateTimeUnit.DAY)
-                                        RepeatFrequency.WEEKLY -> selectedStartDate.plus(7, DateTimeUnit.DAY)
-                                        RepeatFrequency.MONTHLY -> selectedStartDate.plus(1, DateTimeUnit.MONTH)
-                                        RepeatFrequency.QUARTERLY -> selectedStartDate.plus(3, DateTimeUnit.MONTH)
-                                        RepeatFrequency.YEARLY -> selectedStartDate.plus(1, DateTimeUnit.YEAR)
-                                        RepeatFrequency.NONE -> selectedStartDate
-                                    }
-                                    reminderTimestamp = LocalDateTime(
-                                        nextDate,
+                                    // Calculate the actual future reminder timestamp
+                                    // Use start date with the selected reminder time
+                                    val reminderDateTime = LocalDateTime(
+                                        selectedStartDate,
                                         LocalTime(selectedReminderHour, selectedReminderMinute)
-                                    ).toInstant(timeZone).toEpochMilliseconds()
-                                }
-                                reminderTimestamp
-                            } else null
-                            onConfirm(selectedFrequency, startDateMillis, reminderTimeMillis, reminderEnabled && selectedFrequency != RepeatFrequency.NONE)
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.primaryText,
-                            contentColor = colors.menuBackground
-                        )
-                    ) {
-                        Text("Save")
-                    }
+                                    )
+                                    var reminderTimestamp = reminderDateTime.toInstant(timeZone).toEpochMilliseconds()
+
+                                    // If the reminder time is in the past, schedule for the next occurrence
+                                    val nowMillis = now.toEpochMilliseconds()
+                                    if (reminderTimestamp <= nowMillis) {
+                                        // Add the frequency interval to get the next future occurrence
+                                        val nextDate = when (selectedFrequency) {
+                                            RepeatFrequency.DAILY -> selectedStartDate.plus(1, DateTimeUnit.DAY)
+                                            RepeatFrequency.WEEKLY -> selectedStartDate.plus(7, DateTimeUnit.DAY)
+                                            RepeatFrequency.MONTHLY -> selectedStartDate.plus(1, DateTimeUnit.MONTH)
+                                            RepeatFrequency.QUARTERLY -> selectedStartDate.plus(3, DateTimeUnit.MONTH)
+                                            RepeatFrequency.YEARLY -> selectedStartDate.plus(1, DateTimeUnit.YEAR)
+                                            RepeatFrequency.NONE -> selectedStartDate
+                                        }
+                                        reminderTimestamp = LocalDateTime(
+                                            nextDate,
+                                            LocalTime(selectedReminderHour, selectedReminderMinute)
+                                        ).toInstant(timeZone).toEpochMilliseconds()
+                                    }
+                                    reminderTimestamp
+                                } else null
+                                onConfirm(
+                                    selectedFrequency,
+                                    startDateMillis,
+                                    reminderTimeMillis,
+                                    reminderEnabled && selectedFrequency != RepeatFrequency.NONE
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.primaryText,
+                                contentColor = colors.menuBackground
+                            )
+                        ) {
+                            Text("Save")
+                        }
                     }
                 }
             }
@@ -1212,9 +1217,13 @@ private fun StartDatePickerDialog(
         when (selectedMonth) {
             kotlinx.datetime.Month.JANUARY, kotlinx.datetime.Month.MARCH, kotlinx.datetime.Month.MAY,
             kotlinx.datetime.Month.JULY, kotlinx.datetime.Month.AUGUST, kotlinx.datetime.Month.OCTOBER,
-            kotlinx.datetime.Month.DECEMBER -> 31
+            kotlinx.datetime.Month.DECEMBER,
+                -> 31
+
             kotlinx.datetime.Month.APRIL, kotlinx.datetime.Month.JUNE, kotlinx.datetime.Month.SEPTEMBER,
-            kotlinx.datetime.Month.NOVEMBER -> 30
+            kotlinx.datetime.Month.NOVEMBER,
+                -> 30
+
             kotlinx.datetime.Month.FEBRUARY -> if ((selectedYear % 4 == 0 && selectedYear % 100 != 0) || (selectedYear % 400 == 0)) 29 else 28
         }
     }

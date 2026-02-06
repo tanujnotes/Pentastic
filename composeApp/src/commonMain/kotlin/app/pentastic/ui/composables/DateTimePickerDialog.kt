@@ -41,9 +41,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pentastic.data.RepeatFrequency
 import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.launch
-import app.pentastic.data.RepeatFrequency
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -90,10 +90,10 @@ fun DateTimePickerDialog(
             Column(modifier = Modifier.padding(24.dp)) {
                 // Title
                 Text(
-                    text = "Set Reminder",
+                    text = "Set reminder",
                     color = colors.primaryText,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 20.sp
+                    fontSize = 18.sp
                 )
 
                 Spacer(Modifier.height(20.dp))
