@@ -34,9 +34,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -56,7 +54,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -64,9 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +76,6 @@ import app.pentastic.data.ThemeMode
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.theme.AppTheme.colors
 import app.pentastic.ui.viewmodel.MainViewModel
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -104,7 +98,7 @@ fun IndexPage(
     onPageOrderChange: (List<Page>) -> Unit,
     onPageDelete: (Page) -> Unit,
     onAddSubPage: (Long, String) -> Unit,
-    onNavigateToTrash: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
 ) {
     val viewModel = koinViewModel<MainViewModel>()
 
@@ -120,10 +114,6 @@ fun IndexPage(
     var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
     val uriHandler = LocalUriHandler.current
     var showTopMenu by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
-
-    val clipboardManager = LocalClipboardManager.current
-    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(pages) {
         localPages = pages.filter { it.id != 0L }
@@ -168,15 +158,6 @@ fun IndexPage(
                 )
             } else {
                 Row {
-                    if (showRateButton)
-                        Text(
-                            text = "Rate",
-                            style = TextStyle(fontWeight = FontWeight.Medium),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp).clickable(onClick = {
-                                viewModel.onRateClicked()
-                                uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
-                            })
-                        )
                     Box {
                         IconButton(onClick = { showTopMenu = true }) {
                             Icon(
@@ -191,69 +172,24 @@ fun IndexPage(
                             modifier = Modifier.background(color = colors.menuBackground),
                             offset = DpOffset(x = (-16).dp, y = (-4).dp),
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("Rate", color = colors.primaryText) },
-                                onClick = {
-                                    showTopMenu = false
-                                    viewModel.onRateClicked()
-                                    uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Star,
-                                        tint = colors.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Share", color = colors.primaryText) },
-                                onClick = {
-                                    showTopMenu = false
-                                    coroutineScope.launch {
-                                        clipboardManager.setText(AnnotatedString("Minimal Todo Lists - Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                            if (showRateButton) {
+                                DropdownMenuItem(
+                                    text = { Text("Rate", color = colors.primaryText) },
+                                    onClick = {
+                                        showTopMenu = false
+                                        viewModel.onRateClicked()
+                                        uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            tint = colors.icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                        )
                                     }
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Share,
-                                        tint = colors.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Follow", color = colors.primaryText) },
-                                onClick = {
-                                    showTopMenu = false
-                                    uriHandler.openUri("https://x.com/tanujnotes")
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.PersonAdd,
-                                        tint = colors.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Theme", color = colors.primaryText) },
-                                onClick = {
-                                    showTopMenu = false
-                                    showThemeDialog = true
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Palette,
-                                        tint = colors.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
-                                    )
-                                }
-                            )
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Reorder", color = colors.primaryText) },
                                 onClick = {
@@ -270,14 +206,14 @@ fun IndexPage(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Trash", color = colors.primaryText) },
+                                text = { Text("Settings", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
-                                    onNavigateToTrash()
+                                    onNavigateToSettings()
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.Default.Delete,
+                                        Icons.Default.Settings,
                                         tint = colors.icon,
                                         contentDescription = null,
                                         modifier = Modifier.padding(end = 4.dp).size(20.dp)
@@ -485,17 +421,6 @@ fun IndexPage(
                     onConfirm = {
                         onPageDelete(pageToDelete!!)
                         showDeleteDialog = false
-                    }
-                )
-            }
-
-            if (showThemeDialog) {
-                ThemeSelectionDialog(
-                    currentTheme = viewModel.themeMode.value,
-                    onDismiss = { showThemeDialog = false },
-                    onConfirm = { selectedTheme ->
-                        viewModel.setThemeMode(selectedTheme)
-                        showThemeDialog = false
                     }
                 )
             }
@@ -889,7 +814,7 @@ fun IndexPagePreview() {
             onPageOrderChange = {},
             onPageDelete = {},
             onAddSubPage = { _, _ -> },
-            onNavigateToTrash = {},
+            onNavigateToSettings = {},
         )
     }
 }
