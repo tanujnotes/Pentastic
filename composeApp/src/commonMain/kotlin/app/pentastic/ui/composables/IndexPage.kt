@@ -104,6 +104,7 @@ fun IndexPage(
     onPageOrderChange: (List<Page>) -> Unit,
     onPageDelete: (Page) -> Unit,
     onAddSubPage: (Long, String) -> Unit,
+    onNavigateToTrash: () -> Unit = {},
 ) {
     val viewModel = koinViewModel<MainViewModel>()
 
@@ -262,6 +263,21 @@ fun IndexPage(
                                 leadingIcon = {
                                     Icon(
                                         Icons.AutoMirrored.Filled.Sort,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Trash", color = colors.primaryText) },
+                                onClick = {
+                                    showTopMenu = false
+                                    onNavigateToTrash()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
                                         tint = colors.icon,
                                         contentDescription = null,
                                         modifier = Modifier.padding(end = 4.dp).size(20.dp)
@@ -691,9 +707,9 @@ fun DeletePageConfirmationDialog(
             shadowElevation = 8.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Delete page", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Text("Move to trash", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(16.dp))
-                Text("Are you sure you want to delete page '${page.name}' and all its notes?", color = colors.primaryText)
+                Text("Move page '${page.name}' and all its notes to trash?", color = colors.primaryText)
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
@@ -706,7 +722,7 @@ fun DeletePageConfirmationDialog(
                             contentColor = colors.menuBackground
                         )
                     ) {
-                        Text("Delete")
+                        Text("Move to trash")
                     }
                 }
             }
@@ -873,6 +889,7 @@ fun IndexPagePreview() {
             onPageOrderChange = {},
             onPageDelete = {},
             onAddSubPage = { _, _ -> },
+            onNavigateToTrash = {},
         )
     }
 }

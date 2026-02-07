@@ -42,7 +42,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.ExperimentalTime
 
 @Composable
-fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
+fun HomeScreen(onNavigateToTrash: () -> Unit = {}, prefs: DataStore<Preferences> = koinInject()) {
     val viewModel = koinViewModel<MainViewModel>()
 
     val pages by viewModel.pages.collectAsState()
@@ -191,7 +191,8 @@ fun HomeScreen(prefs: DataStore<Preferences> = koinInject()) {
                                 viewModel.updatePageOrder(updatedPages)
                             },
                             onPageDelete = { page -> viewModel.deletePage(page) },
-                            onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) }
+                            onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
+                            onNavigateToTrash = onNavigateToTrash,
                         )
                     else {
                         val currentPage = pages.getOrNull(pageIndex - 1)

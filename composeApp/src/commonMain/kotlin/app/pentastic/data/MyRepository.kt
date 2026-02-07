@@ -74,4 +74,37 @@ class MyRepository(
     suspend fun deletePage(id: Long) {
         pageDao.deletePage(id)
     }
+
+    // Trash operations
+
+    suspend fun softDeleteNote(id: Long, deletedAt: Long) {
+        noteDao.softDeleteNote(id, deletedAt)
+    }
+
+    suspend fun softDeletePage(id: Long, deletedAt: Long) {
+        pageDao.softDeleteSubPages(id, deletedAt)
+        pageDao.softDeletePage(id, deletedAt)
+    }
+
+    suspend fun restoreNote(id: Long) {
+        noteDao.restoreNote(id)
+    }
+
+    suspend fun restorePage(id: Long) {
+        pageDao.restorePage(id)
+        pageDao.restoreSubPages(id)
+    }
+
+    fun getTrashedPages(): Flow<List<Page>> {
+        return pageDao.getTrashedPages()
+    }
+
+    fun getTrashedNotes(): Flow<List<Note>> {
+        return noteDao.getTrashedNotes()
+    }
+
+    suspend fun emptyTrash() {
+        noteDao.permanentlyDeleteAllTrashedNotes()
+        pageDao.permanentlyDeleteAllTrashedPages()
+    }
 }

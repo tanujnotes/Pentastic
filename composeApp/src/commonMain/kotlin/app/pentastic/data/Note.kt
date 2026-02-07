@@ -47,4 +47,7 @@ data class Note(
 
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val updatedAt: Long = Clock.System.now().toEpochMilliseconds(),
+
+    @ColumnInfo(defaultValue = "0")
+    val deletedAt: Long = 0,
 )

@@ -49,6 +49,18 @@ class MainViewModel(
     private val _subPagesByParent = MutableStateFlow<Map<Long, List<Page>>>(emptyMap())
     val subPagesByParent: StateFlow<Map<Long, List<Page>>> = _subPagesByParent.asStateFlow()
 
+    val trashedPages: StateFlow<List<Page>> = repository.getTrashedPages().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val trashedNotes: StateFlow<List<Note>> = repository.getTrashedNotes().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     val pages: StateFlow<List<Page>> = repository.getRootPages().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -105,7 +117,21 @@ class MainViewModel(
 
     fun deletePage(page: Page) {
         viewModelScope.launch {
-            repository.deletePage(page.id)
+            val now = Clock.System.now().toEpochMilliseconds()
+            // Cancel reminders for notes in this page
+            val notes = repository.getAllNotesByPage(page.id).first()
+            notes.filter { it.reminderEnabled == 1 }.forEach { note ->
+                reminderScheduler.cancelReminder(note.id, note.uuid)
+            }
+            // Cancel reminders for notes in sub-pages
+            val subPages = repository.getSubPages(page.id).first()
+            for (subPage in subPages) {
+                val subNotes = repository.getAllNotesByPage(subPage.id).first()
+                subNotes.filter { it.reminderEnabled == 1 }.forEach { note ->
+                    reminderScheduler.cancelReminder(note.id, note.uuid)
+                }
+            }
+            repository.softDeletePage(page.id, now)
         }
     }
 
@@ -230,7 +256,8 @@ class MainViewModel(
             if (note.reminderEnabled == 1) {
                 reminderScheduler.cancelReminder(note.id, note.uuid)
             }
-            repository.deleteNote(note.id)
+            val now = Clock.System.now().toEpochMilliseconds()
+            repository.softDeleteNote(note.id, now)
         }
     }
 
@@ -262,6 +289,42 @@ class MainViewModel(
             )
             repository.updateNote(updatedNote)
             reminderScheduler.cancelReminder(note.id, note.uuid)
+        }
+    }
+
+    // Trash operations
+
+    fun restorePage(page: Page) {
+        viewModelScope.launch {
+            repository.restorePage(page.id)
+            reminderScheduler.rescheduleAllReminders()
+        }
+    }
+
+    fun restoreNote(note: Note) {
+        viewModelScope.launch {
+            repository.restoreNote(note.id)
+            if (note.reminderEnabled == 1 && note.reminderAt > Clock.System.now().toEpochMilliseconds()) {
+                reminderScheduler.scheduleReminder(note)
+            }
+        }
+    }
+
+    fun permanentlyDeletePage(page: Page) {
+        viewModelScope.launch {
+            repository.deletePage(page.id)
+        }
+    }
+
+    fun permanentlyDeleteNote(note: Note) {
+        viewModelScope.launch {
+            repository.deleteNote(note.id)
+        }
+    }
+
+    fun emptyTrash() {
+        viewModelScope.launch {
+            repository.emptyTrash()
         }
     }
 
