@@ -309,7 +309,7 @@ class MainViewModel(
                 dataStoreRepository.firstLaunchDone()
 
                 val page1 = repository.insertPage(Page(name = "Today"))
-                val page2 = repository.insertPage(Page(name = "Later"))
+                val page2 = repository.insertPage(Page(name = "Reminders"))
                 repository.insertPage(Page(name = "Page 3"))
                 repository.insertPage(Page(name = "Page 4"))
                 repository.insertPage(Page(name = "Page 5"))
@@ -329,7 +329,7 @@ class MainViewModel(
                 repository.insertNote(
                     Note(
                         pageId = page2,
-                        text = "Tip: You can long press the page names on the index page to rename them.",
+                        text = "You can set reminders to your one-off or repeating tasks. Tap on the task to open the menu. ",
                     )
                 )
                 repository.insertNote(
