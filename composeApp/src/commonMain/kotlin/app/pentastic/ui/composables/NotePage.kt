@@ -300,14 +300,14 @@ fun NotePage(
                                 val hasUpcomingReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
                                 if (isRepeating || hasUpcomingReminder) {
                                     Row(
-                                        modifier = Modifier.padding(top = 8.dp, end = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        modifier = Modifier.padding(top = 7.dp, end = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
                                         if (isRepeating) {
                                             Icon(
                                                 imageVector = Icons.Filled.Repeat,
                                                 contentDescription = "Repeating task",
-                                                modifier = Modifier.size(14.dp),
+                                                modifier = Modifier.size(16.dp),
                                                 tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
                                             )
                                         }
@@ -315,7 +315,7 @@ fun NotePage(
                                             Icon(
                                                 imageVector = Icons.Outlined.Notifications,
                                                 contentDescription = "Upcoming reminder",
-                                                modifier = Modifier.size(14.dp),
+                                                modifier = Modifier.size(16.dp),
                                                 tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
                                             )
                                         }
