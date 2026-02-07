@@ -38,16 +38,24 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
 
         val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-        // Reset the task (mark as not done) and schedule next reminder for repeating tasks
+        // Reset the task (mark as not done), determine notification title, and schedule next reminder
         CoroutineScope(Dispatchers.IO).launch {
+            var notificationBody = "To-do reminder"
+
             val note = database.noteDao.getNoteByUuid(noteUuid)
             if (note != null) {
                 val now = Clock.System.now().toEpochMilliseconds()
                 val isRepeatingTask = note.repeatFrequency > 0
+                val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+
+                notificationBody = (if (isRepeatingTask)
+                    "${frequency.label} reminder"
+                else
+                    "To-do reminder")
 
                 // Calculate next reminder time for repeating tasks
                 val nextReminderAt = if (isRepeatingTask && note.reminderEnabled == 1) {
-                    calculateNextReminderTime(note.reminderAt, RepeatFrequency.fromOrdinal(note.repeatFrequency))
+                    calculateNextReminderTime(note.reminderAt, frequency)
                 } else {
                     note.reminderAt
                 }
@@ -65,52 +73,49 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                     reminderScheduler.scheduleReminder(updatedNote)
                 }
             }
-        }
 
-        // Create intent to open the app at the specific page
-        val openAppIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("navigate_to_page_id", notePageId)
-            putExtra("note_uuid", noteUuid)
-        }
+            // Build and show notification after DB lookup
+            val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("navigate_to_page_id", notePageId)
+                putExtra("note_uuid", noteUuid)
+            }
 
-        val contentPendingIntent = PendingIntent.getActivity(
-            context,
-            noteUuid.hashCode(),
-            openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Create intent for "Mark as done" action
-        val markDoneIntent = Intent(context, MarkDoneReceiver::class.java).apply {
-            action = "app.pentastic.ACTION_MARK_DONE"
-            putExtra("note_uuid", noteUuid)
-        }
-
-        val markDonePendingIntent = PendingIntent.getBroadcast(
-            context,
-            noteUuid.hashCode() + 1, // Different request code to avoid conflict
-            markDoneIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_pentastic_small)
-            .setContentTitle(noteText)
-            .setContentText("Task reminder")
-//            .setContentText(noteText.take(100))
-//            .setStyle(NotificationCompat.BigTextStyle().bigText(noteText))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(contentPendingIntent)
-            .addAction(
-                0, // No icon for action button (text only)
-                "Mark as done",
-                markDonePendingIntent
+            val contentPendingIntent = PendingIntent.getActivity(
+                context,
+                noteUuid.hashCode(),
+                openAppIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            .build()
 
-        notificationManager.notify(noteUuid.hashCode(), notification)
+            val markDoneIntent = Intent(context, MarkDoneReceiver::class.java).apply {
+                action = "app.pentastic.ACTION_MARK_DONE"
+                putExtra("note_uuid", noteUuid)
+            }
+
+            val markDonePendingIntent = PendingIntent.getBroadcast(
+                context,
+                noteUuid.hashCode() + 1,
+                markDoneIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_pentastic_small)
+                .setContentTitle(noteText)
+                .setContentText(notificationBody)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(contentPendingIntent)
+                .addAction(
+                    0,
+                    "Mark as done",
+                    markDonePendingIntent
+                )
+                .build()
+
+            notificationManager.notify(noteUuid.hashCode(), notification)
+        }
     }
 
     private fun calculateNextReminderTime(currentReminderAt: Long, frequency: RepeatFrequency): Long {
