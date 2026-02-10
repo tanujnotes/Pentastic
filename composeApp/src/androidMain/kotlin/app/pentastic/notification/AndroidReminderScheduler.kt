@@ -61,7 +61,7 @@ class AndroidReminderScheduler(
         }
     }
 
-    override suspend fun cancelReminder(noteId: Long, noteUuid: String) {
+    override suspend fun cancelReminder(noteUuid: String) {
         val intent = Intent(context, ReminderBroadcastReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
             context,

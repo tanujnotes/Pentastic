@@ -12,7 +12,7 @@ class DesktopReminderScheduler : ReminderScheduler {
         // No-op: Desktop doesn't support reminders
     }
 
-    override suspend fun cancelReminder(noteId: Long, noteUuid: String) {
+    override suspend fun cancelReminder(noteUuid: String) {
         // No-op: Desktop doesn't support reminders
     }
 

@@ -121,14 +121,14 @@ class MainViewModel(
             // Cancel reminders for notes in this page
             val notes = repository.getAllNotesByPage(page.id).first()
             notes.filter { it.reminderEnabled == 1 }.forEach { note ->
-                reminderScheduler.cancelReminder(note.id, note.uuid)
+                reminderScheduler.cancelReminder(note.uuid)
             }
             // Cancel reminders for notes in sub-pages
             val subPages = repository.getSubPages(page.id).first()
             for (subPage in subPages) {
                 val subNotes = repository.getAllNotesByPage(subPage.id).first()
                 subNotes.filter { it.reminderEnabled == 1 }.forEach { note ->
-                    reminderScheduler.cancelReminder(note.id, note.uuid)
+                    reminderScheduler.cancelReminder(note.uuid)
                 }
             }
             repository.softDeletePage(page.id, now)
@@ -189,7 +189,7 @@ class MainViewModel(
 
             // Cancel reminder when marking as done (except for repeating tasks)
             if (newDoneState && note.reminderEnabled == 1 && !isRepeatingTask) {
-                reminderScheduler.cancelReminder(note.id, note.uuid)
+                reminderScheduler.cancelReminder(note.uuid)
             }
 
             repository.updateNote(
@@ -226,7 +226,7 @@ class MainViewModel(
             if (reminderEnabled && frequency != RepeatFrequency.NONE && reminderTime != null && reminderTime > 0) {
                 reminderScheduler.scheduleReminder(updatedNote)
             } else if (!reminderEnabled || frequency == RepeatFrequency.NONE) {
-                reminderScheduler.cancelReminder(note.id, note.uuid)
+                reminderScheduler.cancelReminder(note.uuid)
             }
         }
     }
@@ -254,7 +254,7 @@ class MainViewModel(
     fun deleteNote(note: Note) {
         viewModelScope.launch {
             if (note.reminderEnabled == 1) {
-                reminderScheduler.cancelReminder(note.id, note.uuid)
+                reminderScheduler.cancelReminder(note.uuid)
             }
             val now = Clock.System.now().toEpochMilliseconds()
             repository.softDeleteNote(note.id, now)
@@ -274,7 +274,7 @@ class MainViewModel(
             if (enabled && reminderAt > now) {
                 reminderScheduler.scheduleReminder(updatedNote)
             } else {
-                reminderScheduler.cancelReminder(note.id, note.uuid)
+                reminderScheduler.cancelReminder(note.uuid)
             }
         }
     }
@@ -288,7 +288,7 @@ class MainViewModel(
                 updatedAt = now
             )
             repository.updateNote(updatedNote)
-            reminderScheduler.cancelReminder(note.id, note.uuid)
+            reminderScheduler.cancelReminder(note.uuid)
         }
     }
 
@@ -312,18 +312,37 @@ class MainViewModel(
 
     fun permanentlyDeletePage(page: Page) {
         viewModelScope.launch {
+            val notes = repository.getAllNotesByPage(page.id).first()
+            notes.filter { it.reminderEnabled == 1 }.forEach { note ->
+                reminderScheduler.cancelReminder(note.uuid)
+            }
+            val subPages = repository.getSubPages(page.id).first()
+            for (subPage in subPages) {
+                val subNotes = repository.getAllNotesByPage(subPage.id).first()
+                subNotes.filter { it.reminderEnabled == 1 }.forEach { note ->
+                    reminderScheduler.cancelReminder(note.uuid)
+                }
+            }
             repository.deletePage(page.id)
         }
     }
 
     fun permanentlyDeleteNote(note: Note) {
         viewModelScope.launch {
+            if (note.reminderEnabled == 1) {
+                reminderScheduler.cancelReminder(note.uuid)
+            }
             repository.deleteNote(note.id)
         }
     }
 
     fun emptyTrash() {
         viewModelScope.launch {
+            // Cancel reminders for all trashed notes
+            val trashedNotes = repository.getTrashedNotes().first()
+            trashedNotes.filter { it.reminderEnabled == 1 }.forEach { note ->
+                reminderScheduler.cancelReminder(note.uuid)
+            }
             repository.emptyTrash()
         }
     }

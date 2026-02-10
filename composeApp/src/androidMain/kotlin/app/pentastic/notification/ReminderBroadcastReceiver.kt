@@ -43,35 +43,39 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
             var notificationBody = "To-do reminder"
 
             val note = database.noteDao.getNoteByUuid(noteUuid)
-            if (note != null) {
-                val now = Clock.System.now().toEpochMilliseconds()
-                val isRepeatingTask = note.repeatFrequency > 0
-                val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+            if (note == null || note.deletedAt > 0) {
+                // Cancel the stale alarm for deleted/trashed notes
+                reminderScheduler.cancelReminder(noteUuid)
+                return@launch
+            }
 
-                notificationBody = (if (isRepeatingTask)
-                    "${frequency.label} reminder"
-                else
-                    "To-do reminder")
+            val now = Clock.System.now().toEpochMilliseconds()
+            val isRepeatingTask = note.repeatFrequency > 0
+            val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
 
-                // Calculate next reminder time for repeating tasks
-                val nextReminderAt = if (isRepeatingTask && note.reminderEnabled == 1) {
-                    calculateNextReminderTime(note.reminderAt, frequency)
-                } else {
-                    note.reminderAt
-                }
+            notificationBody = if (isRepeatingTask)
+                "${frequency.label} reminder"
+            else
+                "To-do reminder"
 
-                val updatedNote = note.copy(
-                    done = false,
-                    orderAt = now,
-                    updatedAt = now,
-                    reminderAt = nextReminderAt
-                )
-                database.noteDao.updateNote(updatedNote)
+            // Calculate next reminder time for repeating tasks
+            val nextReminderAt = if (isRepeatingTask && note.reminderEnabled == 1) {
+                calculateNextReminderTime(note.reminderAt, frequency)
+            } else {
+                note.reminderAt
+            }
 
-                // Schedule the next reminder for repeating tasks
-                if (isRepeatingTask && note.reminderEnabled == 1 && nextReminderAt > now) {
-                    reminderScheduler.scheduleReminder(updatedNote)
-                }
+            val updatedNote = note.copy(
+                done = false,
+                orderAt = now,
+                updatedAt = now,
+                reminderAt = nextReminderAt
+            )
+            database.noteDao.updateNote(updatedNote)
+
+            // Schedule the next reminder for repeating tasks
+            if (isRepeatingTask && note.reminderEnabled == 1 && nextReminderAt > now) {
+                reminderScheduler.scheduleReminder(updatedNote)
             }
 
             // Build and show notification after DB lookup

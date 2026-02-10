@@ -55,7 +55,7 @@ class IOSReminderScheduler(
         }
     }
 
-    override suspend fun cancelReminder(noteId: Long, noteUuid: String) {
+    override suspend fun cancelReminder(noteUuid: String) {
         notificationCenter.removePendingNotificationRequestsWithIdentifiers(listOf(noteUuid))
     }
 

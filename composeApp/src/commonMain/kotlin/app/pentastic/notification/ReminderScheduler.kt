@@ -11,10 +11,9 @@ interface ReminderScheduler {
 
     /**
      * Cancel a scheduled reminder for a note.
-     * @param noteId The ID of the note whose reminder should be cancelled
      * @param noteUuid The UUID of the note (used as unique identifier for the notification)
      */
-    suspend fun cancelReminder(noteId: Long, noteUuid: String)
+    suspend fun cancelReminder(noteUuid: String)
 
     /**
      * Reschedule all active reminders (called on app start/reboot)
