@@ -17,11 +17,13 @@ actual fun SystemBarEffect(isDarkTheme: Boolean) {
     LaunchedEffect(isDarkTheme) {
         activity?.let {
             if (isDarkTheme) {
+                it.window.setBackgroundDrawableResource(android.R.color.black)
                 it.enableEdgeToEdge(
                     statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
                     navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
                 )
             } else {
+                it.window.setBackgroundDrawableResource(android.R.color.white)
                 it.enableEdgeToEdge(
                     statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
                     navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
