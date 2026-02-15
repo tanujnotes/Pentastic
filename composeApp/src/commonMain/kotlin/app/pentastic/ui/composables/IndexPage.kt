@@ -23,18 +23,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -97,8 +102,12 @@ fun IndexPage(
     onPageNameChange: (Page, String) -> Unit,
     onPageOrderChange: (List<Page>) -> Unit,
     onPageDelete: (Page) -> Unit,
+    onPageArchive: (Page) -> Unit,
     onAddSubPage: (Long, String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    archivedPages: List<Page> = emptyList(),
+    onArchivedPageClick: (Page) -> Unit = {},
+    onPageUnarchive: (Page) -> Unit = {},
 ) {
     val viewModel = koinViewModel<MainViewModel>()
 
@@ -110,6 +119,7 @@ fun IndexPage(
     var showAddSubPageDialog by remember { mutableStateOf(false) }
     var parentPageForSubPage: Page? by remember { mutableStateOf(null) }
     var showSubPageLimitDialog by remember { mutableStateOf(false) }
+    var isArchiveExpanded by remember { mutableStateOf(false) }
 
     var localPages by remember { mutableStateOf(pages.filter { it.id != 0L }) }
     val uriHandler = LocalUriHandler.current
@@ -358,20 +368,35 @@ fun IndexPage(
                                         )
                                     }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text("Delete", color = colors.primaryText) },
-                                    onClick = {
-                                        showMenu = false
-                                        pageToDelete = page
-                                        showDeleteDialog = true
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.Delete, tint = colors.icon, contentDescription = null,
-                                            modifier = Modifier.padding(end = 4.dp).size(20.dp)
-                                        )
-                                    }
-                                )
+                                if (localPages.size > 1) {
+                                    DropdownMenuItem(
+                                        text = { Text("Archive", color = colors.primaryText) },
+                                        onClick = {
+                                            showMenu = false
+                                            onPageArchive(page)
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Archive, tint = colors.icon, contentDescription = null,
+                                                modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                            )
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Delete", color = colors.primaryText) },
+                                        onClick = {
+                                            showMenu = false
+                                            pageToDelete = page
+                                            showDeleteDialog = true
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Delete, tint = colors.icon, contentDescription = null,
+                                                modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -397,6 +422,96 @@ fun IndexPage(
                                     showDeleteDialog = true
                                 }
                             )
+                        }
+                    }
+                }
+
+                // Archive section at the bottom
+                if (archivedPages.isNotEmpty() && !isReorderMode) {
+                    item(key = "archive_header") {
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isArchiveExpanded = !isArchiveExpanded }
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (isArchiveExpanded) Icons.Default.KeyboardArrowDown
+                                else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = colors.hint,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Archive (${archivedPages.size})",
+                                fontSize = 16.sp,
+                                color = colors.hint,
+                            )
+                        }
+                    }
+                    if (isArchiveExpanded) {
+                        items(archivedPages, key = { "archived_${it.id}" }) { archivedPage ->
+                            var showArchivedMenu by remember { mutableStateOf(false) }
+                            val interactionSource = remember { MutableInteractionSource() }
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            interactionSource = interactionSource,
+                                            indication = null,
+                                            onClick = { onArchivedPageClick(archivedPage) },
+                                            onLongClick = { showArchivedMenu = true }
+                                        )
+                                        .padding(start = 48.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = archivedPage.name.take(20),
+                                        fontSize = 16.sp,
+                                        maxLines = 1,
+                                        color = colors.hint,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showArchivedMenu,
+                                    onDismissRequest = { showArchivedMenu = false },
+                                    offset = DpOffset(x = 80.dp, y = 0.dp),
+                                    modifier = Modifier.background(color = colors.menuBackground),
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Unarchive", color = colors.primaryText) },
+                                        onClick = {
+                                            showArchivedMenu = false
+                                            onPageUnarchive(archivedPage)
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Unarchive, tint = colors.icon, contentDescription = null,
+                                                modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                            )
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Delete", color = colors.primaryText) },
+                                        onClick = {
+                                            showArchivedMenu = false
+                                            pageToDelete = archivedPage
+                                            showDeleteDialog = true
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Delete, tint = colors.icon, contentDescription = null,
+                                                modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -813,6 +928,7 @@ fun IndexPagePreview() {
             onPageNameChange = { _, _ -> },
             onPageOrderChange = {},
             onPageDelete = {},
+            onPageArchive = {},
             onAddSubPage = { _, _ -> },
             onNavigateToSettings = {},
         )

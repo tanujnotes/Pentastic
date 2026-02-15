@@ -36,4 +36,7 @@ data class Page(
 
     @ColumnInfo(defaultValue = "0")
     val deletedAt: Long = 0,
+
+    @ColumnInfo(defaultValue = "0")
+    val archivedAt: Long = 0,
 )

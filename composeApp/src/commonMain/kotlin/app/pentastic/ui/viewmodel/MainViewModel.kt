@@ -11,6 +11,7 @@ import app.pentastic.data.ThemeMode
 import app.pentastic.notification.ReminderScheduler
 import app.pentastic.utils.hasBeenHours
 import app.pentastic.utils.hasRepeatIntervalPassed
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -61,6 +62,12 @@ class MainViewModel(
         initialValue = emptyList()
     )
 
+    val archivedPages: StateFlow<List<Page>> = repository.getArchivedPages().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     val pages: StateFlow<List<Page>> = repository.getRootPages().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -84,6 +91,14 @@ class MainViewModel(
 
     fun setEditingNote(note: Note?) {
         _editingNote.value = note
+    }
+
+    suspend fun getPageById(id: Long): Page? {
+        return repository.getPageById(id)
+    }
+
+    fun getArchivedSubPages(parentId: Long): Flow<List<Page>> {
+        return repository.getArchivedSubPages(parentId)
     }
 
     fun addPage(pageName: String) {
@@ -132,6 +147,33 @@ class MainViewModel(
                 }
             }
             repository.softDeletePage(page.id, now)
+        }
+    }
+
+    fun archivePage(page: Page) {
+        viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
+            // Cancel reminders for notes in this page
+            val notes = repository.getAllNotesByPage(page.id).first()
+            notes.filter { it.reminderEnabled == 1 }.forEach { note ->
+                reminderScheduler.cancelReminder(note.uuid)
+            }
+            // Cancel reminders for notes in sub-pages
+            val subPages = repository.getSubPages(page.id).first()
+            for (subPage in subPages) {
+                val subNotes = repository.getAllNotesByPage(subPage.id).first()
+                subNotes.filter { it.reminderEnabled == 1 }.forEach { note ->
+                    reminderScheduler.cancelReminder(note.uuid)
+                }
+            }
+            repository.archivePage(page.id, now)
+        }
+    }
+
+    fun unarchivePage(page: Page) {
+        viewModelScope.launch {
+            repository.unarchivePage(page.id)
+            reminderScheduler.rescheduleAllReminders()
         }
     }
 

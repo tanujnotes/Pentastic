@@ -42,10 +42,15 @@ import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.ExperimentalTime
 
 @Composable
-fun HomeScreen(onNavigateToSettings: () -> Unit = {}, prefs: DataStore<Preferences> = koinInject()) {
+fun HomeScreen(
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToArchivedNotes: (Long) -> Unit = {},
+    prefs: DataStore<Preferences> = koinInject(),
+) {
     val viewModel = koinViewModel<MainViewModel>()
 
     val pages by viewModel.pages.collectAsState()
+    val archivedPages by viewModel.archivedPages.collectAsState()
     val subPagesByParent by viewModel.subPagesByParent.collectAsState()
     val notesByPage by viewModel.notesByPage.collectAsState()
     val notesCountByPage by viewModel.notesCountByPage.collectAsState()
@@ -190,8 +195,12 @@ fun HomeScreen(onNavigateToSettings: () -> Unit = {}, prefs: DataStore<Preferenc
                                 viewModel.updatePageOrder(updatedPages)
                             },
                             onPageDelete = { page -> viewModel.deletePage(page) },
+                            onPageArchive = { page -> viewModel.archivePage(page) },
                             onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
                             onNavigateToSettings = onNavigateToSettings,
+                            archivedPages = archivedPages,
+                            onArchivedPageClick = { page -> onNavigateToArchivedNotes(page.id) },
+                            onPageUnarchive = { page -> viewModel.unarchivePage(page) },
                         )
                     else {
                         val currentPage = pages.getOrNull(pageIndex - 1)

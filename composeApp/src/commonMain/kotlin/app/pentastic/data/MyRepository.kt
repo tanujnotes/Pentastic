@@ -107,4 +107,24 @@ class MyRepository(
         noteDao.permanentlyDeleteAllTrashedNotes()
         pageDao.permanentlyDeleteAllTrashedPages()
     }
+
+    // Archive operations
+
+    suspend fun archivePage(id: Long, archivedAt: Long) {
+        pageDao.archiveSubPages(id, archivedAt)
+        pageDao.archivePage(id, archivedAt)
+    }
+
+    suspend fun unarchivePage(id: Long) {
+        pageDao.unarchivePage(id)
+        pageDao.unarchiveSubPages(id)
+    }
+
+    fun getArchivedPages(): Flow<List<Page>> {
+        return pageDao.getArchivedPages()
+    }
+
+    fun getArchivedSubPages(parentId: Long): Flow<List<Page>> {
+        return pageDao.getArchivedSubPages(parentId)
+    }
 }
