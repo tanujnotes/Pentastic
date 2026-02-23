@@ -311,7 +311,7 @@ fun NotePage(
                                     maxLines = if (showMenu) Int.MAX_VALUE else 10,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 18.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                                        .padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
                                 )
                                 val clipboardManager = LocalClipboardManager.current
                                 NoteActionsMenu(
@@ -430,7 +430,7 @@ fun NotePage(
                                         lineHeight = 20.sp
                                     )
                                     Text(
-                                        modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp).weight(1f),
+                                        modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 5.dp, bottom = 5.dp).weight(1f),
                                         text = styledText.value,
                                         color = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
                                         fontSize = 18.sp,

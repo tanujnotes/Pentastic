@@ -2,7 +2,6 @@ package app.pentastic.ui.composables
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -41,7 +41,7 @@ fun CommonInput(
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
     isEditing: Boolean = false,
-//    actionIcon: ImageVector = Icons.Default.Add,
+    placeholder: String = "",
     actionIconContentDescription: String = "Add",
 ) {
     var isInputFocused by remember { mutableStateOf(false) }
@@ -62,6 +62,9 @@ fun CommonInput(
                 .onFocusChanged { isInputFocused = it.isFocused },
             value = text,
             onValueChange = { if (it.length <= 300) onTextChange(it) },
+            placeholder = if (placeholder.isNotEmpty()) {
+                { Text(placeholder, color = AppTheme.colors.hint, fontSize = 16.sp) }
+            } else null,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,

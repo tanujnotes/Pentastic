@@ -136,7 +136,18 @@ fun HomeScreen(
                     }
                     text = ""
                 },
-                isEditing = editingNote != null
+                isEditing = editingNote != null,
+                placeholder = when {
+                    editingNote != null -> ""
+                    pagerState.currentPage == 0 -> "Add a new page..."
+                    else -> {
+                        val currentPage = pages.getOrNull(pagerState.currentPage - 1)
+                        if (currentPage != null && PageType.fromOrdinal(currentPage.pageType) == PageType.NOTES)
+                            "Add a note..."
+                        else
+                            "Add a task..."
+                    }
+                }
             )
         }
     ) { paddingValues ->
