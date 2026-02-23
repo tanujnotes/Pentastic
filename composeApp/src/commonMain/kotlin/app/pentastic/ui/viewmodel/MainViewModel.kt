@@ -441,7 +441,7 @@ class MainViewModel(
 
                 val page1 = repository.insertPage(Page(name = "Today"))
                 val page2 = repository.insertPage(Page(name = "Reminders"))
-                repository.insertPage(Page(name = "Page 3"))
+                val page3 = repository.insertPage(Page(name = "Notes", pageType = PageType.NOTES.ordinal))
                 repository.insertPage(Page(name = "Page 4"))
                 repository.insertPage(Page(name = "Page 5"))
                 val page6 = repository.insertPage(Page(name = "2026"))
@@ -452,15 +452,34 @@ class MainViewModel(
                 repository.insertPage(Page(name = "Books & Movies"))
                 val page10 = repository.insertPage(Page(name = "Long press to rename"))
 
-                repository.insertNote(Note(pageId = page1, text = "Install Pentastic!️", done = true, orderAt = 3L))
-                repository.insertNote(Note(pageId = page1, text = "Double tap to mark a task as done. ✔", orderAt = 2L))
-                repository.insertNote(Note(pageId = page1, text = "Single tap for menu; long press to reorder.", orderAt = 1L))
-                repository.insertNote(Note(pageId = page1, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L))
-
+                repository.insertNote(
+                    Note(pageId = page1, text = "Install Pentastic!️", done = true, orderAt = 3L)
+                )
+                repository.insertNote(
+                    Note(pageId = page1, text = "Double tap to mark a task as done. ✔", orderAt = 2L)
+                )
+                repository.insertNote(
+                    Note(pageId = page1, text = "Single tap for menu; long press to reorder.", orderAt = 1L)
+                )
+                repository.insertNote(
+                    Note(pageId = page1, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L)
+                )
                 repository.insertNote(
                     Note(
                         pageId = page2,
                         text = "You can set reminders to your one-off or repeating tasks. Tap on the task to open the menu. ",
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page3,
+                        text = "This page is for notes. You can add notes here. 📝",
+                    )
+                )
+                repository.insertNote(
+                    Note(
+                        pageId = page3,
+                        text = "You can change the type of a page from the Index page.",
                     )
                 )
                 repository.insertNote(
