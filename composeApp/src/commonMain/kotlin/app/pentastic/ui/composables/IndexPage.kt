@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -50,7 +51,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,8 +65,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -545,7 +548,6 @@ fun IndexPage(
             if (showRenameDialog && pageToRename != null) {
                 EditPageNameDialog(
                     page = pageToRename!!,
-                    indexLabel = pageToRenameIndexLabel,
                     onDismiss = { showRenameDialog = false },
                     onConfirm = { newName ->
                         onPageNameChange(pageToRename!!, newName.ifBlank { "Page" })
@@ -734,7 +736,6 @@ private fun SubPageItem(
 @Composable
 fun EditPageNameDialog(
     page: Page,
-    indexLabel: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
@@ -749,14 +750,37 @@ fun EditPageNameDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text("Edit page name", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
+                Spacer(Modifier.height(20.dp))
+                BasicTextField(
                     value = text.take(20),
                     onValueChange = { if (it.length <= 20) text = it },
-                    label = { Text("Page $indexLabel") },
+                    singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences
-                    )
+                    ),
+                    textStyle = TextStyle(color = colors.primaryText, fontSize = 16.sp),
+                    cursorBrush = SolidColor(colors.cursor),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp)
+                                .drawBehind {
+                                    drawLine(
+                                        color = colors.primaryText.copy(alpha = 0.5f),
+                                        start = Offset(0f, size.height),
+                                        end = Offset(size.width, size.height),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                },
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (text.isEmpty()) {
+                                Text(page.name, color = colors.hint, fontSize = 16.sp)
+                            }
+                            innerTextField()
+                        }
+                    }
                 )
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -764,7 +788,7 @@ fun EditPageNameDialog(
                         Text("Cancel", color = colors.primaryText)
                     }
                     Button(
-                        onClick = { onConfirm(text) },
+                        onClick = { onConfirm(text.ifBlank { page.name }) },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.primaryText,
                             contentColor = colors.menuBackground
@@ -835,16 +859,38 @@ fun AddSubPageDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text("Add sub-page", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
-                Spacer(Modifier.height(8.dp))
                 Text("to ${parentPage.name}", color = colors.primaryText.copy(alpha = 0.5f), fontSize = 14.sp)
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
+                Spacer(Modifier.height(20.dp))
+                BasicTextField(
                     value = text.take(20),
                     onValueChange = { if (it.length <= 20) text = it },
-                    label = { Text("Sub-page name") },
+                    singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences
-                    )
+                    ),
+                    textStyle = TextStyle(color = colors.primaryText, fontSize = 16.sp),
+                    cursorBrush = SolidColor(colors.cursor),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp)
+                                .drawBehind {
+                                    drawLine(
+                                        color = colors.primaryText.copy(alpha = 0.5f),
+                                        start = Offset(0f, size.height),
+                                        end = Offset(size.width, size.height),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                },
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (text.isEmpty()) {
+                                Text("Sub-page name", color = colors.hint, fontSize = 16.sp)
+                            }
+                            innerTextField()
+                        }
+                    }
                 )
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
