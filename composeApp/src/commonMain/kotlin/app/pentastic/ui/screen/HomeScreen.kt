@@ -208,7 +208,30 @@ fun HomeScreen(
                             },
                             onPageDelete = { page -> viewModel.deletePage(page) },
                             onPageArchive = { page -> viewModel.archivePage(page) },
-                            onPageTypeChange = { page, type -> viewModel.updatePageType(page, type) },
+                            onPageTypeChange = { page, type ->
+                                viewModel.updatePageType(page, type)
+                                // Navigate to the page
+                                val rootPageIndex = pages.indexOfFirst { it.id == page.id }
+                                if (rootPageIndex >= 0) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(rootPageIndex + 1)
+                                    }
+                                } else {
+                                    // It's a sub-page — navigate to its parent
+                                    val parentPage = pages.find { parent ->
+                                        subPagesByParent[parent.id]?.any { it.id == page.id } == true
+                                    }
+                                    if (parentPage != null) {
+                                        val parentIndex = pages.indexOf(parentPage)
+                                        selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
+                                            put(parentPage.id, page.id)
+                                        }
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(parentIndex + 1)
+                                        }
+                                    }
+                                }
+                            },
                             onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
                             onNavigateToSettings = onNavigateToSettings,
                             archivedPages = archivedPages,
