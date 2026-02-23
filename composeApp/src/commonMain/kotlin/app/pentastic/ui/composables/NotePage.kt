@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -85,6 +86,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.pentastic.data.Note
 import app.pentastic.data.Page
+import app.pentastic.data.PageType
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.CoroutineScope
@@ -126,7 +128,9 @@ fun NotePage(
     allPages: List<Page> = emptyList(),
     allSubPagesByParent: Map<Long, List<Page>> = emptyMap(),
     onMoveNote: (Note, Long) -> Unit = { _, _ -> },
+    pageType: PageType = PageType.TASKS,
 ) {
+    val isNotesType = pageType == PageType.NOTES
     val noteMovedToIndex = remember { mutableStateOf(-1) }
     var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
     var noteForReminderDialog by remember { mutableStateOf<Note?>(null) }
@@ -167,7 +171,11 @@ fun NotePage(
     LaunchedEffect(displayedNotes) {
         list = displayedNotes
         if (displayedNotes.isNotEmpty()) {
-            lazyListState.animateScrollToItem(0)
+            if (isNotesType) {
+                lazyListState.animateScrollToItem(displayedNotes.size - 1)
+            } else {
+                lazyListState.animateScrollToItem(0)
+            }
         }
     }
 
@@ -197,27 +205,43 @@ fun NotePage(
             Spacer(Modifier.height(14.dp))
         }
 
+        // Pre-compute date strings for notes-type grouping (outside LazyColumn scope)
+        val noteDateStrings = remember(list, isNotesType) {
+            if (isNotesType) {
+                val timeZone = TimeZone.currentSystemDefault()
+                list.map { note ->
+                    val dt = Instant.fromEpochMilliseconds(note.createdAt)
+                        .toLocalDateTime(timeZone)
+                    val day = dt.dayOfMonth
+                    val month = dt.month.name.take(3).lowercase()
+                        .replaceFirstChar { it.uppercase() }
+                    val year = dt.year
+                    "$day $month $year"
+                }
+            } else emptyList()
+        }
+
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = lazyListState,
             ) {
-                itemsIndexed(list, key = { _, it -> it.id }) { index, note ->
-                    ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
-                        val interactionSource = remember { MutableInteractionSource() }
+                if (isNotesType) {
+                    // Notes type: chronological, no drag-to-reorder, date headers, time to the right
+                    val timeZone = TimeZone.currentSystemDefault()
+
+                    itemsIndexed(list, key = { _, it -> it.id }) { index, note ->
                         var showMenu by remember { mutableStateOf(false) }
                         val colors = AppTheme.colors
-                        val styledText = remember(note.text, note.done, note.priority, isDragging, colors) {
+                        val styledText = remember(note.text, note.done, note.priority, colors) {
                             mutableStateOf(
                                 buildAnnotatedString {
-                                    val style = if (isDragging) {
-                                        SpanStyle(color = colors.hint)
-                                    } else if (note.done) {
+                                    val style = if (note.done) {
                                         SpanStyle(textDecoration = TextDecoration.LineThrough)
                                     } else if (note.priority == 1) {
                                         SpanStyle(color = colors.priorityText)
                                     } else {
-                                        SpanStyle() // Default style
+                                        SpanStyle()
                                     }
                                     withStyle(style) {
                                         append(note.text)
@@ -226,132 +250,254 @@ fun NotePage(
                             )
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .pointerInput(note) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            focusManager.clearFocus()
-                                            showMenu = true
-                                        },
-                                        onDoubleTap = {
-                                            handleToggleDone(
-                                                note,
-                                                toggleNoteDone,
-                                                scope,
-                                                styledText,
-                                                if (note.priority == 1) colors.priorityText else colors.primaryText
-                                            )
-                                        },
-                                    )
-                                }
-                                .longPressDraggableHandle(
-                                    onDragStarted = {
-                                    },
-                                    onDragStopped = {
-                                        if (noteMovedToIndex.value == -1) return@longPressDraggableHandle
-                                        if (noteMovedToIndex.value == 0)
-                                            onUpdateNote(
-                                                list[0].copy(
-                                                    orderAt = Clock.System.now().toEpochMilliseconds(),
-                                                    done = false,
-                                                    priority = list[1].priority
-                                                )
-                                            )
-                                        else if (noteMovedToIndex.value > 0) {
-                                            onUpdateNote(
-                                                list[noteMovedToIndex.value].copy(
-                                                    orderAt = list[noteMovedToIndex.value - 1].orderAt - 1,
-                                                    done = list[noteMovedToIndex.value - 1].done
-                                                )
-                                            )
-                                        }
-                                        noteMovedToIndex.value = -1
-                                    },
-                                    interactionSource = interactionSource,
-                                ).animateItem(),
-                        ) {
-                            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
+                        val timeLabel = remember(note.createdAt) {
+                            val dateTime = Instant.fromEpochMilliseconds(note.createdAt)
+                                .toLocalDateTime(timeZone)
+                            val hour = dateTime.hour
+                            val minute = dateTime.minute
+                            val amPm = if (hour < 12) "AM" else "PM"
+                            val hour12 = when {
+                                hour == 0 -> 12
+                                hour > 12 -> hour - 12
+                                else -> hour
+                            }
+                            "$hour12:${minute.toString().padStart(2, '0')} $amPm"
+                        }
+
+
+                        // Show date header if this is the first note or a different day from the previous note
+                        val showDateHeader = index == 0 ||
+                                noteDateStrings[index] != noteDateStrings[index - 1]
+
+                        Column(modifier = Modifier.animateItem()) {
+                            if (showDateHeader) {
                                 Text(
-                                    modifier = Modifier.padding(start = 12.dp, top = 6.dp).defaultMinSize(minWidth = 28.dp),
-                                    fontFamily = FontFamily(Font(Res.font.Merriweather_Regular)),
-                                    text = (index + 1).toString() + ".",
-                                    // color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
-                                    color = colors.primaryText.copy(alpha = 0.33f),
+                                    text = noteDateStrings[index],
+                                    color = colors.hint,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = if (index == 0) 4.dp else 16.dp, bottom = 8.dp),
                                     textAlign = TextAlign.Center,
-                                    fontSize = 16.sp,
-                                    lineHeight = 20.sp
                                 )
-                                Text(
-                                    modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp).weight(1f),
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .pointerInput(note) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                focusManager.clearFocus()
+                                                showMenu = true
+                                            },
+                                            onDoubleTap = {
+                                                handleToggleDone(
+                                                    note,
+                                                    toggleNoteDone,
+                                                    scope,
+                                                    styledText,
+                                                    if (note.priority == 1) colors.priorityText else colors.primaryText
+                                                )
+                                            },
+                                        )
+                                    },
+                            ) {
+                                NoteTextWithTime(
                                     text = styledText.value,
-                                    color = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
-                                    fontSize = 18.sp,
-                                    lineHeight = 20.sp,
-                                    letterSpacing = 0.5.sp,
-                                    maxLines = if (showMenu) Int.MAX_VALUE else if (note.done) 1 else 3,
-                                    overflow = TextOverflow.Ellipsis
+                                    textColor = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
+                                    timeLabel = timeLabel,
+                                    timeColor = colors.hint,
+                                    maxLines = if (showMenu) Int.MAX_VALUE else 10,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                                 )
-                                // Icons for reminder and repeat
-                                val isRepeating = note.repeatFrequency > 0
-                                val nowMillis = Clock.System.now().toEpochMilliseconds()
-                                val hasUpcomingReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
-                                if (isRepeating || hasUpcomingReminder) {
-                                    Row(
-                                        modifier = Modifier.padding(top = 7.dp, end = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        if (isRepeating) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Repeat,
-                                                contentDescription = "Repeating task",
-                                                modifier = Modifier.size(16.dp),
-                                                tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
+                                val clipboardManager = LocalClipboardManager.current
+                                NoteActionsMenu(
+                                    note = note,
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                    onDelete = { onDeleteNote(note) },
+                                    onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
+                                    onToggleDone = {
+                                        handleToggleDone(
+                                            note,
+                                            toggleNoteDone,
+                                            scope,
+                                            styledText,
+                                            if (note.priority == 1) colors.priorityText else colors.primaryText
+                                        )
+                                    },
+                                    onSetPriority = {
+                                        onUpdateNote(
+                                            note.copy(
+                                                priority = if (note.priority == 0) 1 else 0,
+                                                done = false,
                                             )
+                                        )
+                                    },
+                                    onEdit = { setEditingNote(note) },
+                                    onSetRepeat = { noteForRepeatDialog = note },
+                                    onSetReminder = { noteForReminderDialog = note },
+                                    onMoveTo = { noteForMoveDialog = note }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Tasks type: numbered list with drag-to-reorder (existing behavior)
+                    itemsIndexed(list, key = { _, it -> it.id }) { index, note ->
+                        ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
+                            val interactionSource = remember { MutableInteractionSource() }
+                            var showMenu by remember { mutableStateOf(false) }
+                            val colors = AppTheme.colors
+                            val styledText = remember(note.text, note.done, note.priority, isDragging, colors) {
+                                mutableStateOf(
+                                    buildAnnotatedString {
+                                        val style = if (isDragging) {
+                                            SpanStyle(color = colors.hint)
+                                        } else if (note.done) {
+                                            SpanStyle(textDecoration = TextDecoration.LineThrough)
+                                        } else if (note.priority == 1) {
+                                            SpanStyle(color = colors.priorityText)
+                                        } else {
+                                            SpanStyle() // Default style
                                         }
-                                        if (hasUpcomingReminder) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Notifications,
-                                                contentDescription = "Upcoming reminder",
-                                                modifier = Modifier.size(16.dp),
-                                                tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
-                                            )
+                                        withStyle(style) {
+                                            append(note.text)
+                                        }
+                                    }
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .pointerInput(note) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                focusManager.clearFocus()
+                                                showMenu = true
+                                            },
+                                            onDoubleTap = {
+                                                handleToggleDone(
+                                                    note,
+                                                    toggleNoteDone,
+                                                    scope,
+                                                    styledText,
+                                                    if (note.priority == 1) colors.priorityText else colors.primaryText
+                                                )
+                                            },
+                                        )
+                                    }
+                                    .longPressDraggableHandle(
+                                        onDragStarted = {
+                                        },
+                                        onDragStopped = {
+                                            if (noteMovedToIndex.value == -1) return@longPressDraggableHandle
+                                            if (noteMovedToIndex.value == 0)
+                                                onUpdateNote(
+                                                    list[0].copy(
+                                                        orderAt = Clock.System.now().toEpochMilliseconds(),
+                                                        done = false,
+                                                        priority = list[1].priority
+                                                    )
+                                                )
+                                            else if (noteMovedToIndex.value > 0) {
+                                                onUpdateNote(
+                                                    list[noteMovedToIndex.value].copy(
+                                                        orderAt = list[noteMovedToIndex.value - 1].orderAt - 1,
+                                                        done = list[noteMovedToIndex.value - 1].done
+                                                    )
+                                                )
+                                            }
+                                            noteMovedToIndex.value = -1
+                                        },
+                                        interactionSource = interactionSource,
+                                    ).animateItem(),
+                            ) {
+                                Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
+                                    Text(
+                                        modifier = Modifier.padding(start = 12.dp, top = 6.dp).defaultMinSize(minWidth = 28.dp),
+                                        fontFamily = FontFamily(Font(Res.font.Merriweather_Regular)),
+                                        text = (index + 1).toString() + ".",
+                                        // color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
+                                        color = colors.primaryText.copy(alpha = 0.33f),
+                                        textAlign = TextAlign.Center,
+                                        fontSize = 16.sp,
+                                        lineHeight = 20.sp
+                                    )
+                                    Text(
+                                        modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp).weight(1f),
+                                        text = styledText.value,
+                                        color = colors.primaryText.copy(alpha = if (note.done) 0.33f else 1f),
+                                        fontSize = 18.sp,
+                                        lineHeight = 20.sp,
+                                        letterSpacing = 0.5.sp,
+                                        maxLines = if (showMenu) Int.MAX_VALUE else if (note.done) 1 else 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    // Icons for reminder and repeat
+                                    val isRepeating = note.repeatFrequency > 0
+                                    val nowMillis = Clock.System.now().toEpochMilliseconds()
+                                    val hasUpcomingReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
+                                    if (isRepeating || hasUpcomingReminder) {
+                                        Row(
+                                            modifier = Modifier.padding(top = 7.dp, end = 8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            if (isRepeating) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Repeat,
+                                                    contentDescription = "Repeating task",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
+                                                )
+                                            }
+                                            if (hasUpcomingReminder) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Notifications,
+                                                    contentDescription = "Upcoming reminder",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            val clipboardManager = LocalClipboardManager.current
-                            NoteActionsMenu(
-                                note = note,
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                                onDelete = { onDeleteNote(note) },
-                                onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
-                                onToggleDone = {
-                                    handleToggleDone(
-                                        note,
-                                        toggleNoteDone,
-                                        scope,
-                                        styledText,
-                                        if (note.priority == 1) colors.priorityText else colors.primaryText
-                                    )
-                                },
-                                onSetPriority = {
-                                    onUpdateNote(
-                                        note.copy(
-                                            priority = if (note.priority == 0) 1 else 0,
-                                            done = false,
-                                            orderAt = Clock.System.now().toEpochMilliseconds()
+                                val clipboardManager = LocalClipboardManager.current
+                                NoteActionsMenu(
+                                    note = note,
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                    onDelete = { onDeleteNote(note) },
+                                    onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
+                                    onToggleDone = {
+                                        handleToggleDone(
+                                            note,
+                                            toggleNoteDone,
+                                            scope,
+                                            styledText,
+                                            if (note.priority == 1) colors.priorityText else colors.primaryText
                                         )
-                                    )
-                                },
-                                onEdit = { setEditingNote(note) },
-                                onSetRepeat = { noteForRepeatDialog = note },
-                                onSetReminder = { noteForReminderDialog = note },
-                                onMoveTo = { noteForMoveDialog = note }
-                            )
+                                    },
+                                    onSetPriority = {
+                                        onUpdateNote(
+                                            note.copy(
+                                                priority = if (note.priority == 0) 1 else 0,
+                                                done = false,
+                                                orderAt = Clock.System.now().toEpochMilliseconds()
+                                            )
+                                        )
+                                    },
+                                    onEdit = { setEditingNote(note) },
+                                    onSetRepeat = { noteForRepeatDialog = note },
+                                    onSetReminder = { noteForReminderDialog = note },
+                                    onMoveTo = { noteForMoveDialog = note }
+                                )
+                            }
                         }
                     }
                 }
@@ -374,7 +520,7 @@ fun NotePage(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(32.dp)
+                    .height(10.dp)
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(Color.Transparent, AppTheme.colors.background)
@@ -480,6 +626,81 @@ fun NotePage(
                         onMoveNote(note, targetPageId)
                         noteForMoveDialog = null
                     }
+                )
+            }
+        }
+    }
+}
+
+
+/**
+ * Text with timestamp placed after the last line if space permits,
+ * or below the text right-aligned if not. Text gets full width.
+ */
+@Composable
+private fun NoteTextWithTime(
+    text: AnnotatedString,
+    textColor: Color,
+    timeLabel: String,
+    timeColor: Color,
+    maxLines: Int,
+    modifier: Modifier = Modifier,
+) {
+    // Plain object to pass layout info from onTextLayout (fires during measure)
+    // to the placement phase without triggering recomposition.
+    val info = remember { FloatArray(3) } // [lastLineRight, lastLineBottom, lineCount]
+
+    Layout(
+        modifier = modifier,
+        content = {
+            Text(
+                text = text,
+                color = textColor,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
+                letterSpacing = 0.5.sp,
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { result ->
+                    val last = result.lineCount - 1
+                    info[0] = result.getLineRight(last)
+                    info[1] = result.getLineBottom(last)
+                    info[2] = result.lineCount.toFloat()
+                },
+            )
+            Text(
+                text = timeLabel,
+                color = timeColor,
+                fontSize = 10.sp,
+            )
+        }
+    ) { measurables, constraints ->
+        // Text measured with FULL width — can reach the right edge
+        val textPlaceable = measurables[0].measure(constraints)
+        val timePlaceable = measurables[1].measure(constraints.copy(minWidth = 0))
+
+        val lastLineRight = info[0].toInt()
+        val lastLineBottom = info[1].toInt()
+        val spacing = (8 * density).toInt()
+        val fitsOnLastLine = lastLineRight + spacing + timePlaceable.width <= constraints.maxWidth
+
+        val totalHeight = if (fitsOnLastLine) {
+            textPlaceable.height
+        } else {
+            textPlaceable.height + timePlaceable.height
+        }
+
+        layout(constraints.maxWidth, totalHeight) {
+            textPlaceable.place(0, 0)
+            if (fitsOnLastLine) {
+                // Right after the text on the last line, bottom-aligned
+                val timeY = lastLineBottom - timePlaceable.height
+                timePlaceable.place(lastLineRight + spacing, timeY)
+            } else {
+                // Below text, right-aligned
+                timePlaceable.place(
+                    x = constraints.maxWidth - timePlaceable.width,
+                    y = textPlaceable.height
                 )
             }
         }

@@ -39,4 +39,7 @@ data class Page(
 
     @ColumnInfo(defaultValue = "0")
     val archivedAt: Long = 0,
+
+    @ColumnInfo(defaultValue = "0")
+    val pageType: Int = 0,
 )

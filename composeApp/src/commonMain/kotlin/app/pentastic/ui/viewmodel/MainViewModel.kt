@@ -6,6 +6,7 @@ import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
 import app.pentastic.data.Page
+import app.pentastic.data.PageType
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.ThemeMode
 import app.pentastic.notification.ReminderScheduler
@@ -112,6 +113,12 @@ class MainViewModel(
     fun addSubPage(parentId: Long, pageName: String) {
         viewModelScope.launch {
             repository.insertPage(Page(name = pageName, parentId = parentId))
+        }
+    }
+
+    fun updatePageType(page: Page, pageType: PageType) {
+        viewModelScope.launch {
+            repository.updatePageType(page.id, pageType.ordinal)
         }
     }
 
@@ -223,7 +230,7 @@ class MainViewModel(
         }
     }
 
-    fun toggleNoteDone(note: Note) {
+    fun toggleNoteDone(note: Note, isNotesType: Boolean = false) {
         viewModelScope.launch {
             val now = Clock.System.now().toEpochMilliseconds()
             val newDoneState = !note.done
@@ -237,7 +244,7 @@ class MainViewModel(
             repository.updateNote(
                 note.copy(
                     done = newDoneState,
-                    orderAt = now,
+                    orderAt = if (isNotesType) note.orderAt else now,
                     taskLastDoneAt = if (note.done) note.taskLastDoneAt else now,
                     // Disable reminder when done (except for repeating tasks)
                     reminderEnabled = if (newDoneState && !isRepeatingTask) 0 else note.reminderEnabled

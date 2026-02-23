@@ -68,4 +68,7 @@ interface PageDao {
 
     @Query("SELECT * FROM page WHERE archivedAt > 0 AND deletedAt = 0 AND parentId = :parentId ORDER BY orderAt")
     fun getArchivedSubPages(parentId: Long): Flow<List<Page>>
+
+    @Query("UPDATE page SET pageType = :pageType WHERE id = :id")
+    suspend fun updatePageType(id: Long, pageType: Int)
 }

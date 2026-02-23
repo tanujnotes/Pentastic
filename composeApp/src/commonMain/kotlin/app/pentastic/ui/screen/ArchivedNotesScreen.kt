@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import app.pentastic.data.Page
+import app.pentastic.data.PageType
 import app.pentastic.data.Note
 import app.pentastic.ui.composables.NotePage
 import app.pentastic.ui.theme.AppTheme
@@ -43,17 +44,24 @@ fun ArchivedNotesScreen(
     val displayedPageId = selectedSubPageId ?: pageId
     val notes = notesByPage[displayedPageId] ?: emptyList()
 
+    val isNotesType = PageType.fromOrdinal(currentPage.pageType) == PageType.NOTES
+
     // Build aggregated notes like HomeScreen does for pages with subpages
     val aggregatedNotes = if (subPages.isNotEmpty()) {
         val parentNotes = notesByPage[pageId] ?: emptyList()
         val subPageNotes = subPages.flatMap { notesByPage[it.id] ?: emptyList() }
-        (parentNotes + subPageNotes).sortedWith(
-            compareBy<Note> { it.done }
-                .thenByDescending { if (!it.done) it.priority else 0 }
-                .thenByDescending { it.orderAt }
-        )
+        if (isNotesType) {
+            (parentNotes + subPageNotes).sortedBy { it.createdAt }
+        } else {
+            (parentNotes + subPageNotes).sortedWith(
+                compareBy<Note> { it.done }
+                    .thenByDescending { if (!it.done) it.priority else 0 }
+                    .thenByDescending { it.orderAt }
+            )
+        }
     } else {
-        notesByPage[pageId] ?: emptyList()
+        val pageNotes = notesByPage[pageId] ?: emptyList()
+        if (isNotesType) pageNotes.sortedBy { it.createdAt } else pageNotes
     }
 
     Column(
@@ -68,8 +76,9 @@ fun ArchivedNotesScreen(
             notesByPage = notesByPage,
             onUpdateNote = { note -> viewModel.updateNote(note) },
             onDeleteNote = { note -> viewModel.deleteNote(note) },
-            toggleNoteDone = { note -> viewModel.toggleNoteDone(note) },
+            toggleNoteDone = { note -> viewModel.toggleNoteDone(note, isNotesType) },
             page = currentPage,
+            pageType = PageType.fromOrdinal(currentPage.pageType),
             subPages = subPages,
             selectedSubPageId = selectedSubPageId,
             onSelectedSubPageChange = { subPageId -> selectedSubPageId = subPageId },

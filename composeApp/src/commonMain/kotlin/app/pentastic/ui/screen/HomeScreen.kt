@@ -30,6 +30,7 @@ import androidx.compose.ui.zIndex
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import app.pentastic.data.Note
+import app.pentastic.data.PageType
 import app.pentastic.navigation.getDeepLinkPageId
 import app.pentastic.ui.composables.CommonInput
 import app.pentastic.ui.composables.IndexPage
@@ -196,6 +197,7 @@ fun HomeScreen(
                             },
                             onPageDelete = { page -> viewModel.deletePage(page) },
                             onPageArchive = { page -> viewModel.archivePage(page) },
+                            onPageTypeChange = { page, type -> viewModel.updatePageType(page, type) },
                             onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
                             onNavigateToSettings = onNavigateToSettings,
                             archivedPages = archivedPages,
@@ -206,17 +208,23 @@ fun HomeScreen(
                         val currentPage = pages.getOrNull(pageIndex - 1)
                         if (currentPage != null) {
                             val subPages = subPagesByParent[currentPage.id] ?: emptyList()
+                            val isNotesType = PageType.fromOrdinal(currentPage.pageType) == PageType.NOTES
 
                             val aggregatedNotes = if (subPages.isNotEmpty()) {
                                 val parentNotes = notesByPage[currentPage.id] ?: emptyList()
                                 val subPageNotes = subPages.flatMap { notesByPage[it.id] ?: emptyList() }
-                                (parentNotes + subPageNotes).sortedWith(
-                                    compareBy<Note> { it.done }
-                                        .thenByDescending { if (!it.done) it.priority else 0 }
-                                        .thenByDescending { it.orderAt }
-                                )
+                                if (isNotesType) {
+                                    (parentNotes + subPageNotes).sortedBy { it.createdAt }
+                                } else {
+                                    (parentNotes + subPageNotes).sortedWith(
+                                        compareBy<Note> { it.done }
+                                            .thenByDescending { if (!it.done) it.priority else 0 }
+                                            .thenByDescending { it.orderAt }
+                                    )
+                                }
                             } else {
-                                notesByPage[currentPage.id] ?: emptyList()
+                                val pageNotes = notesByPage[currentPage.id] ?: emptyList()
+                                if (isNotesType) pageNotes.sortedBy { it.createdAt } else pageNotes
                             }
 
                             val selectedSubPageId = selectedSubPageByParent[currentPage.id]
@@ -226,8 +234,9 @@ fun HomeScreen(
                                 notesByPage = notesByPage,
                                 onUpdateNote = { note -> viewModel.updateNote(note) },
                                 onDeleteNote = { note -> viewModel.deleteNote(note) },
-                                toggleNoteDone = { note -> viewModel.toggleNoteDone(note) },
+                                toggleNoteDone = { note -> viewModel.toggleNoteDone(note, isNotesType) },
                                 page = currentPage,
+                                pageType = PageType.fromOrdinal(currentPage.pageType),
                                 subPages = subPages,
                                 selectedSubPageId = selectedSubPageId,
                                 onSelectedSubPageChange = { subPageId ->

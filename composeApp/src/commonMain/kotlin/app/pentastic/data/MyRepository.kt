@@ -127,4 +127,8 @@ class MyRepository(
     fun getArchivedSubPages(parentId: Long): Flow<List<Page>> {
         return pageDao.getArchivedSubPages(parentId)
     }
+
+    suspend fun updatePageType(id: Long, pageType: Int) {
+        pageDao.updatePageType(id, pageType)
+    }
 }

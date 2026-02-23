@@ -33,14 +33,15 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,6 +78,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
+import app.pentastic.data.PageType
 import app.pentastic.data.ThemeMode
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.theme.AppTheme.colors
@@ -103,6 +105,7 @@ fun IndexPage(
     onPageOrderChange: (List<Page>) -> Unit,
     onPageDelete: (Page) -> Unit,
     onPageArchive: (Page) -> Unit,
+    onPageTypeChange: (Page, PageType) -> Unit,
     onAddSubPage: (Long, String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
     archivedPages: List<Page> = emptyList(),
@@ -354,6 +357,27 @@ fun IndexPage(
                                     )
                                 }
                                 DropdownMenuItem(
+                                    text = {
+                                        val currentType = PageType.fromOrdinal(page.pageType)
+                                        Text(
+                                            if (currentType == PageType.TASKS) "Switch to Notes" else "Switch to Tasks",
+                                            color = colors.primaryText
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        val currentType = PageType.fromOrdinal(page.pageType)
+                                        val newType = if (currentType == PageType.TASKS) PageType.NOTES else PageType.TASKS
+                                        onPageTypeChange(page, newType)
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.SwapHoriz, tint = colors.icon, contentDescription = null,
+                                            modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
                                     text = { Text("Rename", color = colors.primaryText) },
                                     onClick = {
                                         showMenu = false
@@ -420,7 +444,8 @@ fun IndexPage(
                                 onDelete = {
                                     pageToDelete = subPage
                                     showDeleteDialog = true
-                                }
+                                },
+                                onPageTypeChange = onPageTypeChange,
                             )
                         }
                     }
@@ -574,7 +599,7 @@ fun IndexPage(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(24.dp)
+                    .height(10.dp)
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(Color.Transparent, colors.background)
@@ -596,6 +621,7 @@ private fun SubPageItem(
     onPageClick: (Long) -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onPageTypeChange: (Page, PageType) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -653,6 +679,27 @@ private fun SubPageItem(
             offset = DpOffset(x = 80.dp, y = 0.dp),
             modifier = Modifier.background(color = colors.menuBackground),
         ) {
+            DropdownMenuItem(
+                text = {
+                    val currentType = PageType.fromOrdinal(subPage.pageType)
+                    Text(
+                        if (currentType == PageType.TASKS) "Switch to Notes" else "Switch to Tasks",
+                        color = colors.primaryText
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    val currentType = PageType.fromOrdinal(subPage.pageType)
+                    val newType = if (currentType == PageType.TASKS) PageType.NOTES else PageType.TASKS
+                    onPageTypeChange(subPage, newType)
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.SwapHoriz, tint = colors.icon, contentDescription = null,
+                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                    )
+                }
+            )
             DropdownMenuItem(
                 text = { Text("Rename", color = colors.primaryText) },
                 onClick = {
@@ -929,6 +976,7 @@ fun IndexPagePreview() {
             onPageOrderChange = {},
             onPageDelete = {},
             onPageArchive = {},
+            onPageTypeChange = { _, _ -> },
             onAddSubPage = { _, _ -> },
             onNavigateToSettings = {},
         )
