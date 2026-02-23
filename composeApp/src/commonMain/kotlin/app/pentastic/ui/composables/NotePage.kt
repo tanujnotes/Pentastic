@@ -172,11 +172,7 @@ fun NotePage(
     LaunchedEffect(displayedNotes) {
         list = displayedNotes
         if (displayedNotes.isNotEmpty()) {
-            if (isNotesType) {
-                lazyListState.animateScrollToItem(displayedNotes.size - 1)
-            } else {
-                lazyListState.animateScrollToItem(0)
-            }
+            lazyListState.animateScrollToItem(0)
         }
     }
 
@@ -226,6 +222,7 @@ fun NotePage(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = lazyListState,
+                reverseLayout = isNotesType,
             ) {
                 if (isNotesType) {
                     // Notes type: chronological, no drag-to-reorder, date headers, time to the right
@@ -266,9 +263,11 @@ fun NotePage(
                         }
 
 
-                        // Show date header if this is the first note or a different day from the previous note
-                        val showDateHeader = index == 0 ||
-                                noteDateStrings[index] != noteDateStrings[index - 1]
+                        // With reverseLayout + descending sort: index 0 = newest at bottom.
+                        // Date header shows above the last note of each day group.
+                        // In reversed layout, the visually "above" neighbor is index + 1.
+                        val showDateHeader = index == list.lastIndex ||
+                                noteDateStrings[index] != noteDateStrings[index + 1]
 
                         Column(modifier = Modifier.animateItem()) {
                             if (showDateHeader) {
@@ -278,7 +277,7 @@ fun NotePage(
                                     fontSize = 12.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = if (index == 0) 4.dp else 16.dp, bottom = 8.dp),
+                                        .padding(top = if (index == list.lastIndex) 4.dp else 16.dp, bottom = 8.dp),
                                     textAlign = TextAlign.Center,
                                 )
                             }

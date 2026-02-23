@@ -214,7 +214,7 @@ fun HomeScreen(
                                 val parentNotes = notesByPage[currentPage.id] ?: emptyList()
                                 val subPageNotes = subPages.flatMap { notesByPage[it.id] ?: emptyList() }
                                 if (isNotesType) {
-                                    (parentNotes + subPageNotes).sortedBy { it.createdAt }
+                                    (parentNotes + subPageNotes).sortedByDescending { it.createdAt }
                                 } else {
                                     (parentNotes + subPageNotes).sortedWith(
                                         compareBy<Note> { it.done }
@@ -224,7 +224,7 @@ fun HomeScreen(
                                 }
                             } else {
                                 val pageNotes = notesByPage[currentPage.id] ?: emptyList()
-                                if (isNotesType) pageNotes.sortedBy { it.createdAt } else pageNotes
+                                if (isNotesType) pageNotes.sortedByDescending { it.createdAt } else pageNotes
                             }
 
                             val selectedSubPageId = selectedSubPageByParent[currentPage.id]

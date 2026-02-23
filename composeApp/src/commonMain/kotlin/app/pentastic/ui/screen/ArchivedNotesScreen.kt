@@ -51,7 +51,7 @@ fun ArchivedNotesScreen(
         val parentNotes = notesByPage[pageId] ?: emptyList()
         val subPageNotes = subPages.flatMap { notesByPage[it.id] ?: emptyList() }
         if (isNotesType) {
-            (parentNotes + subPageNotes).sortedBy { it.createdAt }
+            (parentNotes + subPageNotes).sortedByDescending { it.createdAt }
         } else {
             (parentNotes + subPageNotes).sortedWith(
                 compareBy<Note> { it.done }
@@ -61,7 +61,7 @@ fun ArchivedNotesScreen(
         }
     } else {
         val pageNotes = notesByPage[pageId] ?: emptyList()
-        if (isNotesType) pageNotes.sortedBy { it.createdAt } else pageNotes
+        if (isNotesType) pageNotes.sortedByDescending { it.createdAt } else pageNotes
     }
 
     Column(
