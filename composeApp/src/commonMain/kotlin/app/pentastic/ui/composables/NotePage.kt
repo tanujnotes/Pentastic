@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -311,7 +312,7 @@ fun NotePage(
                                     maxLines = if (showMenu) Int.MAX_VALUE else 10,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                                        .padding(start = 18.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                                 )
                                 val clipboardManager = LocalClipboardManager.current
                                 NoteActionsMenu(
@@ -648,7 +649,8 @@ private fun NoteTextWithTime(
 ) {
     // Plain object to pass layout info from onTextLayout (fires during measure)
     // to the placement phase without triggering recomposition.
-    val info = remember { FloatArray(3) } // [lastLineRight, lastLineBottom, lineCount]
+    // [lastLineRight, lastBaseline, lineCount]
+    val info = remember { FloatArray(3) }
 
     Layout(
         modifier = modifier,
@@ -664,7 +666,7 @@ private fun NoteTextWithTime(
                 onTextLayout = { result ->
                     val last = result.lineCount - 1
                     info[0] = result.getLineRight(last)
-                    info[1] = result.getLineBottom(last)
+                    info[1] = result.lastBaseline
                     info[2] = result.lineCount.toFloat()
                 },
             )
@@ -675,14 +677,16 @@ private fun NoteTextWithTime(
             )
         }
     ) { measurables, constraints ->
-        // Text measured with FULL width — can reach the right edge
         val textPlaceable = measurables[0].measure(constraints)
         val timePlaceable = measurables[1].measure(constraints.copy(minWidth = 0))
 
         val lastLineRight = info[0].toInt()
-        val lastLineBottom = info[1].toInt()
+        val textLastBaseline = info[1].toInt()
+        val lineCount = info[2].toInt()
         val spacing = (8 * density).toInt()
         val fitsOnLastLine = lastLineRight + spacing + timePlaceable.width <= constraints.maxWidth
+        val timeBaseline = timePlaceable[LastBaseline]
+        val isMultiLine = lineCount > 1
 
         val totalHeight = if (fitsOnLastLine) {
             textPlaceable.height
@@ -693,11 +697,16 @@ private fun NoteTextWithTime(
         layout(constraints.maxWidth, totalHeight) {
             textPlaceable.place(0, 0)
             if (fitsOnLastLine) {
-                // Right after the text on the last line, bottom-aligned
-                val timeY = lastLineBottom - timePlaceable.height
-                timePlaceable.place(lastLineRight + spacing, timeY)
+                val timeY = textLastBaseline - timeBaseline
+                val timeX = if (isMultiLine) {
+                    // Multi-line: push time to the right edge
+                    constraints.maxWidth - timePlaceable.width
+                } else {
+                    // Single line: right after the text
+                    lastLineRight + spacing
+                }
+                timePlaceable.place(timeX, timeY)
             } else {
-                // Below text, right-aligned
                 timePlaceable.place(
                     x = constraints.maxWidth - timePlaceable.width,
                     y = textPlaceable.height
