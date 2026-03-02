@@ -51,6 +51,14 @@
                 <action android:name="app.pentastic.ACTION_MARK_DONE" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".notification.SnoozeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="app.pentastic.ACTION_SNOOZE" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

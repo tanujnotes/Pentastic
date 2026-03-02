@@ -35,6 +35,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
         val noteUuid = intent.getStringExtra("note_uuid") ?: return
         val noteText = intent.getStringExtra("note_text") ?: "Task reminder"
         val notePageId = intent.getLongExtra("note_page_id", -1L)
+        val isSnooze = intent.getBooleanExtra("is_snooze", false)
 
         val notificationManager = context.getSystemService(NotificationManager::class.java)
 
@@ -49,7 +50,6 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                 return@launch
             }
 
-            val now = Clock.System.now().toEpochMilliseconds()
             val isRepeatingTask = note.repeatFrequency > 0
             val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
 
@@ -58,24 +58,28 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
             else
                 "To-do reminder"
 
-            // Calculate next reminder time for repeating tasks
-            val nextReminderAt = if (isRepeatingTask && note.reminderEnabled == 1) {
-                calculateNextReminderTime(note.reminderAt, frequency)
-            } else {
-                note.reminderAt
-            }
+            if (!isSnooze) {
+                val now = Clock.System.now().toEpochMilliseconds()
 
-            val updatedNote = note.copy(
-                done = false,
-                orderAt = now,
-                updatedAt = now,
-                reminderAt = nextReminderAt
-            )
-            database.noteDao.updateNote(updatedNote)
+                // Calculate next reminder time for repeating tasks
+                val nextReminderAt = if (isRepeatingTask && note.reminderEnabled == 1) {
+                    calculateNextReminderTime(note.reminderAt, frequency)
+                } else {
+                    note.reminderAt
+                }
 
-            // Schedule the next reminder for repeating tasks
-            if (isRepeatingTask && note.reminderEnabled == 1 && nextReminderAt > now) {
-                reminderScheduler.scheduleReminder(updatedNote)
+                val updatedNote = note.copy(
+                    done = false,
+                    orderAt = now,
+                    updatedAt = now,
+                    reminderAt = nextReminderAt
+                )
+                database.noteDao.updateNote(updatedNote)
+
+                // Schedule the next reminder for repeating tasks
+                if (isRepeatingTask && note.reminderEnabled == 1 && nextReminderAt > now) {
+                    reminderScheduler.scheduleReminder(updatedNote)
+                }
             }
 
             // Build and show notification after DB lookup
@@ -104,6 +108,18 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
+            val snoozeIntent = Intent(context, SnoozeReceiver::class.java).apply {
+                action = "app.pentastic.ACTION_SNOOZE"
+                putExtra("note_uuid", noteUuid)
+            }
+
+            val snoozePendingIntent = PendingIntent.getBroadcast(
+                context,
+                noteUuid.hashCode() + 2,
+                snoozeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
             val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_pentastic_small)
                 .setContentTitle(noteText)
@@ -111,11 +127,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(contentPendingIntent)
-                .addAction(
-                    0,
-                    "Mark as done",
-                    markDonePendingIntent
-                )
+                .addAction(0, "Mark as done", markDonePendingIntent)
+                .addAction(0, "Snooze (1 hour)", snoozePendingIntent)
                 .build()
 
             notificationManager.notify(noteUuid.hashCode(), notification)
