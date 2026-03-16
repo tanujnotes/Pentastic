@@ -51,7 +51,7 @@ fun SetupNavGraph(
             route = Screen.ArchivedNotes.route,
             arguments = listOf(navArgument("pageId") { type = NavType.LongType })
         ) { backStackEntry ->
-            val pageId = backStackEntry.arguments?.getLong("pageId") ?: return@composable
+            val pageId = backStackEntry.savedStateHandle.get<Long>("pageId") ?: return@composable
             ArchivedNotesScreen(
                 pageId = pageId,
                 onNavigateBack = {
