@@ -98,6 +98,7 @@ import kotlin.time.ExperimentalTime
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun IndexPage(
+    modifier: Modifier = Modifier,
     pages: List<Page>,
     subPagesByParent: Map<Long, List<Page>>,
     notesCountByPage: Map<Long, Int>,
@@ -148,7 +149,7 @@ fun IndexPage(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background)) {
+    Column(modifier = modifier.fillMaxSize().background(AppTheme.colors.background)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

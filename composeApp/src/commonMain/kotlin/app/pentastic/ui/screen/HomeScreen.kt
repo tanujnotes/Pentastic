@@ -4,27 +4,35 @@ package app.pentastic.ui.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import androidx.datastore.core.DataStore
@@ -65,6 +73,7 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var selectedSubPageByParent by remember { mutableStateOf<Map<Long, Long?>>(emptyMap()) }
+    var selectedWidePageIndex by remember { mutableIntStateOf(0) }
 
     // Handle deep link navigation from notification
     val deepLinkPageId = getDeepLinkPageId()
@@ -74,163 +83,130 @@ fun HomeScreen(
         viewModel.resetRepeatingTasksTodo()
     }
 
-    // Navigate to the page from deep link (notification tap)
-    LaunchedEffect(deepLinkPageId, pages, hasNavigatedFromDeepLink) {
-        if (deepLinkPageId != null && pages.isNotEmpty() && !hasNavigatedFromDeepLink) {
-            // Find if it's a root page
-            val rootPageIndex = pages.indexOfFirst { it.id == deepLinkPageId }
-            if (rootPageIndex >= 0) {
-                pagerState.scrollToPage(rootPageIndex + 1)
-                hasNavigatedFromDeepLink = true
-            } else {
-                // Check if it's a sub-page
-                val parentPage = pages.find { parent ->
-                    subPagesByParent[parent.id]?.any { it.id == deepLinkPageId } == true
-                }
-                if (parentPage != null) {
-                    val parentIndex = pages.indexOf(parentPage)
-                    selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
-                        put(parentPage.id, deepLinkPageId)
-                    }
-                    pagerState.scrollToPage(parentIndex + 1)
-                    hasNavigatedFromDeepLink = true
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(editingNote) {
-        editingNote?.let { text = it.text }
-    }
-
-    BackHandler(pagerState.currentPage > 0) {
-        coroutineScope.launch {
-            if (editingNote != null) {
-                viewModel.setEditingNote(null)
-                text = ""
-            } else
-                pagerState.animateScrollToPage(0)
-        }
-    }
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = AppTheme.colors.background,
-        bottomBar = {
-            CommonInput(
-                modifier = Modifier.navigationBarsPadding().imePadding(),
-                text = text,
-                onTextChange = { text = it },
-                onActionClick = {
-                    val note = editingNote
-                    if (note != null)
-                        viewModel.updateNote(note.copy(text = text.trim()))
-                    else {
-                        if (pagerState.currentPage == 0)
-                            viewModel.addPage(text.trim())
-                        else
-                            pages.getOrNull(pagerState.currentPage - 1)?.let { page ->
-                                val targetPageId = selectedSubPageByParent[page.id] ?: page.id
-                                viewModel.insertNote(targetPageId, text.trim())
-                            }
-                    }
-                    text = ""
-                },
-                isEditing = editingNote != null,
-                placeholder = when {
-                    editingNote != null -> ""
-                    pagerState.currentPage == 0 -> "Add a new page..."
-                    else -> {
-                        val currentPage = pages.getOrNull(pagerState.currentPage - 1)
-                        if (currentPage != null && PageType.fromOrdinal(currentPage.pageType) == PageType.NOTES)
-                            "Add a note..."
-                        else
-                            "Add a task..."
-                    }
-                }
-            )
-        }
     ) { paddingValues ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            HorizontalPager(state = pagerState) { pageIndex ->
+            val isWideLayout = maxWidth >= 600.dp
 
-                val pageOffset = pagerState.getOffsetDistanceInPages(pageIndex)
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            translationX = (if (pageOffset < 0f) 0f else -pageOffset * size.width)
-                            val scale = lerp(1f, 0.9f, pageOffset.coerceIn(0f, 1f))
-                            scaleX = scale
-                            scaleY = scale
+            // Sync state when switching between layouts
+            LaunchedEffect(isWideLayout) {
+                if (isWideLayout) {
+                    // Switching to wide: sync from pager
+                    if (pagerState.currentPage > 0) {
+                        selectedWidePageIndex = pagerState.currentPage - 1
+                    }
+                } else {
+                    // Switching to narrow: sync to pager
+                    if (selectedWidePageIndex >= 0 && selectedWidePageIndex < pages.size) {
+                        pagerState.scrollToPage(selectedWidePageIndex + 1)
+                    }
+                }
+            }
 
-                            alpha = lerp(1f, 0.5f, pageOffset.coerceIn(0f, 1f))
+            // Navigate to the page from deep link (notification tap)
+            LaunchedEffect(deepLinkPageId, pages, hasNavigatedFromDeepLink) {
+                if (deepLinkPageId != null && pages.isNotEmpty() && !hasNavigatedFromDeepLink) {
+                    val rootPageIndex = pages.indexOfFirst { it.id == deepLinkPageId }
+                    if (rootPageIndex >= 0) {
+                        if (isWideLayout) {
+                            selectedWidePageIndex = rootPageIndex
+                        } else {
+                            pagerState.scrollToPage(rootPageIndex + 1)
                         }
-                        .zIndex(if (pageOffset < 0f) 1f else 0f)
-                ) {
-                    if (pageIndex == 0)
+                        hasNavigatedFromDeepLink = true
+                    } else {
+                        val parentPage = pages.find { parent ->
+                            subPagesByParent[parent.id]?.any { it.id == deepLinkPageId } == true
+                        }
+                        if (parentPage != null) {
+                            val parentIndex = pages.indexOf(parentPage)
+                            selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
+                                put(parentPage.id, deepLinkPageId)
+                            }
+                            if (isWideLayout) {
+                                selectedWidePageIndex = parentIndex
+                            } else {
+                                pagerState.scrollToPage(parentIndex + 1)
+                            }
+                            hasNavigatedFromDeepLink = true
+                        }
+                    }
+                }
+            }
+
+            LaunchedEffect(editingNote) {
+                editingNote?.let { text = it.text }
+            }
+
+            // Helper to navigate to a page by ID
+            fun navigateToPage(pageId: Long) {
+                val rootPageIndex = pages.indexOfFirst { it.id == pageId }
+                if (rootPageIndex >= 0) {
+                    if (isWideLayout) {
+                        selectedWidePageIndex = rootPageIndex
+                    } else {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(rootPageIndex + 1)
+                        }
+                    }
+                } else {
+                    val parentPage = pages.find { parent ->
+                        subPagesByParent[parent.id]?.any { it.id == pageId } == true
+                    }
+                    if (parentPage != null) {
+                        val parentIndex = pages.indexOf(parentPage)
+                        selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
+                            put(parentPage.id, pageId)
+                        }
+                        if (isWideLayout) {
+                            selectedWidePageIndex = parentIndex
+                        } else {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(parentIndex + 1)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Determine current page for input bar logic
+            val currentActivePage = if (isWideLayout) {
+                pages.getOrNull(selectedWidePageIndex)
+            } else {
+                pages.getOrNull(pagerState.currentPage - 1)
+            }
+            val isOnIndexPage = !isWideLayout && pagerState.currentPage == 0
+
+            if (isWideLayout) {
+                // === WIDE LAYOUT: Side-by-side ===
+                BackHandler(editingNote != null) {
+                    viewModel.setEditingNote(null)
+                    text = ""
+                }
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(modifier = Modifier.weight(1f)) {
                         IndexPage(
+                            modifier = Modifier.width(300.dp).fillMaxHeight(),
                             pages = pages,
                             subPagesByParent = subPagesByParent,
                             notesCountByPage = notesCountByPage,
                             priorityNotesCountByPage = priorityNotesCountByPage,
                             showRateButton = showRateButton,
-                            onPageClick = { pageId ->
-                                val rootPageIndex = pages.indexOfFirst { it.id == pageId }
-                                if (rootPageIndex >= 0) {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(rootPageIndex + 1)
-                                    }
-                                } else {
-                                    val parentPage = pages.find { parent ->
-                                        subPagesByParent[parent.id]?.any { it.id == pageId } == true
-                                    }
-                                    if (parentPage != null) {
-                                        val parentIndex = pages.indexOf(parentPage)
-                                        selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
-                                            put(parentPage.id, pageId)
-                                        }
-                                        coroutineScope.launch {
-                                            pagerState.animateScrollToPage(parentIndex + 1)
-                                        }
-                                    }
-                                }
-                            },
-                            onPageNameChange = { page, name ->
-                                viewModel.savePageName(page, name)
-                            },
-                            onPageOrderChange = { updatedPages ->
-                                viewModel.updatePageOrder(updatedPages)
-                            },
+                            onPageClick = { pageId -> navigateToPage(pageId) },
+                            onPageNameChange = { page, name -> viewModel.savePageName(page, name) },
+                            onPageOrderChange = { updatedPages -> viewModel.updatePageOrder(updatedPages) },
                             onPageDelete = { page -> viewModel.deletePage(page) },
                             onPageArchive = { page -> viewModel.archivePage(page) },
                             onPageTypeChange = { page, type ->
                                 viewModel.updatePageType(page, type)
-                                // Navigate to the page
-                                val rootPageIndex = pages.indexOfFirst { it.id == page.id }
-                                if (rootPageIndex >= 0) {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(rootPageIndex + 1)
-                                    }
-                                } else {
-                                    // It's a sub-page — navigate to its parent
-                                    val parentPage = pages.find { parent ->
-                                        subPagesByParent[parent.id]?.any { it.id == page.id } == true
-                                    }
-                                    if (parentPage != null) {
-                                        val parentIndex = pages.indexOf(parentPage)
-                                        selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
-                                            put(parentPage.id, page.id)
-                                        }
-                                        coroutineScope.launch {
-                                            pagerState.animateScrollToPage(parentIndex + 1)
-                                        }
-                                    }
-                                }
+                                navigateToPage(page.id)
                             },
                             onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
                             onNavigateToSettings = onNavigateToSettings,
@@ -238,60 +214,222 @@ fun HomeScreen(
                             onArchivedPageClick = { page -> onNavigateToArchivedNotes(page.id) },
                             onPageUnarchive = { page -> viewModel.unarchivePage(page) },
                         )
-                    else {
-                        val currentPage = pages.getOrNull(pageIndex - 1)
-                        if (currentPage != null) {
-                            val subPages = subPagesByParent[currentPage.id] ?: emptyList()
-                            val isNotesType = PageType.fromOrdinal(currentPage.pageType) == PageType.NOTES
 
-                            val aggregatedNotes = if (subPages.isNotEmpty()) {
-                                val parentNotes = notesByPage[currentPage.id] ?: emptyList()
-                                val subPageNotes = subPages.flatMap { notesByPage[it.id] ?: emptyList() }
-                                if (isNotesType) {
-                                    (parentNotes + subPageNotes).sortedByDescending { it.createdAt }
-                                } else {
-                                    (parentNotes + subPageNotes).sortedWith(
-                                        compareBy<Note> { it.done }
-                                            .thenByDescending { if (!it.done) it.priority else 0 }
-                                            .thenByDescending { it.orderAt }
+                        VerticalDivider(color = AppTheme.colors.divider)
+
+                        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                val widePage = pages.getOrNull(selectedWidePageIndex)
+                                if (widePage != null) {
+                                    val subPages = subPagesByParent[widePage.id] ?: emptyList()
+                                    val aggregatedNotes = aggregateNotes(widePage, subPages, notesByPage)
+                                    val selectedSubPageId = selectedSubPageByParent[widePage.id]
+
+                                    NotePage(
+                                        notes = aggregatedNotes,
+                                        notesByPage = notesByPage,
+                                        onUpdateNote = { note -> viewModel.updateNote(note) },
+                                        onDeleteNote = { note -> viewModel.deleteNote(note) },
+                                        toggleNoteDone = { note ->
+                                            viewModel.toggleNoteDone(note, PageType.fromOrdinal(widePage.pageType) == PageType.NOTES)
+                                        },
+                                        page = widePage,
+                                        pageType = PageType.fromOrdinal(widePage.pageType),
+                                        subPages = subPages,
+                                        selectedSubPageId = selectedSubPageId,
+                                        onSelectedSubPageChange = { subPageId ->
+                                            selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
+                                                put(widePage.id, subPageId)
+                                            }
+                                        },
+                                        setEditingNote = { note -> viewModel.setEditingNote(note) },
+                                        onSetRepeatFrequency = { note, frequency, startDate, reminderTime, reminderEnabled ->
+                                            viewModel.setNoteRepeatFrequency(note, frequency, startDate, reminderTime, reminderEnabled)
+                                        },
+                                        onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
+                                        onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
+                                        allPages = pages,
+                                        allSubPagesByParent = subPagesByParent,
+                                        onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
                                     )
                                 }
-                            } else {
-                                val pageNotes = notesByPage[currentPage.id] ?: emptyList()
-                                if (isNotesType) pageNotes.sortedByDescending { it.createdAt } else pageNotes
                             }
 
-                            val selectedSubPageId = selectedSubPageByParent[currentPage.id]
-
-                            NotePage(
-                                notes = aggregatedNotes,
-                                notesByPage = notesByPage,
-                                onUpdateNote = { note -> viewModel.updateNote(note) },
-                                onDeleteNote = { note -> viewModel.deleteNote(note) },
-                                toggleNoteDone = { note -> viewModel.toggleNoteDone(note, isNotesType) },
-                                page = currentPage,
-                                pageType = PageType.fromOrdinal(currentPage.pageType),
-                                subPages = subPages,
-                                selectedSubPageId = selectedSubPageId,
-                                onSelectedSubPageChange = { subPageId ->
-                                    selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
-                                        put(currentPage.id, subPageId)
+                            CommonInput(
+                                modifier = Modifier.navigationBarsPadding().imePadding(),
+                                text = text,
+                                onTextChange = { text = it },
+                                onActionClick = {
+                                    val note = editingNote
+                                    if (note != null) {
+                                        viewModel.updateNote(note.copy(text = text.trim()))
+                                    } else {
+                                        currentActivePage?.let { page ->
+                                            val targetPageId = selectedSubPageByParent[page.id] ?: page.id
+                                            viewModel.insertNote(targetPageId, text.trim())
+                                        }
                                     }
+                                    text = ""
                                 },
-                                setEditingNote = { note -> viewModel.setEditingNote(note) },
-                                onSetRepeatFrequency = { note, frequency, startDate, reminderTime, reminderEnabled ->
-                                    viewModel.setNoteRepeatFrequency(note, frequency, startDate, reminderTime, reminderEnabled)
-                                },
-                                onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
-                                onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
-                                allPages = pages,
-                                allSubPagesByParent = subPagesByParent,
-                                onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
+                                isEditing = editingNote != null,
+                                placeholder = when {
+                                    editingNote != null -> ""
+                                    currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES -> "Add a note..."
+                                    currentActivePage != null -> "Add a task..."
+                                    else -> ""
+                                }
                             )
                         }
                     }
                 }
+            } else {
+                // === NARROW LAYOUT: HorizontalPager (existing behavior) ===
+                BackHandler(pagerState.currentPage > 0) {
+                    coroutineScope.launch {
+                        if (editingNote != null) {
+                            viewModel.setEditingNote(null)
+                            text = ""
+                        } else
+                            pagerState.animateScrollToPage(0)
+                    }
+                }
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f)
+                    ) { pageIndex ->
+                        val pageOffset = pagerState.getOffsetDistanceInPages(pageIndex)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    translationX = (if (pageOffset < 0f) 0f else -pageOffset * size.width)
+                                    val scale = lerp(1f, 0.9f, pageOffset.coerceIn(0f, 1f))
+                                    scaleX = scale
+                                    scaleY = scale
+                                    alpha = lerp(1f, 0.5f, pageOffset.coerceIn(0f, 1f))
+                                }
+                                .zIndex(if (pageOffset < 0f) 1f else 0f)
+                        ) {
+                            if (pageIndex == 0)
+                                IndexPage(
+                                    pages = pages,
+                                    subPagesByParent = subPagesByParent,
+                                    notesCountByPage = notesCountByPage,
+                                    priorityNotesCountByPage = priorityNotesCountByPage,
+                                    showRateButton = showRateButton,
+                                    onPageClick = { pageId -> navigateToPage(pageId) },
+                                    onPageNameChange = { page, name -> viewModel.savePageName(page, name) },
+                                    onPageOrderChange = { updatedPages -> viewModel.updatePageOrder(updatedPages) },
+                                    onPageDelete = { page -> viewModel.deletePage(page) },
+                                    onPageArchive = { page -> viewModel.archivePage(page) },
+                                    onPageTypeChange = { page, type ->
+                                        viewModel.updatePageType(page, type)
+                                        navigateToPage(page.id)
+                                    },
+                                    onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
+                                    onNavigateToSettings = onNavigateToSettings,
+                                    archivedPages = archivedPages,
+                                    onArchivedPageClick = { page -> onNavigateToArchivedNotes(page.id) },
+                                    onPageUnarchive = { page -> viewModel.unarchivePage(page) },
+                                )
+                            else {
+                                val currentPage = pages.getOrNull(pageIndex - 1)
+                                if (currentPage != null) {
+                                    val subPages = subPagesByParent[currentPage.id] ?: emptyList()
+                                    val aggregatedNotes = aggregateNotes(currentPage, subPages, notesByPage)
+                                    val selectedSubPageId = selectedSubPageByParent[currentPage.id]
+
+                                    NotePage(
+                                        notes = aggregatedNotes,
+                                        notesByPage = notesByPage,
+                                        onUpdateNote = { note -> viewModel.updateNote(note) },
+                                        onDeleteNote = { note -> viewModel.deleteNote(note) },
+                                        toggleNoteDone = { note ->
+                                            viewModel.toggleNoteDone(note, PageType.fromOrdinal(currentPage.pageType) == PageType.NOTES)
+                                        },
+                                        page = currentPage,
+                                        pageType = PageType.fromOrdinal(currentPage.pageType),
+                                        subPages = subPages,
+                                        selectedSubPageId = selectedSubPageId,
+                                        onSelectedSubPageChange = { subPageId ->
+                                            selectedSubPageByParent = selectedSubPageByParent.toMutableMap().apply {
+                                                put(currentPage.id, subPageId)
+                                            }
+                                        },
+                                        setEditingNote = { note -> viewModel.setEditingNote(note) },
+                                        onSetRepeatFrequency = { note, frequency, startDate, reminderTime, reminderEnabled ->
+                                            viewModel.setNoteRepeatFrequency(note, frequency, startDate, reminderTime, reminderEnabled)
+                                        },
+                                        onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
+                                        onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
+                                        allPages = pages,
+                                        allSubPagesByParent = subPagesByParent,
+                                        onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    CommonInput(
+                        modifier = Modifier.navigationBarsPadding().imePadding(),
+                        text = text,
+                        onTextChange = { text = it },
+                        onActionClick = {
+                            val note = editingNote
+                            if (note != null)
+                                viewModel.updateNote(note.copy(text = text.trim()))
+                            else {
+                                if (isOnIndexPage)
+                                    viewModel.addPage(text.trim())
+                                else
+                                    currentActivePage?.let { page ->
+                                        val targetPageId = selectedSubPageByParent[page.id] ?: page.id
+                                        viewModel.insertNote(targetPageId, text.trim())
+                                    }
+                            }
+                            text = ""
+                        },
+                        isEditing = editingNote != null,
+                        placeholder = when {
+                            editingNote != null -> ""
+                            isOnIndexPage -> "Add a new page..."
+                            else -> {
+                                if (currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES)
+                                    "Add a note..."
+                                else
+                                    "Add a task..."
+                            }
+                        }
+                    )
+                }
             }
         }
+    }
+}
+
+private fun aggregateNotes(
+    page: app.pentastic.data.Page,
+    subPages: List<app.pentastic.data.Page>,
+    notesByPage: Map<Long, List<Note>>,
+): List<Note> {
+    val isNotesType = PageType.fromOrdinal(page.pageType) == PageType.NOTES
+    return if (subPages.isNotEmpty()) {
+        val parentNotes = notesByPage[page.id] ?: emptyList()
+        val subPageNotes = subPages.flatMap { notesByPage[it.id] ?: emptyList() }
+        if (isNotesType) {
+            (parentNotes + subPageNotes).sortedByDescending { it.createdAt }
+        } else {
+            (parentNotes + subPageNotes).sortedWith(
+                compareBy<Note> { it.done }
+                    .thenByDescending { if (!it.done) it.priority else 0 }
+                    .thenByDescending { it.orderAt }
+            )
+        }
+    } else {
+        val pageNotes = notesByPage[page.id] ?: emptyList()
+        if (isNotesType) pageNotes.sortedByDescending { it.createdAt } else pageNotes
     }
 }
