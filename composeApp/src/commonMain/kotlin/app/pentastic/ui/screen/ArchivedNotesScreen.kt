@@ -31,6 +31,7 @@ fun ArchivedNotesScreen(
 ) {
     val viewModel = koinViewModel<MainViewModel>()
     val notesByPage by viewModel.notesByPage.collectAsState()
+    val showCompletedTasks by viewModel.showCompletedTasks.collectAsState()
     val subPages by viewModel.getArchivedSubPages(pageId).collectAsState(initial = emptyList())
     var page by remember { mutableStateOf<Page?>(null) }
     var selectedSubPageId by remember { mutableStateOf<Long?>(null) }
@@ -88,6 +89,8 @@ fun ArchivedNotesScreen(
             },
             onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
             onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
+            showCompletedTasks = showCompletedTasks,
+            onToggleShowCompleted = { viewModel.toggleShowCompletedTasks() },
         )
     }
 }

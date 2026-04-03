@@ -66,6 +66,7 @@ fun HomeScreen(
     val priorityNotesCountByPage by viewModel.priorityNotesCountByPage.collectAsState()
     val editingNote by viewModel.editingNote.collectAsState()
     val showRateButton by viewModel.showRateButton.collectAsState()
+    val showCompletedTasks by viewModel.showCompletedTasks.collectAsState()
     val pagerState = rememberPagerState(
         initialPage = 1,
         pageCount = { (pages.size + 1).coerceAtLeast(2) }
@@ -251,6 +252,8 @@ fun HomeScreen(
                                         allPages = pages,
                                         allSubPagesByParent = subPagesByParent,
                                         onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
+                                        showCompletedTasks = showCompletedTasks,
+                                        onToggleShowCompleted = { viewModel.toggleShowCompletedTasks() },
                                     )
                                 }
                             }
@@ -367,6 +370,8 @@ fun HomeScreen(
                                         allPages = pages,
                                         allSubPagesByParent = subPagesByParent,
                                         onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
+                                        showCompletedTasks = showCompletedTasks,
+                                        onToggleShowCompleted = { viewModel.toggleShowCompletedTasks() },
                                     )
                                 }
                             }

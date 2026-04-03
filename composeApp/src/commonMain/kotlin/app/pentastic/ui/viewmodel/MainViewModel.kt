@@ -45,6 +45,9 @@ class MainViewModel(
     private val _priorityNotesCountByPage = MutableStateFlow<Map<Long, Int>>(emptyMap())
     val priorityNotesCountByPage: StateFlow<Map<Long, Int>> = _priorityNotesCountByPage.asStateFlow()
 
+    private val _showCompletedTasks = MutableStateFlow(false)
+    val showCompletedTasks: StateFlow<Boolean> = _showCompletedTasks.asStateFlow()
+
     private val _editingNote = MutableStateFlow<Note?>(null)
     val editingNote: StateFlow<Note?> = _editingNote.asStateFlow()
 
@@ -81,6 +84,7 @@ class MainViewModel(
         loadSubPages()
         checkForRateButton()
         loadThemeMode()
+        loadShowCompletedTasks()
         rescheduleRemindersOnStart()
     }
 
@@ -419,6 +423,22 @@ class MainViewModel(
         viewModelScope.launch {
             _themeMode.value = themeMode
             dataStoreRepository.saveThemeMode(themeMode.ordinal)
+        }
+    }
+
+    private fun loadShowCompletedTasks() {
+        viewModelScope.launch {
+            dataStoreRepository.showCompletedTasks.collect { show ->
+                _showCompletedTasks.value = show
+            }
+        }
+    }
+
+    fun toggleShowCompletedTasks() {
+        viewModelScope.launch {
+            val newValue = !_showCompletedTasks.value
+            _showCompletedTasks.value = newValue
+            dataStoreRepository.setShowCompletedTasks(newValue)
         }
     }
 

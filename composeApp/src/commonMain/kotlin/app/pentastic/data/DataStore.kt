@@ -19,6 +19,7 @@ object DatastoreKeys {
 
     val SHOW_RATE_BUTTON = booleanPreferencesKey("show_rate_button")
     val THEME_MODE = intPreferencesKey("theme_mode")
+    val SHOW_COMPLETED_TASKS = booleanPreferencesKey("show_completed_tasks")
 }
 
 class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
@@ -65,6 +66,16 @@ class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun saveThemeMode(themeMode: Int) {
         dataStore.edit { settings ->
             settings[DatastoreKeys.THEME_MODE] = themeMode
+        }
+    }
+
+    val showCompletedTasks: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.SHOW_COMPLETED_TASKS] ?: true
+    }
+
+    suspend fun setShowCompletedTasks(show: Boolean) {
+        dataStore.edit { settings ->
+            settings[DatastoreKeys.SHOW_COMPLETED_TASKS] = show
         }
     }
 }
