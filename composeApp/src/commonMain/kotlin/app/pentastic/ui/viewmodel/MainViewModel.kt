@@ -216,6 +216,12 @@ class MainViewModel(
         }
     }
 
+    fun insertPriorityNote(pageId: Long, text: String) {
+        viewModelScope.launch {
+            repository.insertNote(Note(pageId = pageId, text = text, priority = 1))
+        }
+    }
+
     fun updateNote(note: Note) {
         viewModelScope.launch {
             repository.updateNote(note)

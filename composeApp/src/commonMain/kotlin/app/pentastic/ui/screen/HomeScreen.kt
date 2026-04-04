@@ -280,6 +280,14 @@ fun HomeScreen(
                                     currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES -> "Add a note..."
                                     currentActivePage != null -> "Add a task..."
                                     else -> ""
+                                },
+                                showPriorityButton = currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.TASKS,
+                                onPriorityActionClick = {
+                                    currentActivePage?.let { page ->
+                                        val targetPageId = selectedSubPageByParent[page.id] ?: page.id
+                                        viewModel.insertPriorityNote(targetPageId, text.trim())
+                                    }
+                                    text = ""
                                 }
                             )
                         }
@@ -407,6 +415,14 @@ fun HomeScreen(
                                 else
                                     "Add a task..."
                             }
+                        },
+                        showPriorityButton = !isOnIndexPage && currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.TASKS,
+                        onPriorityActionClick = {
+                            currentActivePage?.let { page ->
+                                val targetPageId = selectedSubPageByParent[page.id] ?: page.id
+                                viewModel.insertPriorityNote(targetPageId, text.trim())
+                            }
+                            text = ""
                         }
                     )
                 }

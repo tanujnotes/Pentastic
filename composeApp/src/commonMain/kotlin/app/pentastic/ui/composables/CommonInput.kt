@@ -1,13 +1,16 @@
 package app.pentastic.ui.composables
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +46,8 @@ fun CommonInput(
     isEditing: Boolean = false,
     placeholder: String = "",
     actionIconContentDescription: String = "Add",
+    showPriorityButton: Boolean = false,
+    onPriorityActionClick: () -> Unit = {},
 ) {
     var isInputFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
@@ -84,43 +89,58 @@ fun CommonInput(
                 letterSpacing = 0.5.sp
             )
         )
-        IconButton(
-            onClick = {
-                if (text.isNotBlank()) {
-                    onActionClick()
-                } else {
-                    focusRequester.requestFocus()
-                    keyboardController?.show()
+        Box(contentAlignment = Alignment.Center) {
+            if (showPriorityButton && text.isNotBlank() && !isEditing) {
+                IconButton(
+                    onClick = { onPriorityActionClick() },
+                    modifier = Modifier.size(42.dp).offset(y = (-42).dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowUpward,
+                        contentDescription = "Add with priority",
+                        modifier = Modifier.size(24.dp),
+                        tint = AppTheme.colors.priorityText.copy(alpha = 0.5f)
+                    )
                 }
             }
-        ) {
-            if (isEditing) {
-                Icon(
-                    modifier = Modifier.size(42.dp),
-                    imageVector = Icons.Default.Check,
-                    contentDescription = actionIconContentDescription,
-                    tint = AppTheme.colors.icon
-                )
-            } else {
-                val iconColor = AppTheme.colors.icon
-                Canvas(modifier = Modifier.size(48.dp)) {
-                    val strokeWidth = 1.5.dp.toPx()
-                    val center = size.width / 2
-                    val lineLength = size.width * 0.6f
-                    drawLine(
-                        color = iconColor,
-                        start = Offset(center - lineLength / 2, center),
-                        end = Offset(center + lineLength / 2, center),
-                        strokeWidth = strokeWidth,
-                        cap = StrokeCap.Round
+            IconButton(
+                onClick = {
+                    if (text.isNotBlank()) {
+                        onActionClick()
+                    } else {
+                        focusRequester.requestFocus()
+                        keyboardController?.show()
+                    }
+                }
+            ) {
+                if (isEditing) {
+                    Icon(
+                        modifier = Modifier.size(42.dp),
+                        imageVector = Icons.Default.Check,
+                        contentDescription = actionIconContentDescription,
+                        tint = AppTheme.colors.icon
                     )
-                    drawLine(
-                        color = iconColor,
-                        start = Offset(center, center - lineLength / 2),
-                        end = Offset(center, center + lineLength / 2),
-                        strokeWidth = strokeWidth,
-                        cap = StrokeCap.Round
-                    )
+                } else {
+                    val iconColor = AppTheme.colors.icon
+                    Canvas(modifier = Modifier.size(48.dp)) {
+                        val strokeWidth = 1.5.dp.toPx()
+                        val center = size.width / 2
+                        val lineLength = size.width * 0.6f
+                        drawLine(
+                            color = iconColor,
+                            start = Offset(center - lineLength / 2, center),
+                            end = Offset(center + lineLength / 2, center),
+                            strokeWidth = strokeWidth,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = iconColor,
+                            start = Offset(center, center - lineLength / 2),
+                            end = Offset(center, center + lineLength / 2),
+                            strokeWidth = strokeWidth,
+                            cap = StrokeCap.Round
+                        )
+                    }
                 }
             }
         }
