@@ -254,6 +254,7 @@ fun HomeScreen(
                                         onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
                                         showCompletedTasks = showCompletedTasks,
                                         onToggleShowCompleted = { viewModel.toggleShowCompletedTasks() },
+                                        onDeleteCompletedTasks = { tasks -> viewModel.moveCompletedTasksToTrash(tasks) },
                                     )
                                 }
                             }
@@ -380,6 +381,7 @@ fun HomeScreen(
                                         onMoveNote = { note, targetPageId -> viewModel.moveNoteToPage(note, targetPageId) },
                                         showCompletedTasks = showCompletedTasks,
                                         onToggleShowCompleted = { viewModel.toggleShowCompletedTasks() },
+                                        onDeleteCompletedTasks = { tasks -> viewModel.moveCompletedTasksToTrash(tasks) },
                                     )
                                 }
                             }

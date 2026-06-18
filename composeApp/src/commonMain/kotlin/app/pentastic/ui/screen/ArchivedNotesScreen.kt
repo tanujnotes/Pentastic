@@ -91,6 +91,7 @@ fun ArchivedNotesScreen(
             onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
             showCompletedTasks = showCompletedTasks,
             onToggleShowCompleted = { viewModel.toggleShowCompletedTasks() },
+            onDeleteCompletedTasks = { tasks -> viewModel.moveCompletedTasksToTrash(tasks) },
         )
     }
 }

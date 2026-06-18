@@ -320,6 +320,18 @@ class MainViewModel(
         }
     }
 
+    fun moveCompletedTasksToTrash(notes: List<Note>) {
+        viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
+            notes.filter { it.done }.forEach { note ->
+                if (note.reminderEnabled == 1) {
+                    reminderScheduler.cancelReminder(note.uuid)
+                }
+                repository.softDeleteNote(note.id, now)
+            }
+        }
+    }
+
     fun setNoteReminder(note: Note, reminderAt: Long, enabled: Boolean) {
         viewModelScope.launch {
             val now = Clock.System.now().toEpochMilliseconds()
