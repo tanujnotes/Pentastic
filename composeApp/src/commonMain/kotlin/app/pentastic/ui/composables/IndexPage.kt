@@ -551,7 +551,7 @@ fun IndexPage(
                     page = pageToRename!!,
                     onDismiss = { showRenameDialog = false },
                     onConfirm = { newName ->
-                        onPageNameChange(pageToRename!!, newName.ifBlank { "Page" })
+                        onPageNameChange(pageToRename!!, newName.trim().ifBlank { "Page" })
                         showRenameDialog = false
                     }
                 )
@@ -573,7 +573,7 @@ fun IndexPage(
                     parentPage = parentPageForSubPage!!,
                     onDismiss = { showAddSubPageDialog = false },
                     onConfirm = { subPageName ->
-                        onAddSubPage(parentPageForSubPage!!.id, subPageName.ifBlank { "Sub-page" })
+                        onAddSubPage(parentPageForSubPage!!.id, subPageName.trim().ifBlank { "Sub-page" })
                         showAddSubPageDialog = false
                     }
                 )
