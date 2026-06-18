@@ -408,23 +408,25 @@ fun NotePage(
                                         onDragStarted = {
                                         },
                                         onDragStopped = {
-                                            if (noteMovedToIndex.value == -1) return@longPressDraggableHandle
-                                            if (noteMovedToIndex.value == 0)
-                                                onUpdateNote(
-                                                    list[0].copy(
-                                                        orderAt = Clock.System.now().toEpochMilliseconds(),
-                                                        done = false,
-                                                        priority = list[1].priority
-                                                    )
-                                                )
-                                            else if (noteMovedToIndex.value > 0) {
-                                                onUpdateNote(
-                                                    list[noteMovedToIndex.value].copy(
-                                                        orderAt = list[noteMovedToIndex.value - 1].orderAt - 1,
-                                                        done = list[noteMovedToIndex.value - 1].done
-                                                    )
-                                                )
+                                            val movedIndex = noteMovedToIndex.value
+                                            if (movedIndex == -1) return@longPressDraggableHandle
+                                            val step = 1_000_000L
+                                            val above = list.getOrNull(movedIndex - 1)
+                                            val below = list.getOrNull(movedIndex + 1)
+                                            val newPriority = when {
+                                                above == null -> below?.priority ?: list[movedIndex].priority
+                                                below == null || above.priority == below.priority -> above.priority
+                                                else -> list[movedIndex].priority
                                             }
+
+                                            val newOrderAt = when {
+                                                above == null -> Clock.System.now().toEpochMilliseconds()
+                                                below == null -> above.orderAt - step
+                                                above.priority == below.priority -> below.orderAt + (above.orderAt - below.orderAt) / 2
+                                                newPriority == above.priority -> above.orderAt - step
+                                                else -> below.orderAt + step
+                                            }
+                                            onUpdateNote(list[movedIndex].copy(orderAt = newOrderAt, priority = newPriority))
                                             noteMovedToIndex.value = -1
                                         },
                                         interactionSource = interactionSource,
