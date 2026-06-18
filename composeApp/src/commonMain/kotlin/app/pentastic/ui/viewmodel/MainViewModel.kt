@@ -497,102 +497,91 @@ class MainViewModel(
                 dataStoreRepository.setFirstLaunchTime(Clock.System.now().toEpochMilliseconds())
                 dataStoreRepository.firstLaunchDone()
 
-                val page1 = repository.insertPage(Page(name = "Today"))
-                val page2 = repository.insertPage(Page(name = "Reminders"))
-                val page3 = repository.insertPage(Page(name = "Notes", pageType = PageType.NOTES.ordinal))
-                repository.insertPage(Page(name = "Page 4"))
-                repository.insertPage(Page(name = "Page 5"))
-                val page6 = repository.insertPage(Page(name = "2026"))
-                val subPage61 = repository.insertPage(Page(name = "Health goals", parentId = page6))
-                val subPage62 = repository.insertPage(Page(name = "Wealth goals", parentId = page6))
-                val page7 = repository.insertPage(Page(name = "Don't do"))
-                val page8 = repository.insertPage(Page(name = "Quotes"))
-                repository.insertPage(Page(name = "Books & Movies"))
-                val page10 = repository.insertPage(Page(name = "Long press to rename"))
+                val pageToday = repository.insertPage(Page(name = "Today"))
+                repository.insertNote(
+                    Note(pageId = pageToday, text = "Install Pentastic!️", done = true, orderAt = 3L)
+                )
+                repository.insertNote(
+                    Note(pageId = pageToday, text = "Double tap to mark a task as done. ✔", orderAt = 2L)
+                )
+                repository.insertNote(
+                    Note(pageId = pageToday, text = "Single tap for menu; long press to reorder.", orderAt = 1L)
+                )
+                repository.insertNote(
+                    Note(pageId = pageToday, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L)
+                )
 
-                repository.insertNote(
-                    Note(pageId = page1, text = "Install Pentastic!️", done = true, orderAt = 3L)
-                )
-                repository.insertNote(
-                    Note(pageId = page1, text = "Double tap to mark a task as done. ✔", orderAt = 2L)
-                )
-                repository.insertNote(
-                    Note(pageId = page1, text = "Single tap for menu; long press to reorder.", orderAt = 1L)
-                )
-                repository.insertNote(
-                    Note(pageId = page1, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L)
-                )
+                val pageReminders = repository.insertPage(Page(name = "Reminders"))
                 repository.insertNote(
                     Note(
-                        pageId = page2,
-                        text = "You can set reminders to your one-off or repeating tasks. Tap on the task to open the menu. ",
+                        pageId = pageReminders,
+                        text = "You can set reminders for your one-off or repeating tasks. Tap on the task to open the menu.",
+                    )
+                )
+
+                val pageThings = repository.insertPage(Page(name = "Stuff"))
+                repository.insertPage(Page(name = "To do", parentId = pageThings))
+                repository.insertPage(Page(name = "Read", parentId = pageThings))
+                repository.insertPage(Page(name = "Watch", parentId = pageThings))
+                repository.insertNote(
+                    Note(
+                        pageId = pageThings,
+                        text = "so that you don't forget to actually do it! 😄",
                     )
                 )
                 repository.insertNote(
                     Note(
-                        pageId = page3,
-                        text = "This page is for notes. You can add notes here. 📝",
+                        pageId = pageThings,
+                        text = "A place to note down all the fun stuff you want to do, read, or watch...",
+                    )
+                )
+
+                val pageNotes = repository.insertPage(Page(name = "Notes", pageType = PageType.NOTES.ordinal))
+                repository.insertNote(
+                    Note(
+                        pageId = pageNotes,
+                        text = "This is a Notes page with timestamps for each note. 📝",
                     )
                 )
                 repository.insertNote(
                     Note(
-                        pageId = page3,
+                        pageId = pageNotes,
                         text = "You can change the type of a page from the Index page.",
                     )
                 )
+
+                val pageIdeas = repository.insertPage(Page(name = "Ideas", pageType = PageType.NOTES.ordinal))
                 repository.insertNote(
                     Note(
-                        pageId = subPage62,
-                        text = "Add your wealth goals! 💰",
+                        pageId = pageIdeas,
+                        text = "Scribble your random thoughts and ideas here to revisit later.",
                     )
                 )
                 repository.insertNote(
                     Note(
-                        pageId = subPage61,
-                        text = "Add your health goals! 💪",
+                        pageId = pageIdeas,
+                        text = " Happy scribbling! :)",
+                    )
+                )
+
+                val pageDontDo = repository.insertPage(Page(name = "Don't do"))
+                repository.insertNote(
+                    Note(
+                        pageId = pageDontDo,
+                        text = "Press BACK to go to the Index page.",
                     )
                 )
                 repository.insertNote(
                     Note(
-                        pageId = page6,
-                        text = "A list of things to accomplish this year. ✅",
+                        pageId = pageDontDo,
+                        text = "Priority tasks will appear in red. Tap on any task to change priority. 👆",
                     )
                 )
                 repository.insertNote(
                     Note(
-                        pageId = page7,
+                        pageId = pageDontDo,
                         text = "It's okay... we all need this list. :D",
                         priority = 1,
-                    )
-                )
-                repository.insertNote(
-                    Note(
-                        pageId = page8,
-                        text = "Be the change you wish to see in the world. — Mahatma Gandhi",
-                    )
-                )
-                repository.insertNote(
-                    Note(
-                        pageId = page8,
-                        text = "You mind is for having ideas, not holding them. — David Allen",
-                    )
-                )
-                repository.insertNote(
-                    Note(
-                        pageId = page8,
-                        text = "Plans are worthless, but planning is everything. — Dwight D. Eisenhower",
-                    )
-                )
-                repository.insertNote(
-                    Note(
-                        pageId = page8,
-                        text = "Motivation doesn’t last. Well, neither does bathing, that’s why we recommend it daily. — Zig Zagler",
-                    )
-                )
-                repository.insertNote(
-                    Note(
-                        pageId = page10,
-                        text = "Press back to go to the Index page.",
                     )
                 )
             }
