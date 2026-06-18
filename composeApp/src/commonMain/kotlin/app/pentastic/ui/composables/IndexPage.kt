@@ -45,6 +45,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.ChecklistRtl
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -60,6 +62,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,6 +124,7 @@ fun IndexPage(
     onPageUnarchive: (Page) -> Unit = {},
 ) {
     val viewModel = koinViewModel<MainViewModel>()
+    val showSubPages by viewModel.showSubPages.collectAsState()
 
     var showRenameDialog by remember { mutableStateOf(false) }
     var pageToRename: Page? by remember { mutableStateOf(null) }
@@ -220,6 +224,26 @@ fun IndexPage(
                                 leadingIcon = {
                                     Icon(
                                         Icons.AutoMirrored.Filled.Sort,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (showSubPages) "Hide sub-pages" else "Show sub-pages",
+                                        color = colors.primaryText
+                                    )
+                                },
+                                onClick = {
+                                    showTopMenu = false
+                                    viewModel.toggleShowSubPages()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        if (showSubPages) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                         tint = colors.icon,
                                         contentDescription = null,
                                         modifier = Modifier.padding(end = 4.dp).size(20.dp)
@@ -427,8 +451,8 @@ fun IndexPage(
                         }
                     }
 
-                    // Sub-pages for this parent (hide during reorder mode)
-                    if (!isReorderMode) {
+                    // Sub-pages for this parent (hide during reorder mode or when toggled off)
+                    if (!isReorderMode && showSubPages) {
                         val subPages = subPagesByParent[page.id] ?: emptyList()
                         subPages.forEachIndexed { subIndex, subPage ->
                             SubPageItem(
