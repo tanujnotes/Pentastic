@@ -425,7 +425,8 @@ fun HomeScreen(
                                 viewModel.insertPriorityNote(targetPageId, text.trim())
                             }
                             text = ""
-                        }
+                        },
+                        maxLength = if (isOnIndexPage && editingNote == null) 20 else 1000,
                     )
                 }
             }

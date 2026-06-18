@@ -30,6 +30,10 @@ class MainViewModel(
     private val reminderScheduler: ReminderScheduler,
 ) : ViewModel() {
 
+    companion object {
+        const val MAX_PAGE_NAME_LENGTH = 20
+    }
+
     private val _showRateButton = MutableStateFlow(false)
     val showRateButton: StateFlow<Boolean> = _showRateButton.asStateFlow()
 
@@ -113,14 +117,14 @@ class MainViewModel(
     fun addPage(pageName: String) {
         viewModelScope.launch {
             if (pages.value.size < 100) {
-                repository.insertPage(Page(name = pageName, parentId = null))
+                repository.insertPage(Page(name = pageName.take(MAX_PAGE_NAME_LENGTH), parentId = null))
             }
         }
     }
 
     fun addSubPage(parentId: Long, pageName: String) {
         viewModelScope.launch {
-            repository.insertPage(Page(name = pageName, parentId = parentId))
+            repository.insertPage(Page(name = pageName.take(MAX_PAGE_NAME_LENGTH), parentId = parentId))
         }
     }
 
@@ -132,7 +136,7 @@ class MainViewModel(
 
     fun savePageName(page: Page, name: String) {
         viewModelScope.launch {
-            repository.updatePage(page.copy(name = name))
+            repository.updatePage(page.copy(name = name.take(MAX_PAGE_NAME_LENGTH)))
         }
     }
 

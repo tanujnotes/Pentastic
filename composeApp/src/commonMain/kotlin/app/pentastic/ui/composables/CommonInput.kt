@@ -18,15 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -48,8 +44,8 @@ fun CommonInput(
     actionIconContentDescription: String = "Add",
     showPriorityButton: Boolean = false,
     onPriorityActionClick: () -> Unit = {},
+    maxLength: Int = 1000,
 ) {
-    var isInputFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -63,10 +59,9 @@ fun CommonInput(
         TextField(
             modifier = Modifier
                 .weight(1f)
-                .focusRequester(focusRequester)
-                .onFocusChanged { isInputFocused = it.isFocused },
+                .focusRequester(focusRequester),
             value = text,
-            onValueChange = { if (it.length <= 300) onTextChange(it) },
+            onValueChange = { if (it.length <= maxLength) onTextChange(it) },
             placeholder = if (placeholder.isNotEmpty()) {
                 { Text(placeholder, color = AppTheme.colors.hint, fontSize = 16.sp) }
             } else null,
