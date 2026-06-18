@@ -32,6 +32,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.outlined.EventNote
+import androidx.compose.material.icons.automirrored.outlined.NoteAdd
+import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
@@ -43,6 +47,10 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.outlined.CheckBox
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.ChecklistRtl
+import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,6 +85,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -276,13 +285,10 @@ fun IndexPage(
                                     ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "${index + 1}.",
-                                    fontSize = 16.sp,
-                                    lineHeight = 20.sp,
-                                    fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
-                                    color = colors.primaryText.copy(alpha = 0.33f),
-                                    modifier = Modifier.padding(top = 1.dp).defaultMinSize(minWidth = 32.dp)
+                                PageTypeIcon(
+                                    pageType = PageType.fromOrdinal(page.pageType),
+                                    size = 18.dp,
+                                    minWidth = 32.dp,
                                 )
 
                                 Text(
@@ -435,8 +441,6 @@ fun IndexPage(
                         subPages.forEachIndexed { subIndex, subPage ->
                             SubPageItem(
                                 subPage = subPage,
-                                parentIndex = index + 1,
-                                subIndex = subIndex + 1,
                                 notesCount = notesCountByPage[subPage.id] ?: 0,
                                 priorityNotesCount = priorityNotesCountByPage[subPage.id] ?: 0,
                                 onPageClick = onPageClick,
@@ -615,10 +619,25 @@ fun IndexPage(
 }
 
 @Composable
+private fun PageTypeIcon(
+    pageType: PageType,
+    size: Dp,
+    minWidth: Dp,
+) {
+    Box(modifier = Modifier.defaultMinSize(minWidth = minWidth)) {
+        Icon(
+            imageVector = if (pageType == PageType.NOTES) Icons.AutoMirrored.Outlined.Notes
+            else Icons.Outlined.ChecklistRtl,
+            contentDescription = if (pageType == PageType.NOTES) "Notes page" else "Tasks page",
+            tint = colors.primaryText.copy(alpha = 0.33f),
+            modifier = Modifier.size(size)
+        )
+    }
+}
+
+@Composable
 private fun SubPageItem(
     subPage: Page,
-    parentIndex: Int,
-    subIndex: Int,
     notesCount: Int,
     priorityNotesCount: Int,
     onPageClick: (Long) -> Unit,
@@ -642,14 +661,6 @@ private fun SubPageItem(
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "$parentIndex.$subIndex",
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-                fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
-                color = colors.primaryText.copy(alpha = 0.33f),
-                modifier = Modifier.defaultMinSize(minWidth = 32.dp)
-            )
             Text(
                 text = subPage.name.take(20),
                 fontSize = 16.sp,
