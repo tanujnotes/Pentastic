@@ -5,6 +5,7 @@
 
 package app.pentastic.ui.composables
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,10 +33,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.automirrored.outlined.EventNote
-import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.Notes
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
@@ -47,10 +45,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Unarchive
-import androidx.compose.material.icons.outlined.CheckBox
-import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.ChecklistRtl
-import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -291,6 +286,8 @@ fun IndexPage(
                                     minWidth = 32.dp,
                                 )
 
+                                Spacer(Modifier.width(6.dp))
+
                                 Text(
                                     text = page.name.take(20),
                                     fontSize = 18.sp,
@@ -302,12 +299,7 @@ fun IndexPage(
                                 Spacer(Modifier.width(6.dp))
 
                                 if (!isReorderMode) {
-                                    Text(
-                                        text = "................................................................................................................... ",
-                                        color = colors.hint,
-                                        maxLines = 1,
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                    DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         modifier = Modifier.defaultMinSize(minWidth = 16.dp),
@@ -619,6 +611,25 @@ fun IndexPage(
 }
 
 @Composable
+private fun DottedLeader(
+    modifier: Modifier = Modifier,
+    color: Color = colors.hint.copy(alpha = 0.5f),
+    dotRadius: Dp = 1.dp,
+    gap: Dp = 3.dp,
+) {
+    Canvas(modifier = modifier.height(dotRadius * 2)) {
+        val r = dotRadius.toPx()
+        val step = r * 2 + gap.toPx()
+        val y = size.height / 2
+        var x = r
+        while (x <= size.width) {
+            drawCircle(color = color, radius = r, center = Offset(x, y))
+            x += step
+        }
+    }
+}
+
+@Composable
 private fun PageTypeIcon(
     pageType: PageType,
     size: Dp,
@@ -652,7 +663,7 @@ private fun SubPageItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 48.dp, top = 4.dp, bottom = 12.dp, end = 16.dp)
+                .padding(start = 54.dp, top = 4.dp, bottom = 12.dp, end = 16.dp)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -669,12 +680,7 @@ private fun SubPageItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.width(6.dp))
-            Text(
-                text = "................................................................................................................... ",
-                color = colors.hint,
-                maxLines = 1,
-                modifier = Modifier.weight(1f)
-            )
+            DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
             Spacer(Modifier.width(8.dp))
             Text(
                 modifier = Modifier.defaultMinSize(minWidth = 16.dp),
