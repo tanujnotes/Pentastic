@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.outlined.ArrowOutward
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.BasicAlertDialog
@@ -91,6 +92,9 @@ import app.pentastic.data.Note
 import app.pentastic.data.Page
 import app.pentastic.data.PageType
 import app.pentastic.data.RepeatFrequency
+import app.pentastic.data.formatDueDateLabel
+import app.pentastic.data.hasDueDate
+import app.pentastic.data.isDueOverdue
 import app.pentastic.ui.theme.AppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -128,6 +132,7 @@ fun NotePage(
     onSetRepeatFrequency: (Note, RepeatFrequency, Long, Long?, Boolean) -> Unit,
     onSetReminder: (Note, Long, Boolean) -> Unit,
     onRemoveReminder: (Note) -> Unit,
+    onSetDueDate: (Note, Long, Long) -> Unit,
     allPages: List<Page> = emptyList(),
     allSubPagesByParent: Map<Long, List<Page>> = emptyMap(),
     onMoveNote: (Note, Long) -> Unit = { _, _ -> },
@@ -140,6 +145,7 @@ fun NotePage(
     var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
     var noteForReminderDialog by remember { mutableStateOf<Note?>(null) }
     var noteForMoveDialog by remember { mutableStateOf<Note?>(null) }
+    var noteForDueDateDialog by remember { mutableStateOf<Note?>(null) }
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -352,6 +358,7 @@ fun NotePage(
                                     onEdit = { setEditingNote(note) },
                                     onSetRepeat = { noteForRepeatDialog = note },
                                     onSetReminder = { noteForReminderDialog = note },
+                                    onSetDueDate = { noteForDueDateDialog = note },
                                     onMoveTo = { noteForMoveDialog = note }
                                 )
                             }
@@ -451,11 +458,12 @@ fun NotePage(
                                         maxLines = if (showMenu) Int.MAX_VALUE else if (note.done) 1 else 3,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    // Icons for reminder and repeat
+                                    // Icons for reminder, repeat and due date
                                     val isRepeating = note.repeatFrequency > 0
                                     val nowMillis = Clock.System.now().toEpochMilliseconds()
                                     val hasUpcomingReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
-                                    if (isRepeating || hasUpcomingReminder) {
+                                    val hasDueDate = note.hasDueDate
+                                    if (isRepeating || hasUpcomingReminder || hasDueDate) {
                                         Row(
                                             modifier = Modifier.padding(top = 7.dp, end = 8.dp),
                                             horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -474,6 +482,18 @@ fun NotePage(
                                                     contentDescription = "Upcoming reminder",
                                                     modifier = Modifier.size(16.dp),
                                                     tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
+                                                )
+                                            }
+                                            if (hasDueDate) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.CalendarMonth,
+                                                    contentDescription = "Due date",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = when {
+                                                        note.done -> colors.primaryText.copy(alpha = 0.33f)
+                                                        note.isDueOverdue(nowMillis) -> colors.priorityText.copy(alpha = 0.7f)
+                                                        else -> colors.primaryText.copy(alpha = 0.4f)
+                                                    }
                                                 )
                                             }
                                         }
@@ -507,6 +527,7 @@ fun NotePage(
                                     onEdit = { setEditingNote(note) },
                                     onSetRepeat = { noteForRepeatDialog = note },
                                     onSetReminder = { noteForReminderDialog = note },
+                                    onSetDueDate = { noteForDueDateDialog = note },
                                     onMoveTo = { noteForMoveDialog = note }
                                 )
                             }
@@ -599,7 +620,8 @@ fun NotePage(
                                         val isRepeating = note.repeatFrequency > 0
                                         val nowMillis = Clock.System.now().toEpochMilliseconds()
                                         val hasUpcomingReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
-                                        if (isRepeating || hasUpcomingReminder) {
+                                        val hasDueDate = note.hasDueDate
+                                        if (isRepeating || hasUpcomingReminder || hasDueDate) {
                                             Row(
                                                 modifier = Modifier.padding(top = 7.dp, end = 8.dp),
                                                 horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -616,6 +638,14 @@ fun NotePage(
                                                     Icon(
                                                         imageVector = Icons.Outlined.Notifications,
                                                         contentDescription = "Upcoming reminder",
+                                                        modifier = Modifier.size(16.dp),
+                                                        tint = colors.primaryText.copy(alpha = 0.33f)
+                                                    )
+                                                }
+                                                if (hasDueDate) {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.CalendarMonth,
+                                                        contentDescription = "Due date",
                                                         modifier = Modifier.size(16.dp),
                                                         tint = colors.primaryText.copy(alpha = 0.33f)
                                                     )
@@ -651,6 +681,7 @@ fun NotePage(
                                         onEdit = { setEditingNote(note) },
                                         onSetRepeat = { noteForRepeatDialog = note },
                                         onSetReminder = { noteForReminderDialog = note },
+                                        onSetDueDate = { noteForDueDateDialog = note },
                                         onMoveTo = { noteForMoveDialog = note }
                                     )
                                 }
@@ -782,6 +813,19 @@ fun NotePage(
                     onConfirm = { targetPageId ->
                         onMoveNote(note, targetPageId)
                         noteForMoveDialog = null
+                    }
+                )
+            }
+
+            if (noteForDueDateDialog != null) {
+                val note = noteForDueDateDialog!!
+                DueDateOptionsDialog(
+                    currentDueStartAt = note.dueStartAt,
+                    currentDueEndAt = note.dueEndAt,
+                    onDismiss = { noteForDueDateDialog = null },
+                    onApply = { dueStartAt, dueEndAt ->
+                        onSetDueDate(note, dueStartAt, dueEndAt)
+                        noteForDueDateDialog = null
                     }
                 )
             }
@@ -931,6 +975,7 @@ private fun NoteActionsMenu(
     onEdit: () -> Unit,
     onSetRepeat: () -> Unit,
     onSetReminder: () -> Unit,
+    onSetDueDate: () -> Unit,
     onMoveTo: () -> Unit,
 ) {
     val colors = AppTheme.colors
@@ -974,6 +1019,12 @@ private fun NoteActionsMenu(
         "Reminder"
     }
 
+    val dueDateLabel = if (note.hasDueDate) {
+        formatDueDateLabel(note.dueStartAt, note.dueEndAt)
+    } else {
+        "Due date"
+    }
+
     data class MenuAction(
         val label: String,
         val icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -1005,6 +1056,12 @@ private fun NoteActionsMenu(
             icon = Icons.Outlined.Notifications,
             tint = colors.primaryText,
             onClick = { onSetReminder(); onDismissRequest() }
+        ),
+        MenuAction(
+            label = dueDateLabel,
+            icon = Icons.Outlined.CalendarMonth,
+            tint = colors.primaryText,
+            onClick = { onSetDueDate(); onDismissRequest() }
         ),
         MenuAction(
             label = "Edit",
@@ -1069,7 +1126,8 @@ private fun NoteActionsMenu(
                                         color = action.tint,
                                         textAlign = TextAlign.Center
                                     ),
-                                    maxLines = 1
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -1632,10 +1690,11 @@ private fun <T> CompactWheelPickerGeneric(
 }
 
 @Composable
-private fun StartDatePickerDialog(
+internal fun StartDatePickerDialog(
     initialDate: LocalDate,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
+    title: String = "Select start date",
 ) {
     val colors = AppTheme.colors
     var selectedDate by remember { mutableStateOf(initialDate) }
@@ -1643,7 +1702,7 @@ private fun StartDatePickerDialog(
     val today = remember { Clock.System.now().toLocalDateTime(timeZone).date }
 
     // Generate year range
-    val years = remember { (today.year..(today.year + 10)).toList() }
+    val years = remember { ((today.year - 1)..(today.year + 10)).toList() }
     val months = remember { kotlinx.datetime.Month.entries.toList() }
 
     var selectedYear by remember { mutableStateOf(selectedDate.year) }
@@ -1687,7 +1746,7 @@ private fun StartDatePickerDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "Select start date",
+                    text = title,
                     color = colors.primaryText,
                     fontWeight = FontWeight.Medium,
                     fontSize = 18.sp

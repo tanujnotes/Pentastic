@@ -89,6 +89,7 @@ fun ArchivedNotesScreen(
             },
             onSetReminder = { note, reminderAt, enabled -> viewModel.setNoteReminder(note, reminderAt, enabled) },
             onRemoveReminder = { note -> viewModel.removeNoteReminder(note) },
+            onSetDueDate = { note, dueStartAt, dueEndAt -> viewModel.setNoteDueDate(note, dueStartAt, dueEndAt) },
             showCompletedTasks = showCompletedTasks,
             onToggleShowCompleted = { viewModel.toggleShowCompletedTasks() },
         )

@@ -351,6 +351,18 @@ class MainViewModel(
         }
     }
 
+    fun setNoteDueDate(note: Note, dueStartAt: Long, dueEndAt: Long) {
+        viewModelScope.launch {
+            repository.updateNote(
+                note.copy(
+                    dueStartAt = dueStartAt,
+                    dueEndAt = dueEndAt,
+                    updatedAt = Clock.System.now().toEpochMilliseconds()
+                )
+            )
+        }
+    }
+
     // Trash operations
 
     fun restorePage(page: Page) {
