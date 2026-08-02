@@ -2,26 +2,24 @@
 
 package app.pentastic.ui.composables
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,23 +30,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Note
+import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.TimelineBucket
 import app.pentastic.data.TimelineSection
 import app.pentastic.data.classifyDueDate
-import app.pentastic.data.formatDueDateLabel
 import app.pentastic.data.hasDueDate
-import app.pentastic.data.isDueSomeday
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.Font
 import org.koin.compose.viewmodel.koinViewModel
@@ -70,6 +74,9 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     val today = Clock.System.now().toLocalDateTime(timeZone).date
 
     var noteForDueDateDialog by remember { mutableStateOf<Note?>(null) }
+    var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
+    var noteForReminderDialog by remember { mutableStateOf<Note?>(null) }
+    var noteForMoveDialog by remember { mutableStateOf<Note?>(null) }
 
     // Keys the user toggled away from their section's default collapse state
     var toggledSections by rememberSaveable(
@@ -98,13 +105,15 @@ fun TimelinePage(modifier: Modifier = Modifier) {
 
             buildList {
                 TimelineSection.entries.filter { it != TimelineSection.SOMEDAY }.forEach { section ->
+                    val sectionNotes = datedSort(grouped[TimelineBucket.Section(section)] ?: emptyList())
+                    // Overdue only appears when something is actually overdue
+                    if (section == TimelineSection.OVERDUE && sectionNotes.isEmpty()) return@forEach
                     add(
                         TimelineSectionUi(
                             key = section.name,
                             label = section.label,
-                            notes = datedSort(grouped[TimelineBucket.Section(section)] ?: emptyList()),
+                            notes = sectionNotes,
                             collapsedByDefault = false,
-                            isOverdue = section == TimelineSection.OVERDUE,
                         )
                     )
                 }
@@ -121,7 +130,6 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                             label = year.toString(),
                             notes = datedSort(grouped[TimelineBucket.Year(year)] ?: emptyList()),
                             collapsedByDefault = true,
-                            isOverdue = false,
                         )
                     )
                 }
@@ -132,7 +140,6 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         label = TimelineSection.SOMEDAY.label,
                         notes = someday.sortedByDescending { it.orderAt },
                         collapsedByDefault = false,
-                        isOverdue = false,
                     )
                 )
 
@@ -148,7 +155,6 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                             label = "Unscheduled",
                             notes = unscheduled,
                             collapsedByDefault = false,
-                            isOverdue = false,
                         )
                     )
                 }
@@ -162,7 +168,6 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                             label = "Completed",
                             notes = completed,
                             collapsedByDefault = true,
-                            isOverdue = false,
                             isDimmed = true,
                         )
                     )
@@ -170,70 +175,59 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             }
         }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            text = "Timeline",
-            style = TextStyle(
-                color = colors.pageTitle,
-                fontSize = 36.sp,
-                fontFamily = FontFamily(Font(Res.font.Merriweather_Light))
-            ),
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 6.dp)
-        )
-
+    Column(modifier = modifier.fillMaxSize().background(colors.background)) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             sections.forEachIndexed { sectionIndex, sectionUi ->
+                val isFirst = sectionIndex == 0
                 val notes = sectionUi.notes
                 val isCollapsed = (sectionUi.key in toggledSections) != sectionUi.collapsedByDefault
                 item(key = "header_${sectionUi.key}") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
+                            .padding(start = 14.dp, end = 14.dp, top = 12.dp)
+                            .clickable {
                                 toggledSections = if (sectionUi.key in toggledSections) {
                                     toggledSections - sectionUi.key
                                 } else {
                                     toggledSections + sectionUi.key
                                 }
                             }
-                            .padding(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = if (sectionIndex == 0) 16.dp else 24.dp,
-                                bottom = 8.dp
-                            ),
+                            .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = if (notes.isEmpty()) sectionUi.label else "${sectionUi.label} (${notes.size})",
-                            color = colors.primaryText.copy(alpha = 0.5f),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontSize = if (isFirst) 36.sp else 22.sp,
+                            fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+                            color = if (isCollapsed) colors.pageTitle.copy(alpha = 0.45f) else colors.pageTitle,
                         )
-                        Spacer(Modifier.width(4.dp))
-                        Icon(
-                            imageVector = if (isCollapsed) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isCollapsed) "Expand ${sectionUi.label}" else "Collapse ${sectionUi.label}",
-                            tint = colors.primaryText.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Spacer(Modifier.width(12.dp))
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = colors.divider)
                     }
-                    HorizontalDivider(
-                        color = colors.divider,
-                        modifier = Modifier.padding(start = 15.dp, end = 15.dp, bottom = 8.dp)
-                    )
                 }
                 if (!isCollapsed) {
-                    items(notes, key = { it.id }) { note ->
+                    itemsIndexed(notes, key = { _, note -> note.id }) { index, note ->
                         TimelineNoteRow(
                             note = note,
-                            isOverdueSection = sectionUi.isOverdue,
+                            index = index + 1,
                             isDimmed = sectionUi.isDimmed,
-                            onTap = { noteForDueDateDialog = note },
-                            onDoubleTap = { viewModel.toggleNoteDone(note) },
+                            onToggleDone = { viewModel.toggleNoteDone(note) },
+                            onDelete = { viewModel.deleteNote(note) },
+                            onSetPriority = {
+                                viewModel.updateNote(
+                                    note.copy(
+                                        priority = if (note.priority == 0) 1 else 0,
+                                        done = false,
+                                        orderAt = Clock.System.now().toEpochMilliseconds()
+                                    )
+                                )
+                            },
+                            onEdit = { viewModel.setEditingNote(note) },
+                            onSetRepeat = { noteForRepeatDialog = note },
+                            onSetReminder = { noteForReminderDialog = note },
+                            onSetDueDate = { noteForDueDateDialog = note },
+                            onMoveTo = { noteForMoveDialog = note },
                         )
                     }
                 }
@@ -253,6 +247,105 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             }
         )
     }
+
+    if (noteForRepeatDialog != null) {
+        val note = noteForRepeatDialog!!
+        RepeatFrequencyDialog(
+            currentFrequency = RepeatFrequency.fromOrdinal(note.repeatFrequency),
+            currentStartDate = note.repeatTaskStartFrom,
+            currentReminderTime = note.reminderAt,
+            isReminderEnabled = note.reminderEnabled == 1 && note.repeatFrequency > 0,
+            onDismiss = { noteForRepeatDialog = null },
+            onConfirm = { frequency, startDate, reminderTime, reminderEnabled ->
+                viewModel.setNoteRepeatFrequency(note, frequency, startDate, reminderTime, reminderEnabled)
+                noteForRepeatDialog = null
+            }
+        )
+    }
+
+    if (noteForReminderDialog != null) {
+        val note = noteForReminderDialog!!
+        val permissionHandler = rememberReminderPermissionHandler()
+        var showDatePicker by remember { mutableStateOf(false) }
+
+        // Check if we already have all permissions
+        LaunchedEffect(note) {
+            if (permissionHandler.hasAllReminderPermissions()) {
+                showDatePicker = true
+            }
+        }
+
+        // Show permission flow if we don't have all permissions
+        if (!showDatePicker && !permissionHandler.hasAllReminderPermissions()) {
+            ReminderPermissionFlow(
+                permissionHandler = permissionHandler,
+                onPermissionsGranted = {
+                    showDatePicker = true
+                },
+                onDismiss = {
+                    noteForReminderDialog = null
+                }
+            )
+        }
+
+        // Show date picker once permissions are handled
+        if (showDatePicker) {
+            val now = Clock.System.now()
+
+            // Calculate initial date/time from existing reminder or default to tomorrow 9 AM
+            val initialDateTime = remember(note.reminderAt) {
+                if (note.reminderAt > 0) {
+                    Instant.fromEpochMilliseconds(note.reminderAt)
+                        .toLocalDateTime(timeZone)
+                } else {
+                    val tomorrow = now.toLocalDateTime(timeZone).date
+                        .plus(1, DateTimeUnit.DAY)
+                    LocalDateTime(tomorrow, LocalTime(9, 0))
+                }
+            }
+
+            val isRepeatingTask = note.repeatFrequency > 0
+            val repeatFrequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+
+            DateTimePickerDialog(
+                initialDate = initialDateTime.date,
+                initialHour = initialDateTime.hour,
+                initialMinute = initialDateTime.minute,
+                hasExistingReminder = note.reminderAt > 0,
+                isRepeatingTask = isRepeatingTask,
+                repeatFrequency = repeatFrequency,
+                onDismiss = { noteForReminderDialog = null },
+                onConfirm = { date, hour, minute ->
+                    val reminderTime = LocalDateTime(
+                        date,
+                        LocalTime(hour, minute)
+                    ).toInstant(timeZone).toEpochMilliseconds()
+                    viewModel.setNoteReminder(note, reminderTime, true)
+                    noteForReminderDialog = null
+                },
+                onClear = {
+                    viewModel.removeNoteReminder(note)
+                },
+                onOpenRepeatDialog = {
+                    noteForRepeatDialog = note
+                }
+            )
+        }
+    }
+
+    if (noteForMoveDialog != null) {
+        val note = noteForMoveDialog!!
+        MoveToDialog(
+            currentPageId = note.pageId,
+            pages = pages,
+            subPagesByParent = subPagesByParent,
+            onDismiss = { noteForMoveDialog = null },
+            onConfirm = { targetPageId ->
+                viewModel.moveNoteToPage(note, targetPageId)
+                noteForMoveDialog = null
+            }
+        )
+    }
 }
 
 private data class TimelineSectionUi(
@@ -260,61 +353,77 @@ private data class TimelineSectionUi(
     val label: String,
     val notes: List<Note>,
     val collapsedByDefault: Boolean,
-    val isOverdue: Boolean,
     val isDimmed: Boolean = false,
 )
 
 @Composable
 private fun TimelineNoteRow(
     note: Note,
-    isOverdueSection: Boolean,
-    onTap: () -> Unit,
-    onDoubleTap: () -> Unit,
+    index: Int,
+    onToggleDone: () -> Unit,
+    onDelete: () -> Unit,
+    onSetPriority: () -> Unit,
+    onEdit: () -> Unit,
+    onSetRepeat: () -> Unit,
+    onSetReminder: () -> Unit,
+    onSetDueDate: () -> Unit,
+    onMoveTo: () -> Unit,
     isDimmed: Boolean = false,
 ) {
     val colors = AppTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(note) {
-                detectTapGestures(
-                    onTap = { onTap() },
-                    onDoubleTap = { onDoubleTap() },
-                )
-            }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = note.text.take(25),
-            fontSize = 18.sp,
-            maxLines = 1,
-            color = when {
-                isDimmed -> colors.primaryText.copy(alpha = 0.33f)
-                note.priority == 1 -> colors.priorityText
-                else -> colors.primaryText
-            },
-            textDecoration = if (isDimmed) TextDecoration.LineThrough else TextDecoration.None,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = "................................................................................................................... ",
-            color = colors.hint,
-            maxLines = 1,
-            modifier = Modifier.weight(1f)
-        )
-        if (note.hasDueDate && !note.isDueSomeday) {
-            Spacer(Modifier.width(8.dp))
+    var showMenu by remember { mutableStateOf(false) }
+    val clipboardManager = LocalClipboardManager.current
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(note) {
+                    detectTapGestures(
+                        onTap = { showMenu = true },
+                        onDoubleTap = { onToggleDone() },
+                    )
+                },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                text = formatDueDateLabel(note.dueStartAt, note.dueEndAt),
-                fontSize = 14.sp,
+                modifier = Modifier.padding(start = 12.dp).defaultMinSize(minWidth = 28.dp),
+                fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+                text = "$index.",
+                color = colors.primaryText.copy(alpha = 0.33f),
+                textAlign = TextAlign.Center,
+                fontSize = 16.sp,
+                lineHeight = 20.sp
+            )
+            Text(
+                modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 5.dp, bottom = 5.dp).weight(1f),
+                text = note.text,
                 color = when {
                     isDimmed -> colors.primaryText.copy(alpha = 0.33f)
-                    isOverdueSection -> colors.priorityText
-                    else -> colors.primaryText.copy(alpha = 0.7f)
+                    note.priority == 1 -> colors.priorityText
+                    else -> colors.primaryText
                 },
+                textDecoration = if (isDimmed) TextDecoration.LineThrough else TextDecoration.None,
+                fontSize = 18.sp,
+                lineHeight = 20.sp,
+                letterSpacing = 0.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+
+        NoteActionsMenu(
+            note = note,
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            onDelete = onDelete,
+            onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
+            onToggleDone = onToggleDone,
+            onSetPriority = onSetPriority,
+            onEdit = onEdit,
+            onSetRepeat = onSetRepeat,
+            onSetReminder = onSetReminder,
+            onSetDueDate = onSetDueDate,
+            onMoveTo = onMoveTo,
+        )
     }
 }

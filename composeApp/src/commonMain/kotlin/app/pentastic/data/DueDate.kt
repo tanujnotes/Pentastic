@@ -130,14 +130,34 @@ fun classifyDueDate(
     if (dueStartAt == 0L) return null
     if (dueStartAt == DUE_SOMEDAY) return TimelineBucket.Section(TimelineSection.SOMEDAY)
 
+    val start = epochMillisToLocalDate(dueStartAt, timeZone)
     val end = epochMillisToLocalDate(dueEndAt, timeZone)
     val weekStart = today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
     val monthStart = LocalDate(today.year, today.month, 1)
     val thisMonthEnd = monthStart.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
     val nextMonthEnd = monthStart.plus(2, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
 
+    if (end < today) return TimelineBucket.Section(TimelineSection.OVERDUE)
+
+    // Whole calendar blocks keep their period's section until they lapse, instead of
+    // migrating into Today/Tomorrow as the period closes (e.g. "This week" on a Sunday)
+    val isWeekBlock = start.dayOfWeek.isoDayNumber == 1 && end == start.plus(6, DateTimeUnit.DAY)
+    val isWeekendBlock = start.dayOfWeek.isoDayNumber == 6 && end == start.plus(1, DateTimeUnit.DAY)
+    if (isWeekBlock || isWeekendBlock) {
+        val blockWeekStart = if (isWeekBlock) start else start.minus(5, DateTimeUnit.DAY)
+        if (blockWeekStart == weekStart) return TimelineBucket.Section(TimelineSection.THIS_WEEK)
+        if (blockWeekStart == weekStart.plus(7, DateTimeUnit.DAY)) return TimelineBucket.Section(TimelineSection.NEXT_WEEK)
+    }
+    val isMonthBlock = start.dayOfMonth == 1 &&
+            end == LocalDate(start.year, start.month, 1).plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
+    if (isMonthBlock) {
+        if (start == monthStart) return TimelineBucket.Section(TimelineSection.THIS_MONTH)
+        if (start == monthStart.plus(1, DateTimeUnit.MONTH)) return TimelineBucket.Section(TimelineSection.NEXT_MONTH)
+    }
+    val isYearBlock = start == LocalDate(start.year, 1, 1) && end == LocalDate(start.year, 12, 31)
+    if (isYearBlock) return TimelineBucket.Year(end.year)
+
     return when {
-        end < today -> TimelineBucket.Section(TimelineSection.OVERDUE)
         end == today -> TimelineBucket.Section(TimelineSection.TODAY)
         end == today.plus(1, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.TOMORROW)
         end <= weekStart.plus(6, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.THIS_WEEK)

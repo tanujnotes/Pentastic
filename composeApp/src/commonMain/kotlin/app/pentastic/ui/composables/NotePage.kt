@@ -1023,7 +1023,7 @@ private fun SubPageTabs(
 }
 
 @Composable
-private fun NoteActionsMenu(
+internal fun NoteActionsMenu(
     note: Note,
     expanded: Boolean,
     onDismissRequest: () -> Unit,
@@ -1239,7 +1239,7 @@ private fun handleToggleDone(
 }
 
 @Composable
-private fun RepeatFrequencyDialog(
+internal fun RepeatFrequencyDialog(
     currentFrequency: RepeatFrequency,
     currentStartDate: Long,
     currentReminderTime: Long,
@@ -1982,7 +1982,7 @@ private fun <T> StartDateWheelPicker(
 }
 
 @Composable
-private fun MoveToDialog(
+internal fun MoveToDialog(
     currentPageId: Long,
     pages: List<Page>,
     subPagesByParent: Map<Long, List<Page>>,
