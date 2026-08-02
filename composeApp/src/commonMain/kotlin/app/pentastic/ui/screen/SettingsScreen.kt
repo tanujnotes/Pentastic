@@ -52,7 +52,6 @@ import pentastic.composeapp.generated.resources.Res
 @Composable
 fun SettingsScreen(
     onNavigateToTrash: () -> Unit,
-    onNavigateBack: () -> Unit,
 ) {
     val viewModel = koinViewModel<MainViewModel>()
     val uriHandler = LocalUriHandler.current

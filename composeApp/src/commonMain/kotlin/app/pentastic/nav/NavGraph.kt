@@ -1,6 +1,7 @@
 package app.pentastic.nav
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -9,34 +10,34 @@ import androidx.navigation.navArgument
 import app.pentastic.ui.screen.ArchivedNotesScreen
 import app.pentastic.ui.screen.HomeScreen
 import app.pentastic.ui.screen.SettingsScreen
+import app.pentastic.ui.screen.TimelineScreen
 import app.pentastic.ui.screen.TrashScreen
 
 @Composable
 fun SetupNavGraph(
     navController: NavHostController,
+    modifier: Modifier = Modifier,
     startDestination: String = Screen.Home.route,
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        modifier = modifier
     ) {
         composable(route = Screen.Home.route) {
             HomeScreen(
-                onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
-                },
                 onNavigateToArchivedNotes = { pageId ->
                     navController.navigate(Screen.ArchivedNotes.createRoute(pageId))
                 }
             )
         }
+        composable(route = Screen.Timeline.route) {
+            TimelineScreen()
+        }
         composable(route = Screen.Settings.route) {
             SettingsScreen(
                 onNavigateToTrash = {
                     navController.navigate(Screen.Trash.route)
-                },
-                onNavigateBack = {
-                    navController.popBackStack()
                 }
             )
         }

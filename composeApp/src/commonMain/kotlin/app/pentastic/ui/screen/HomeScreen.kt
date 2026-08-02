@@ -52,7 +52,6 @@ import kotlin.time.ExperimentalTime
 
 @Composable
 fun HomeScreen(
-    onNavigateToSettings: () -> Unit = {},
     onNavigateToArchivedNotes: (Long) -> Unit = {},
     prefs: DataStore<Preferences> = koinInject(),
 ) {
@@ -210,7 +209,6 @@ fun HomeScreen(
                                 navigateToPage(page.id)
                             },
                             onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
-                            onNavigateToSettings = onNavigateToSettings,
                             archivedPages = archivedPages,
                             onArchivedPageClick = { page -> onNavigateToArchivedNotes(page.id) },
                             onPageUnarchive = { page -> viewModel.unarchivePage(page) },
@@ -341,8 +339,7 @@ fun HomeScreen(
                                         navigateToPage(page.id)
                                     },
                                     onAddSubPage = { parentId, name -> viewModel.addSubPage(parentId, name) },
-                                    onNavigateToSettings = onNavigateToSettings,
-                                    archivedPages = archivedPages,
+                                            archivedPages = archivedPages,
                                     onArchivedPageClick = { page -> onNavigateToArchivedNotes(page.id) },
                                     onPageUnarchive = { page -> viewModel.unarchivePage(page) },
                                 )

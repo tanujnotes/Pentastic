@@ -84,6 +84,12 @@ internal fun DueDateOptionsDialog(
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
 
+    // Optional exact due day within a multi-day preset: narrows the range end to that day
+    var refinedDay by remember { mutableStateOf<LocalDate?>(null) }
+    var showDayPicker by remember { mutableStateOf(false) }
+    val selectedRange = selectedOption?.resolveRange(today)
+    val supportsRefinement = selectedRange != null && selectedRange.first != selectedRange.second
+
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
@@ -107,13 +113,19 @@ internal fun DueDateOptionsDialog(
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
-                                    ) { selectedOption = option },
+                                    ) {
+                                        selectedOption = option
+                                        refinedDay = null
+                                    },
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 RadioButton(
                                     selected = selectedOption == option,
-                                    onClick = { selectedOption = option }
+                                    onClick = {
+                                        selectedOption = option
+                                        refinedDay = null
+                                    }
                                 )
                                 Text(text = option.label, color = colors.primaryText)
                             }
@@ -171,6 +183,31 @@ internal fun DueDateOptionsDialog(
                     }
                 }
 
+                // Optional exact due day within a multi-day preset
+                if (supportsRefinement) {
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = colors.divider)
+                    Spacer(Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { showDayPicker = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Due day", color = colors.primaryText, fontSize = 15.sp)
+                        Text(
+                            text = refinedDay?.let { rangeDateLabel(it) } ?: "Optional",
+                            color = colors.primaryText.copy(alpha = 0.7f),
+                            fontSize = 15.sp
+                        )
+                    }
+                }
+
                 Spacer(Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -202,10 +239,18 @@ internal fun DueDateOptionsDialog(
 
                                     else -> {
                                         val (start, end) = option.resolveRange(today)!!
-                                        onApply(
-                                            start.toStartOfDayMillis(timeZone),
-                                            end.toStartOfDayMillis(timeZone)
-                                        )
+                                        val day = refinedDay
+                                        if (day != null) {
+                                            onApply(
+                                                minOf(start, day).toStartOfDayMillis(timeZone),
+                                                day.toStartOfDayMillis(timeZone)
+                                            )
+                                        } else {
+                                            onApply(
+                                                start.toStartOfDayMillis(timeZone),
+                                                end.toStartOfDayMillis(timeZone)
+                                            )
+                                        }
                                     }
                                 }
                             },
@@ -244,6 +289,17 @@ internal fun DueDateOptionsDialog(
                 showEndPicker = false
             },
             title = "Select end date",
+        )
+    }
+    if (showDayPicker) {
+        StartDatePickerDialog(
+            initialDate = refinedDay ?: selectedRange?.second ?: today,
+            onDismiss = { showDayPicker = false },
+            onConfirm = { date ->
+                refinedDay = date
+                showDayPicker = false
+            },
+            title = "Select due day",
         )
     }
 }

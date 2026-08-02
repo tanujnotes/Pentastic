@@ -96,3 +96,54 @@ private fun monthAbbrev(month: Month): String =
 
 private fun twoDigitYear(year: Int): String =
     (year % 100).toString().padStart(2, '0')
+
+/** Fixed timeline sections in display order (enum order is the on-screen order). */
+enum class TimelineSection(val label: String) {
+    OVERDUE("Overdue"),
+    TODAY("Today"),
+    TOMORROW("Tomorrow"),
+    THIS_WEEK("This week"),
+    NEXT_WEEK("Next week"),
+    THIS_MONTH("This month"),
+    NEXT_MONTH("Next month"),
+    SOMEDAY("Someday"),
+}
+
+/** A timeline bucket: one of the fixed sections, or a year section beyond next month. */
+sealed interface TimelineBucket {
+    data class Section(val section: TimelineSection) : TimelineBucket
+    data class Year(val year: Int) : TimelineBucket
+}
+
+/**
+ * Buckets a due range by its END date (deadline semantics). Checks run top to
+ * bottom, first match wins, so each task lands in exactly one bucket.
+ * Ranges ending beyond next month bucket into the end date's year.
+ * Returns null when there is no due date.
+ */
+fun classifyDueDate(
+    dueStartAt: Long,
+    dueEndAt: Long,
+    today: LocalDate,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): TimelineBucket? {
+    if (dueStartAt == 0L) return null
+    if (dueStartAt == DUE_SOMEDAY) return TimelineBucket.Section(TimelineSection.SOMEDAY)
+
+    val end = epochMillisToLocalDate(dueEndAt, timeZone)
+    val weekStart = today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
+    val monthStart = LocalDate(today.year, today.month, 1)
+    val thisMonthEnd = monthStart.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
+    val nextMonthEnd = monthStart.plus(2, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
+
+    return when {
+        end < today -> TimelineBucket.Section(TimelineSection.OVERDUE)
+        end == today -> TimelineBucket.Section(TimelineSection.TODAY)
+        end == today.plus(1, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.TOMORROW)
+        end <= weekStart.plus(6, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.THIS_WEEK)
+        end <= weekStart.plus(13, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.NEXT_WEEK)
+        end <= thisMonthEnd -> TimelineBucket.Section(TimelineSection.THIS_MONTH)
+        end <= nextMonthEnd -> TimelineBucket.Section(TimelineSection.NEXT_MONTH)
+        else -> TimelineBucket.Year(end.year)
+    }
+}

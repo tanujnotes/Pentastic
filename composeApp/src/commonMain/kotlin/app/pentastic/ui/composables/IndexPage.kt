@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Unarchive
@@ -111,7 +110,6 @@ fun IndexPage(
     onPageArchive: (Page) -> Unit,
     onPageTypeChange: (Page, PageType) -> Unit,
     onAddSubPage: (Long, String) -> Unit,
-    onNavigateToSettings: () -> Unit = {},
     archivedPages: List<Page> = emptyList(),
     onArchivedPageClick: (Page) -> Unit = {},
     onPageUnarchive: (Page) -> Unit = {},
@@ -216,21 +214,6 @@ fun IndexPage(
                                 leadingIcon = {
                                     Icon(
                                         Icons.AutoMirrored.Filled.Sort,
-                                        tint = colors.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Settings", color = colors.primaryText) },
-                                onClick = {
-                                    showTopMenu = false
-                                    onNavigateToSettings()
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Settings,
                                         tint = colors.icon,
                                         contentDescription = null,
                                         modifier = Modifier.padding(end = 4.dp).size(20.dp)
@@ -1025,7 +1008,6 @@ fun IndexPagePreview() {
             onPageArchive = {},
             onPageTypeChange = { _, _ -> },
             onAddSubPage = { _, _ -> },
-            onNavigateToSettings = {},
         )
     }
 }
