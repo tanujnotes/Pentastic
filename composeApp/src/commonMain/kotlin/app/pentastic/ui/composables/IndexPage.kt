@@ -5,6 +5,7 @@
 
 package app.pentastic.ui.composables
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
@@ -43,6 +45,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.ChecklistRtl
 import androidx.compose.material.icons.outlined.ViewTimeline
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -58,6 +63,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,6 +84,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -120,6 +127,7 @@ fun IndexPage(
     onTimelineClick: () -> Unit = {},
 ) {
     val viewModel = koinViewModel<MainViewModel>()
+    val showSubPages by viewModel.showSubPages.collectAsState()
 
     var showRenameDialog by remember { mutableStateOf(false) }
     var pageToRename: Page? by remember { mutableStateOf(null) }
@@ -226,6 +234,26 @@ fun IndexPage(
                                 }
                             )
                             DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (showSubPages) "Hide sub-pages" else "Show sub-pages",
+                                        color = colors.primaryText
+                                    )
+                                },
+                                onClick = {
+                                    showTopMenu = false
+                                    viewModel.toggleShowSubPages()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        if (showSubPages) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Settings", color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
@@ -274,6 +302,9 @@ fun IndexPage(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+
+                            Spacer(Modifier.width(6.dp))
+
                             Text(
                                 text = "Timeline",
                                 fontSize = 18.sp,
@@ -281,13 +312,10 @@ fun IndexPage(
                                 color = colors.primaryText,
                                 overflow = TextOverflow.Ellipsis,
                             )
+
                             Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "................................................................................................................... ",
-                                color = colors.hint,
-                                maxLines = 1,
-                                modifier = Modifier.weight(1f)
-                            )
+
+                            DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                         }
                     }
                 }
@@ -317,14 +345,13 @@ fun IndexPage(
                                     ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "${index + 1}.",
-                                    fontSize = 16.sp,
-                                    lineHeight = 20.sp,
-                                    fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
-                                    color = colors.primaryText.copy(alpha = 0.33f),
-                                    modifier = Modifier.padding(top = 1.dp).defaultMinSize(minWidth = 32.dp)
+                                PageTypeIcon(
+                                    pageType = PageType.fromOrdinal(page.pageType),
+                                    size = 18.dp,
+                                    minWidth = 32.dp,
                                 )
+
+                                Spacer(Modifier.width(6.dp))
 
                                 Text(
                                     text = page.name.take(20),
@@ -337,12 +364,7 @@ fun IndexPage(
                                 Spacer(Modifier.width(6.dp))
 
                                 if (!isReorderMode) {
-                                    Text(
-                                        text = "................................................................................................................... ",
-                                        color = colors.hint,
-                                        maxLines = 1,
-                                        modifier = Modifier.weight(1f)
-                                    )
+                                    DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         modifier = Modifier.defaultMinSize(minWidth = 16.dp),
@@ -470,14 +492,12 @@ fun IndexPage(
                         }
                     }
 
-                    // Sub-pages for this parent (hide during reorder mode)
-                    if (!isReorderMode) {
+                    // Sub-pages for this parent (hide during reorder mode or when toggled off)
+                    if (!isReorderMode && showSubPages) {
                         val subPages = subPagesByParent[page.id] ?: emptyList()
                         subPages.forEachIndexed { subIndex, subPage ->
                             SubPageItem(
                                 subPage = subPage,
-                                parentIndex = index + 1,
-                                subIndex = subIndex + 1,
                                 notesCount = notesCountByPage[subPage.id] ?: 0,
                                 priorityNotesCount = priorityNotesCountByPage[subPage.id] ?: 0,
                                 onPageClick = onPageClick,
@@ -592,7 +612,7 @@ fun IndexPage(
                     page = pageToRename!!,
                     onDismiss = { showRenameDialog = false },
                     onConfirm = { newName ->
-                        onPageNameChange(pageToRename!!, newName.ifBlank { "Page" })
+                        onPageNameChange(pageToRename!!, newName.trim().ifBlank { "Page" })
                         showRenameDialog = false
                     }
                 )
@@ -614,7 +634,7 @@ fun IndexPage(
                     parentPage = parentPageForSubPage!!,
                     onDismiss = { showAddSubPageDialog = false },
                     onConfirm = { subPageName ->
-                        onAddSubPage(parentPageForSubPage!!.id, subPageName.ifBlank { "Sub-page" })
+                        onAddSubPage(parentPageForSubPage!!.id, subPageName.trim().ifBlank { "Sub-page" })
                         showAddSubPageDialog = false
                     }
                 )
@@ -656,10 +676,44 @@ fun IndexPage(
 }
 
 @Composable
+private fun DottedLeader(
+    modifier: Modifier = Modifier,
+    color: Color = colors.hint.copy(alpha = 0.5f),
+    dotRadius: Dp = 1.dp,
+    gap: Dp = 3.dp,
+) {
+    Canvas(modifier = modifier.height(dotRadius * 2)) {
+        val r = dotRadius.toPx()
+        val step = r * 2 + gap.toPx()
+        val y = size.height / 2
+        var x = r
+        while (x <= size.width) {
+            drawCircle(color = color, radius = r, center = Offset(x, y))
+            x += step
+        }
+    }
+}
+
+@Composable
+private fun PageTypeIcon(
+    pageType: PageType,
+    size: Dp,
+    minWidth: Dp,
+) {
+    Box(modifier = Modifier.defaultMinSize(minWidth = minWidth)) {
+        Icon(
+            imageVector = if (pageType == PageType.NOTES) Icons.AutoMirrored.Outlined.Notes
+            else Icons.Outlined.ChecklistRtl,
+            contentDescription = if (pageType == PageType.NOTES) "Notes page" else "Tasks page",
+            tint = colors.primaryText.copy(alpha = 0.33f),
+            modifier = Modifier.size(size)
+        )
+    }
+}
+
+@Composable
 private fun SubPageItem(
     subPage: Page,
-    parentIndex: Int,
-    subIndex: Int,
     notesCount: Int,
     priorityNotesCount: Int,
     onPageClick: (Long) -> Unit,
@@ -674,7 +728,7 @@ private fun SubPageItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 48.dp, top = 4.dp, bottom = 12.dp, end = 16.dp)
+                .padding(start = 54.dp, top = 4.dp, bottom = 12.dp, end = 16.dp)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -684,14 +738,6 @@ private fun SubPageItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "$parentIndex.$subIndex",
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-                fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
-                color = colors.primaryText.copy(alpha = 0.33f),
-                modifier = Modifier.defaultMinSize(minWidth = 32.dp)
-            )
-            Text(
                 text = subPage.name.take(20),
                 fontSize = 16.sp,
                 maxLines = 1,
@@ -699,12 +745,7 @@ private fun SubPageItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.width(6.dp))
-            Text(
-                text = "................................................................................................................... ",
-                color = colors.hint,
-                maxLines = 1,
-                modifier = Modifier.weight(1f)
-            )
+            DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
             Spacer(Modifier.width(8.dp))
             Text(
                 modifier = Modifier.defaultMinSize(minWidth = 16.dp),

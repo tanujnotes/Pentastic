@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.outlined.ArrowOutward
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -44,6 +45,7 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -139,6 +141,7 @@ fun NotePage(
     pageType: PageType = PageType.TASKS,
     showCompletedTasks: Boolean = false,
     onToggleShowCompleted: () -> Unit = {},
+    onDeleteCompletedTasks: (List<Note>) -> Unit = {},
 ) {
     val isNotesType = pageType == PageType.NOTES
     val noteMovedToIndex = remember { mutableStateOf(-1) }
@@ -146,6 +149,8 @@ fun NotePage(
     var noteForReminderDialog by remember { mutableStateOf<Note?>(null) }
     var noteForMoveDialog by remember { mutableStateOf<Note?>(null) }
     var noteForDueDateDialog by remember { mutableStateOf<Note?>(null) }
+    var showCompletedMenu by remember { mutableStateOf(false) }
+    var showDeleteCompletedDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -415,23 +420,25 @@ fun NotePage(
                                         onDragStarted = {
                                         },
                                         onDragStopped = {
-                                            if (noteMovedToIndex.value == -1) return@longPressDraggableHandle
-                                            if (noteMovedToIndex.value == 0)
-                                                onUpdateNote(
-                                                    list[0].copy(
-                                                        orderAt = Clock.System.now().toEpochMilliseconds(),
-                                                        done = false,
-                                                        priority = list[1].priority
-                                                    )
-                                                )
-                                            else if (noteMovedToIndex.value > 0) {
-                                                onUpdateNote(
-                                                    list[noteMovedToIndex.value].copy(
-                                                        orderAt = list[noteMovedToIndex.value - 1].orderAt - 1,
-                                                        done = list[noteMovedToIndex.value - 1].done
-                                                    )
-                                                )
+                                            val movedIndex = noteMovedToIndex.value
+                                            if (movedIndex == -1) return@longPressDraggableHandle
+                                            val step = 1_000_000L
+                                            val above = list.getOrNull(movedIndex - 1)
+                                            val below = list.getOrNull(movedIndex + 1)
+                                            val newPriority = when {
+                                                above == null -> below?.priority ?: list[movedIndex].priority
+                                                below == null || above.priority == below.priority -> above.priority
+                                                else -> list[movedIndex].priority
                                             }
+
+                                            val newOrderAt = when {
+                                                above == null -> Clock.System.now().toEpochMilliseconds()
+                                                below == null -> above.orderAt - step
+                                                above.priority == below.priority -> below.orderAt + (above.orderAt - below.orderAt) / 2
+                                                newPriority == above.priority -> above.orderAt - step
+                                                else -> below.orderAt + step
+                                            }
+                                            onUpdateNote(list[movedIndex].copy(orderAt = newOrderAt, priority = newPriority))
                                             noteMovedToIndex.value = -1
                                         },
                                         interactionSource = interactionSource,
@@ -539,24 +546,63 @@ fun NotePage(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onToggleShowCompleted() }
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    .padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = if (showCompletedTasks) Icons.Default.KeyboardArrowDown
-                                    else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    tint = AppTheme.colors.primaryText.copy(alpha = 0.33f),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(Modifier.width(18.dp))
-                                Text(
-                                    text = if (showCompletedTasks) "Hide completed (${completedTasks.size})"
-                                    else "Show completed (${completedTasks.size})",
-                                    fontSize = 18.sp,
-                                    color = AppTheme.colors.primaryText.copy(alpha = 0.33f),
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { onToggleShowCompleted() }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (showCompletedTasks) Icons.Default.KeyboardArrowDown
+                                        else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = AppTheme.colors.primaryText.copy(alpha = 0.33f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.width(18.dp))
+                                    Text(
+                                        text = if (showCompletedTasks) "Hide completed (${completedTasks.size})"
+                                        else "Show completed (${completedTasks.size})",
+                                        fontSize = 18.sp,
+                                        color = AppTheme.colors.primaryText.copy(alpha = 0.33f),
+                                    )
+                                }
+
+                                Box {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "More options",
+                                        tint = AppTheme.colors.primaryText.copy(alpha = 0.33f),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(percent = 50))
+                                            .clickable { showCompletedMenu = true }
+                                            .padding(8.dp)
+                                            .size(20.dp)
+                                    )
+                                    DropdownMenu(
+                                        modifier = Modifier.background(color = AppTheme.colors.menuBackground),
+                                        expanded = showCompletedMenu,
+                                        onDismissRequest = { showCompletedMenu = false },
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = "Delete completed",
+                                                    color = AppTheme.colors.primaryText,
+                                                    fontSize = 16.sp,
+                                                )
+                                            },
+                                            onClick = {
+                                                showCompletedMenu = false
+                                                showDeleteCompletedDialog = true
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -826,6 +872,19 @@ fun NotePage(
                     onApply = { dueStartAt, dueEndAt ->
                         onSetDueDate(note, dueStartAt, dueEndAt)
                         noteForDueDateDialog = null
+                    }
+                )
+            }
+
+            if (showDeleteCompletedDialog) {
+                ConfirmationDialog(
+                    title = "Delete completed",
+                    message = "Move all ${completedTasks.size} completed tasks to trash?",
+                    confirmText = "Move to trash",
+                    onDismiss = { showDeleteCompletedDialog = false },
+                    onConfirm = {
+                        onDeleteCompletedTasks(completedTasks)
+                        showDeleteCompletedDialog = false
                     }
                 )
             }
@@ -2029,6 +2088,45 @@ private fun MoveToDialog(
                 ) {
                     TextButton(onClick = onDismiss) {
                         Text("Cancel", color = colors.primaryText)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfirmationDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val colors = AppTheme.colors
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(title, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
+                Text(message, color = colors.primaryText)
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = colors.primaryText)
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
+                        Text(confirmText)
                     }
                 }
             }

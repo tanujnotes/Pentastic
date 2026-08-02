@@ -21,6 +21,7 @@ object DatastoreKeys {
     val THEME_MODE = intPreferencesKey("theme_mode")
     val SHOW_COMPLETED_TASKS = booleanPreferencesKey("show_completed_tasks")
     val SHOW_TIMELINE = booleanPreferencesKey("show_timeline")
+    val SHOW_SUB_PAGES = booleanPreferencesKey("show_sub_pages")
 }
 
 class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
@@ -87,6 +88,16 @@ class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setShowTimeline(show: Boolean) {
         dataStore.edit { settings ->
             settings[DatastoreKeys.SHOW_TIMELINE] = show
+        }
+    }
+
+    val showSubPages: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.SHOW_SUB_PAGES] ?: true
+    }
+
+    suspend fun setShowSubPages(show: Boolean) {
+        dataStore.edit { settings ->
+            settings[DatastoreKeys.SHOW_SUB_PAGES] = show
         }
     }
 }
