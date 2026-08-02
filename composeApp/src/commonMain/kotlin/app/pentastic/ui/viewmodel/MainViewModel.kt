@@ -88,6 +88,12 @@ class MainViewModel(
         initialValue = emptyList()
     )
 
+    val timelinePage: StateFlow<Page?> = repository.getTimelinePage().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
     init {
         checkFirstLaunch()
         loadNotesByPage()
@@ -231,6 +237,16 @@ class MainViewModel(
     fun insertPriorityNote(pageId: Long, text: String) {
         viewModelScope.launch {
             repository.insertNote(Note(pageId = pageId, text = text, priority = 1))
+        }
+    }
+
+    fun addTimelineTask(text: String, dueStartAt: Long, dueEndAt: Long) {
+        viewModelScope.launch {
+            val timelinePageId = repository.getTimelinePageOnce()?.id
+                ?: repository.insertPage(Page(name = "Timeline", pageType = PageType.TIMELINE.ordinal))
+            repository.insertNote(
+                Note(pageId = timelinePageId, text = text, dueStartAt = dueStartAt, dueEndAt = dueEndAt)
+            )
         }
     }
 

@@ -63,6 +63,14 @@ class MyRepository(
         return pageDao.getRootPages()
     }
 
+    fun getTimelinePage(): Flow<Page?> {
+        return pageDao.getTimelinePage()
+    }
+
+    suspend fun getTimelinePageOnce(): Page? {
+        return pageDao.getTimelinePageOnce()
+    }
+
     fun getSubPages(parentId: Long): Flow<List<Page>> {
         return pageDao.getSubPages(parentId)
     }

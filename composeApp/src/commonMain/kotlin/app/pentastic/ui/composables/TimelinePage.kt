@@ -35,6 +35,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,6 +64,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     val notesByPage by viewModel.notesByPage.collectAsState()
     val pages by viewModel.pages.collectAsState()
     val subPagesByParent by viewModel.subPagesByParent.collectAsState()
+    val timelinePage by viewModel.timelinePage.collectAsState()
 
     val timeZone = TimeZone.currentSystemDefault()
     val today = Clock.System.now().toLocalDateTime(timeZone).date
@@ -78,11 +80,12 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     ) { mutableStateOf(setOf<String>()) }
 
     val sections: List<TimelineSectionUi> =
-        remember(notesByPage, pages, subPagesByParent, today) {
-            // Live (non-deleted, non-archived) pages = root pages + their sub-pages
+        remember(notesByPage, pages, subPagesByParent, timelinePage, today) {
+            // Live (non-deleted, non-archived) pages = root pages + their sub-pages + the Timeline page itself
             val livePageIds = buildSet {
                 pages.forEach { add(it.id) }
                 subPagesByParent.values.forEach { subs -> subs.forEach { add(it.id) } }
+                timelinePage?.let { add(it.id) }
             }
             val grouped = notesByPage
                 .filterKeys { it in livePageIds }
@@ -132,6 +135,38 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         isOverdue = false,
                     )
                 )
+
+                // Safety nets for tasks that live ON the Timeline page itself (shown only when non-empty)
+                val timelineOwnNotes = timelinePage?.id?.let { notesByPage[it] } ?: emptyList()
+                val unscheduled = timelineOwnNotes
+                    .filter { !it.done && it.dueStartAt == 0L }
+                    .sortedByDescending { it.orderAt }
+                if (unscheduled.isNotEmpty()) {
+                    add(
+                        TimelineSectionUi(
+                            key = "UNSCHEDULED",
+                            label = "Unscheduled",
+                            notes = unscheduled,
+                            collapsedByDefault = false,
+                            isOverdue = false,
+                        )
+                    )
+                }
+                val completed = timelineOwnNotes
+                    .filter { it.done }
+                    .sortedByDescending { it.orderAt }
+                if (completed.isNotEmpty()) {
+                    add(
+                        TimelineSectionUi(
+                            key = "COMPLETED",
+                            label = "Completed",
+                            notes = completed,
+                            collapsedByDefault = true,
+                            isOverdue = false,
+                            isDimmed = true,
+                        )
+                    )
+                }
             }
         }
 
@@ -196,6 +231,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         TimelineNoteRow(
                             note = note,
                             isOverdueSection = sectionUi.isOverdue,
+                            isDimmed = sectionUi.isDimmed,
                             onTap = { noteForDueDateDialog = note },
                             onDoubleTap = { viewModel.toggleNoteDone(note) },
                         )
@@ -225,6 +261,7 @@ private data class TimelineSectionUi(
     val notes: List<Note>,
     val collapsedByDefault: Boolean,
     val isOverdue: Boolean,
+    val isDimmed: Boolean = false,
 )
 
 @Composable
@@ -233,6 +270,7 @@ private fun TimelineNoteRow(
     isOverdueSection: Boolean,
     onTap: () -> Unit,
     onDoubleTap: () -> Unit,
+    isDimmed: Boolean = false,
 ) {
     val colors = AppTheme.colors
     Row(
@@ -251,7 +289,12 @@ private fun TimelineNoteRow(
             text = note.text.take(25),
             fontSize = 18.sp,
             maxLines = 1,
-            color = if (note.priority == 1) colors.priorityText else colors.primaryText,
+            color = when {
+                isDimmed -> colors.primaryText.copy(alpha = 0.33f)
+                note.priority == 1 -> colors.priorityText
+                else -> colors.primaryText
+            },
+            textDecoration = if (isDimmed) TextDecoration.LineThrough else TextDecoration.None,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(6.dp))
@@ -261,12 +304,16 @@ private fun TimelineNoteRow(
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
-        if (!note.isDueSomeday) {
+        if (note.hasDueDate && !note.isDueSomeday) {
             Spacer(Modifier.width(8.dp))
             Text(
                 text = formatDueDateLabel(note.dueStartAt, note.dueEndAt),
                 fontSize = 14.sp,
-                color = if (isOverdueSection) colors.priorityText else colors.primaryText.copy(alpha = 0.7f),
+                color = when {
+                    isDimmed -> colors.primaryText.copy(alpha = 0.33f)
+                    isOverdueSection -> colors.priorityText
+                    else -> colors.primaryText.copy(alpha = 0.7f)
+                },
             )
         }
     }

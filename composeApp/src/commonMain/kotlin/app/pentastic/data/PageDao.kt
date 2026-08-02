@@ -21,8 +21,14 @@ interface PageDao {
     @Query("SELECT * FROM page WHERE deletedAt = 0 AND archivedAt = 0 ORDER BY orderAt")
     fun getAllPages(): Flow<List<Page>>
 
-    @Query("SELECT * FROM page WHERE parentId IS NULL AND deletedAt = 0 AND archivedAt = 0 ORDER BY orderAt")
+    @Query("SELECT * FROM page WHERE parentId IS NULL AND deletedAt = 0 AND archivedAt = 0 AND pageType != 2 ORDER BY orderAt")
     fun getRootPages(): Flow<List<Page>>
+
+    @Query("SELECT * FROM page WHERE pageType = 2 AND deletedAt = 0 LIMIT 1")
+    fun getTimelinePage(): Flow<Page?>
+
+    @Query("SELECT * FROM page WHERE pageType = 2 AND deletedAt = 0 LIMIT 1")
+    suspend fun getTimelinePageOnce(): Page?
 
     @Query("SELECT * FROM page WHERE parentId = :parentId AND deletedAt = 0 AND archivedAt = 0 ORDER BY orderAt")
     fun getSubPages(parentId: Long): Flow<List<Page>>

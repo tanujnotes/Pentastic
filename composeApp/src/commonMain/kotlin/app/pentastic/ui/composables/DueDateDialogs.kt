@@ -72,17 +72,11 @@ internal fun DueDateOptionsDialog(
     }
     var selectedOption by remember { mutableStateOf(initialOption) }
 
-    val initialRange = remember {
-        if (currentDueStartAt > 0) {
-            epochMillisToLocalDate(currentDueStartAt, timeZone) to epochMillisToLocalDate(currentDueEndAt, timeZone)
-        } else {
-            today to today
-        }
+    val initialCustomDate = remember {
+        if (currentDueStartAt > 0) epochMillisToLocalDate(currentDueEndAt, timeZone) else today
     }
-    var customStart by remember { mutableStateOf(initialRange.first) }
-    var customEnd by remember { mutableStateOf(initialRange.second) }
-    var showStartPicker by remember { mutableStateOf(false) }
-    var showEndPicker by remember { mutableStateOf(false) }
+    var customDate by remember { mutableStateOf(initialCustomDate) }
+    var showCustomDatePicker by remember { mutableStateOf(false) }
 
     // Optional exact due day within a multi-day preset: narrows the range end to that day
     var refinedDay by remember { mutableStateOf<LocalDate?>(null) }
@@ -136,7 +130,7 @@ internal fun DueDateOptionsDialog(
                     }
                 }
 
-                // Start/end rows (only for Custom)
+                // Single date row (only for Custom)
                 if (selectedOption == DueDateOption.CUSTOM) {
                     Spacer(Modifier.height(16.dp))
                     HorizontalDivider(color = colors.divider)
@@ -148,35 +142,13 @@ internal fun DueDateOptionsDialog(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { showStartPicker = true },
+                            ) { showCustomDatePicker = true },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Start", color = colors.primaryText, fontSize = 15.sp)
+                        Text("Date", color = colors.primaryText, fontSize = 15.sp)
                         Text(
-                            text = rangeDateLabel(customStart),
-                            color = colors.primaryText.copy(alpha = 0.7f),
-                            fontSize = 15.sp
-                        )
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = colors.divider)
-                    Spacer(Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { showEndPicker = true },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("End", color = colors.primaryText, fontSize = 15.sp)
-                        Text(
-                            text = rangeDateLabel(customEnd),
+                            text = rangeDateLabel(customDate),
                             color = colors.primaryText.copy(alpha = 0.7f),
                             fontSize = 15.sp
                         )
@@ -233,8 +205,8 @@ internal fun DueDateOptionsDialog(
                                     null -> {}
                                     DueDateOption.SOMEDAY -> onApply(DUE_SOMEDAY, DUE_SOMEDAY)
                                     DueDateOption.CUSTOM -> onApply(
-                                        customStart.toStartOfDayMillis(timeZone),
-                                        customEnd.toStartOfDayMillis(timeZone)
+                                        customDate.toStartOfDayMillis(timeZone),
+                                        customDate.toStartOfDayMillis(timeZone)
                                     )
 
                                     else -> {
@@ -267,28 +239,15 @@ internal fun DueDateOptionsDialog(
         }
     }
 
-    if (showStartPicker) {
+    if (showCustomDatePicker) {
         StartDatePickerDialog(
-            initialDate = customStart,
-            onDismiss = { showStartPicker = false },
+            initialDate = customDate,
+            onDismiss = { showCustomDatePicker = false },
             onConfirm = { date ->
-                customStart = date
-                if (customEnd < date) customEnd = date
-                showStartPicker = false
+                customDate = date
+                showCustomDatePicker = false
             },
-            title = "Select start date",
-        )
-    }
-    if (showEndPicker) {
-        StartDatePickerDialog(
-            initialDate = customEnd,
-            onDismiss = { showEndPicker = false },
-            onConfirm = { date ->
-                customEnd = date
-                if (customStart > date) customStart = date
-                showEndPicker = false
-            },
-            title = "Select end date",
+            title = "Select date",
         )
     }
     if (showDayPicker) {

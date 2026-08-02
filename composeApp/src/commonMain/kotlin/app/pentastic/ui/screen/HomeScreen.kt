@@ -41,6 +41,7 @@ import app.pentastic.data.Note
 import app.pentastic.data.PageType
 import app.pentastic.navigation.getDeepLinkPageId
 import app.pentastic.ui.composables.CommonInput
+import app.pentastic.ui.composables.DueDateOptionsDialog
 import app.pentastic.ui.composables.IndexPage
 import app.pentastic.ui.composables.NotePage
 import app.pentastic.ui.composables.TimelinePage
@@ -80,6 +81,8 @@ fun HomeScreen(
     var selectedSubPageByParent by remember { mutableStateOf<Map<Long, Long?>>(emptyMap()) }
     var selectedWidePageIndex by remember { mutableIntStateOf(0) }
     var wideShowsTimeline by remember { mutableStateOf(false) }
+    // Task text waiting for a due date before being added to the Timeline page
+    var pendingTimelineTask by remember { mutableStateOf<String?>(null) }
 
     // Handle deep link navigation from notification
     val deepLinkPageId = getDeepLinkPageId()
@@ -296,7 +299,7 @@ fun HomeScreen(
                                 }
                             }
 
-                            if (!isOnTimelinePage) CommonInput(
+                            CommonInput(
                                 modifier = Modifier.navigationBarsPadding().imePadding(),
                                 text = text,
                                 onTextChange = { text = it },
@@ -304,17 +307,21 @@ fun HomeScreen(
                                     val note = editingNote
                                     if (note != null) {
                                         viewModel.updateNote(note.copy(text = text.trim()))
+                                        text = ""
+                                    } else if (isOnTimelinePage) {
+                                        if (text.isNotBlank()) pendingTimelineTask = text.trim()
                                     } else {
                                         currentActivePage?.let { page ->
                                             val targetPageId = selectedSubPageByParent[page.id] ?: page.id
                                             viewModel.insertNote(targetPageId, text.trim())
                                         }
+                                        text = ""
                                     }
-                                    text = ""
                                 },
                                 isEditing = editingNote != null,
                                 placeholder = when {
                                     editingNote != null -> ""
+                                    isOnTimelinePage -> "Add a task..."
                                     currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES -> "Add a note..."
                                     currentActivePage != null -> "Add a task..."
                                     else -> ""
@@ -430,15 +437,18 @@ fun HomeScreen(
                         }
                     }
 
-                    if (!isOnTimelinePage) CommonInput(
+                    CommonInput(
                         modifier = Modifier.navigationBarsPadding().imePadding(),
                         text = text,
                         onTextChange = { text = it },
                         onActionClick = {
                             val note = editingNote
-                            if (note != null)
+                            if (note != null) {
                                 viewModel.updateNote(note.copy(text = text.trim()))
-                            else {
+                                text = ""
+                            } else if (isOnTimelinePage) {
+                                if (text.isNotBlank()) pendingTimelineTask = text.trim()
+                            } else {
                                 if (isOnIndexPage)
                                     viewModel.addPage(text.trim())
                                 else
@@ -446,12 +456,13 @@ fun HomeScreen(
                                         val targetPageId = selectedSubPageByParent[page.id] ?: page.id
                                         viewModel.insertNote(targetPageId, text.trim())
                                     }
+                                text = ""
                             }
-                            text = ""
                         },
                         isEditing = editingNote != null,
                         placeholder = when {
                             editingNote != null -> ""
+                            isOnTimelinePage -> "Add a task..."
                             isOnIndexPage -> "Add a new page..."
                             else -> {
                                 if (currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES)
@@ -471,6 +482,20 @@ fun HomeScreen(
                         maxLength = if (isOnIndexPage && editingNote == null) 20 else 1000,
                     )
                 }
+            }
+
+            // Ask for a due date before adding a task from the Timeline input
+            if (pendingTimelineTask != null) {
+                DueDateOptionsDialog(
+                    currentDueStartAt = 0L,
+                    currentDueEndAt = 0L,
+                    onDismiss = { pendingTimelineTask = null },
+                    onApply = { dueStartAt, dueEndAt ->
+                        viewModel.addTimelineTask(pendingTimelineTask!!, dueStartAt, dueEndAt)
+                        pendingTimelineTask = null
+                        text = ""
+                    }
+                )
             }
         }
     }

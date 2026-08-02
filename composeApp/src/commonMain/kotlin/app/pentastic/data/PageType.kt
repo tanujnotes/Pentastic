@@ -2,7 +2,8 @@ package app.pentastic.data
 
 enum class PageType(val label: String) {
     TASKS("Tasks"),
-    NOTES("Notes");
+    NOTES("Notes"),
+    TIMELINE("Timeline");
 
     companion object {
         fun fromOrdinal(ordinal: Int): PageType {
