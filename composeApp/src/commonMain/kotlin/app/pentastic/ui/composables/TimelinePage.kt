@@ -1,8 +1,7 @@
 @file:OptIn(ExperimentalTime::class)
 
-package app.pentastic.ui.screen
+package app.pentastic.ui.composables
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,10 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -48,7 +45,6 @@ import app.pentastic.data.classifyDueDate
 import app.pentastic.data.formatDueDateLabel
 import app.pentastic.data.hasDueDate
 import app.pentastic.data.isDueSomeday
-import app.pentastic.ui.composables.DueDateOptionsDialog
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.datetime.TimeZone
@@ -61,7 +57,7 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 @Composable
-fun TimelineScreen() {
+fun TimelinePage(modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
     val viewModel = koinViewModel<MainViewModel>()
     val notesByPage by viewModel.notesByPage.collectAsState()
@@ -139,12 +135,7 @@ fun TimelineScreen() {
             }
         }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.background)
-            .statusBarsPadding()
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
         Text(
             text = "Timeline",
             style = TextStyle(

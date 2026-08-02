@@ -39,9 +39,11 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.outlined.ViewTimeline
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -113,6 +115,9 @@ fun IndexPage(
     archivedPages: List<Page> = emptyList(),
     onArchivedPageClick: (Page) -> Unit = {},
     onPageUnarchive: (Page) -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    showTimeline: Boolean = false,
+    onTimelineClick: () -> Unit = {},
 ) {
     val viewModel = koinViewModel<MainViewModel>()
 
@@ -220,6 +225,21 @@ fun IndexPage(
                                     )
                                 }
                             )
+                            DropdownMenuItem(
+                                text = { Text("Settings", color = colors.primaryText) },
+                                onClick = {
+                                    showTopMenu = false
+                                    onNavigateToSettings()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Settings,
+                                        tint = colors.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 4.dp).size(20.dp)
+                                    )
+                                }
+                            )
                         }
                     }
                 }
@@ -233,6 +253,44 @@ fun IndexPage(
                 modifier = Modifier.fillMaxSize(),
                 state = lazyListState
             ) {
+                // Pinned Timeline entry: not deletable, not reorderable
+                if (showTimeline && !isReorderMode) {
+                    item(key = "timeline_row") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onTimelineClick() },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.defaultMinSize(minWidth = 32.dp)) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ViewTimeline,
+                                    contentDescription = "Timeline",
+                                    tint = colors.primaryText.copy(alpha = 0.33f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Text(
+                                text = "Timeline",
+                                fontSize = 18.sp,
+                                maxLines = 1,
+                                color = colors.primaryText,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "................................................................................................................... ",
+                                color = colors.hint,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
                 itemsIndexed(localPages, key = { _, it -> it.id }) { index, page ->
                     ReorderableItem(reorderableState, key = page.id) { isDragging ->
                         val interactionSource = remember { MutableInteractionSource() }

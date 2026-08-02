@@ -43,6 +43,7 @@ import app.pentastic.navigation.getDeepLinkPageId
 import app.pentastic.ui.composables.CommonInput
 import app.pentastic.ui.composables.IndexPage
 import app.pentastic.ui.composables.NotePage
+import app.pentastic.ui.composables.TimelinePage
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -52,6 +53,7 @@ import kotlin.time.ExperimentalTime
 
 @Composable
 fun HomeScreen(
+    onNavigateToSettings: () -> Unit = {},
     onNavigateToArchivedNotes: (Long) -> Unit = {},
     prefs: DataStore<Preferences> = koinInject(),
 ) {
@@ -66,14 +68,18 @@ fun HomeScreen(
     val editingNote by viewModel.editingNote.collectAsState()
     val showRateButton by viewModel.showRateButton.collectAsState()
     val showCompletedTasks by viewModel.showCompletedTasks.collectAsState()
+    val showTimeline by viewModel.showTimeline.collectAsState()
+    // With Timeline enabled, pager index 1 is the Timeline page and real pages shift by one
+    val timelineOffset = if (showTimeline) 1 else 0
     val pagerState = rememberPagerState(
         initialPage = 1,
-        pageCount = { (pages.size + 1).coerceAtLeast(2) }
+        pageCount = { (pages.size + 1 + (if (showTimeline) 1 else 0)).coerceAtLeast(2) }
     )
     val coroutineScope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var selectedSubPageByParent by remember { mutableStateOf<Map<Long, Long?>>(emptyMap()) }
     var selectedWidePageIndex by remember { mutableIntStateOf(0) }
+    var wideShowsTimeline by remember { mutableStateOf(false) }
 
     // Handle deep link navigation from notification
     val deepLinkPageId = getDeepLinkPageId()
@@ -98,13 +104,18 @@ fun HomeScreen(
             LaunchedEffect(isWideLayout) {
                 if (isWideLayout) {
                     // Switching to wide: sync from pager
-                    if (pagerState.currentPage > 0) {
-                        selectedWidePageIndex = pagerState.currentPage - 1
+                    if (showTimeline && pagerState.currentPage == 1) {
+                        wideShowsTimeline = true
+                    } else if (pagerState.currentPage > timelineOffset) {
+                        wideShowsTimeline = false
+                        selectedWidePageIndex = pagerState.currentPage - 1 - timelineOffset
                     }
                 } else {
                     // Switching to narrow: sync to pager
-                    if (selectedWidePageIndex >= 0 && selectedWidePageIndex < pages.size) {
-                        pagerState.scrollToPage(selectedWidePageIndex + 1)
+                    if (wideShowsTimeline && showTimeline) {
+                        pagerState.scrollToPage(1)
+                    } else if (selectedWidePageIndex >= 0 && selectedWidePageIndex < pages.size) {
+                        pagerState.scrollToPage(selectedWidePageIndex + 1 + timelineOffset)
                     }
                 }
             }
@@ -115,9 +126,10 @@ fun HomeScreen(
                     val rootPageIndex = pages.indexOfFirst { it.id == deepLinkPageId }
                     if (rootPageIndex >= 0) {
                         if (isWideLayout) {
+                            wideShowsTimeline = false
                             selectedWidePageIndex = rootPageIndex
                         } else {
-                            pagerState.scrollToPage(rootPageIndex + 1)
+                            pagerState.scrollToPage(rootPageIndex + 1 + timelineOffset)
                         }
                         hasNavigatedFromDeepLink = true
                     } else {
@@ -130,9 +142,10 @@ fun HomeScreen(
                                 put(parentPage.id, deepLinkPageId)
                             }
                             if (isWideLayout) {
+                                wideShowsTimeline = false
                                 selectedWidePageIndex = parentIndex
                             } else {
-                                pagerState.scrollToPage(parentIndex + 1)
+                                pagerState.scrollToPage(parentIndex + 1 + timelineOffset)
                             }
                             hasNavigatedFromDeepLink = true
                         }
@@ -149,10 +162,11 @@ fun HomeScreen(
                 val rootPageIndex = pages.indexOfFirst { it.id == pageId }
                 if (rootPageIndex >= 0) {
                     if (isWideLayout) {
+                        wideShowsTimeline = false
                         selectedWidePageIndex = rootPageIndex
                     } else {
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(rootPageIndex + 1)
+                            pagerState.animateScrollToPage(rootPageIndex + 1 + timelineOffset)
                         }
                     }
                 } else {
@@ -165,21 +179,40 @@ fun HomeScreen(
                             put(parentPage.id, pageId)
                         }
                         if (isWideLayout) {
+                            wideShowsTimeline = false
                             selectedWidePageIndex = parentIndex
                         } else {
                             coroutineScope.launch {
-                                pagerState.animateScrollToPage(parentIndex + 1)
+                                pagerState.animateScrollToPage(parentIndex + 1 + timelineOffset)
                             }
                         }
                     }
                 }
             }
 
+            // Helper to open the Timeline page
+            fun openTimeline() {
+                if (isWideLayout) {
+                    wideShowsTimeline = true
+                } else {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(1)
+                    }
+                }
+            }
+
             // Determine current page for input bar logic
-            val currentActivePage = if (isWideLayout) {
+            val isOnTimelinePage = if (isWideLayout) {
+                wideShowsTimeline && showTimeline
+            } else {
+                showTimeline && pagerState.currentPage == 1
+            }
+            val currentActivePage = if (isOnTimelinePage) {
+                null
+            } else if (isWideLayout) {
                 pages.getOrNull(selectedWidePageIndex)
             } else {
-                pages.getOrNull(pagerState.currentPage - 1)
+                pages.getOrNull(pagerState.currentPage - 1 - timelineOffset)
             }
             val isOnIndexPage = !isWideLayout && pagerState.currentPage == 0
 
@@ -212,6 +245,9 @@ fun HomeScreen(
                             archivedPages = archivedPages,
                             onArchivedPageClick = { page -> onNavigateToArchivedNotes(page.id) },
                             onPageUnarchive = { page -> viewModel.unarchivePage(page) },
+                            onNavigateToSettings = onNavigateToSettings,
+                            showTimeline = showTimeline,
+                            onTimelineClick = { openTimeline() },
                         )
 
                         VerticalDivider(color = AppTheme.colors.divider)
@@ -219,7 +255,9 @@ fun HomeScreen(
                         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             Box(modifier = Modifier.weight(1f)) {
                                 val widePage = pages.getOrNull(selectedWidePageIndex)
-                                if (widePage != null) {
+                                if (isOnTimelinePage) {
+                                    TimelinePage()
+                                } else if (widePage != null) {
                                     val subPages = subPagesByParent[widePage.id] ?: emptyList()
                                     val aggregatedNotes = aggregateNotes(widePage, subPages, notesByPage)
                                     val selectedSubPageId = selectedSubPageByParent[widePage.id]
@@ -257,7 +295,7 @@ fun HomeScreen(
                                 }
                             }
 
-                            CommonInput(
+                            if (!isOnTimelinePage) CommonInput(
                                 modifier = Modifier.navigationBarsPadding().imePadding(),
                                 text = text,
                                 onTextChange = { text = it },
@@ -342,9 +380,14 @@ fun HomeScreen(
                                             archivedPages = archivedPages,
                                     onArchivedPageClick = { page -> onNavigateToArchivedNotes(page.id) },
                                     onPageUnarchive = { page -> viewModel.unarchivePage(page) },
+                                    onNavigateToSettings = onNavigateToSettings,
+                                    showTimeline = showTimeline,
+                                    onTimelineClick = { openTimeline() },
                                 )
-                            else {
-                                val currentPage = pages.getOrNull(pageIndex - 1)
+                            else if (showTimeline && pageIndex == 1) {
+                                TimelinePage()
+                            } else {
+                                val currentPage = pages.getOrNull(pageIndex - 1 - timelineOffset)
                                 if (currentPage != null) {
                                     val subPages = subPagesByParent[currentPage.id] ?: emptyList()
                                     val aggregatedNotes = aggregateNotes(currentPage, subPages, notesByPage)
@@ -385,7 +428,7 @@ fun HomeScreen(
                         }
                     }
 
-                    CommonInput(
+                    if (!isOnTimelinePage) CommonInput(
                         modifier = Modifier.navigationBarsPadding().imePadding(),
                         text = text,
                         onTextChange = { text = it },

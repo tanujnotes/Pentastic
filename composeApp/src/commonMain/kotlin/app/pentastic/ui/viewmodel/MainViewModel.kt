@@ -48,6 +48,9 @@ class MainViewModel(
     private val _showCompletedTasks = MutableStateFlow(false)
     val showCompletedTasks: StateFlow<Boolean> = _showCompletedTasks.asStateFlow()
 
+    private val _showTimeline = MutableStateFlow(true)
+    val showTimeline: StateFlow<Boolean> = _showTimeline.asStateFlow()
+
     private val _editingNote = MutableStateFlow<Note?>(null)
     val editingNote: StateFlow<Note?> = _editingNote.asStateFlow()
 
@@ -85,6 +88,7 @@ class MainViewModel(
         checkForRateButton()
         loadThemeMode()
         loadShowCompletedTasks()
+        loadShowTimeline()
         rescheduleRemindersOnStart()
     }
 
@@ -457,6 +461,22 @@ class MainViewModel(
             val newValue = !_showCompletedTasks.value
             _showCompletedTasks.value = newValue
             dataStoreRepository.setShowCompletedTasks(newValue)
+        }
+    }
+
+    private fun loadShowTimeline() {
+        viewModelScope.launch {
+            dataStoreRepository.showTimeline.collect { show ->
+                _showTimeline.value = show
+            }
+        }
+    }
+
+    fun toggleShowTimeline() {
+        viewModelScope.launch {
+            val newValue = !_showTimeline.value
+            _showTimeline.value = newValue
+            dataStoreRepository.setShowTimeline(newValue)
         }
     }
 
