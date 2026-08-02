@@ -177,10 +177,14 @@ fun TimelinePage(modifier: Modifier = Modifier) {
 
     Column(modifier = modifier.fillMaxSize().background(colors.background)) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
+            // Tasks are numbered continuously across all sections (collapsed ones keep their numbers)
+            var taskNumber = 0
             sections.forEachIndexed { sectionIndex, sectionUi ->
                 val isFirst = sectionIndex == 0
                 val notes = sectionUi.notes
                 val isCollapsed = (sectionUi.key in toggledSections) != sectionUi.collapsedByDefault
+                val sectionStart = taskNumber
+                taskNumber += notes.size
                 item(key = "header_${sectionUi.key}") {
                     Row(
                         modifier = Modifier
@@ -197,7 +201,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (notes.isEmpty()) sectionUi.label else "${sectionUi.label} (${notes.size})",
+                            text = sectionUi.label,
                             fontSize = if (isFirst) 36.sp else 22.sp,
                             fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
                             color = if (isCollapsed) colors.pageTitle.copy(alpha = 0.45f) else colors.pageTitle,
@@ -210,7 +214,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     itemsIndexed(notes, key = { _, note -> note.id }) { index, note ->
                         TimelineNoteRow(
                             note = note,
-                            index = index + 1,
+                            index = sectionStart + index + 1,
                             isDimmed = sectionUi.isDimmed,
                             onToggleDone = { viewModel.toggleNoteDone(note) },
                             onDelete = { viewModel.deleteNote(note) },

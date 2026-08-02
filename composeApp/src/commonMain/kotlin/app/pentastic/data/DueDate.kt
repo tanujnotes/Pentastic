@@ -103,6 +103,7 @@ enum class TimelineSection(val label: String) {
     TODAY("Today"),
     TOMORROW("Tomorrow"),
     THIS_WEEK("This week"),
+    THIS_WEEKEND("This weekend"),
     NEXT_WEEK("Next week"),
     THIS_MONTH("This month"),
     NEXT_MONTH("Next month"),
@@ -145,7 +146,11 @@ fun classifyDueDate(
     val isWeekendBlock = start.dayOfWeek.isoDayNumber == 6 && end == start.plus(1, DateTimeUnit.DAY)
     if (isWeekBlock || isWeekendBlock) {
         val blockWeekStart = if (isWeekBlock) start else start.minus(5, DateTimeUnit.DAY)
-        if (blockWeekStart == weekStart) return TimelineBucket.Section(TimelineSection.THIS_WEEK)
+        if (blockWeekStart == weekStart) {
+            return TimelineBucket.Section(
+                if (isWeekendBlock) TimelineSection.THIS_WEEKEND else TimelineSection.THIS_WEEK
+            )
+        }
         if (blockWeekStart == weekStart.plus(7, DateTimeUnit.DAY)) return TimelineBucket.Section(TimelineSection.NEXT_WEEK)
     }
     val isMonthBlock = start.dayOfMonth == 1 &&
@@ -160,7 +165,8 @@ fun classifyDueDate(
     return when {
         end == today -> TimelineBucket.Section(TimelineSection.TODAY)
         end == today.plus(1, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.TOMORROW)
-        end <= weekStart.plus(6, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.THIS_WEEK)
+        end <= weekStart.plus(4, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.THIS_WEEK)
+        end <= weekStart.plus(6, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.THIS_WEEKEND)
         end <= weekStart.plus(13, DateTimeUnit.DAY) -> TimelineBucket.Section(TimelineSection.NEXT_WEEK)
         end <= thisMonthEnd -> TimelineBucket.Section(TimelineSection.THIS_MONTH)
         end <= nextMonthEnd -> TimelineBucket.Section(TimelineSection.NEXT_MONTH)
