@@ -202,7 +202,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     ) {
                         Text(
                             text = sectionUi.label,
-                            fontSize = if (isFirst) 36.sp else 22.sp,
+                            fontSize = if (isFirst) 36.sp else 18.sp,
                             fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
                             color = if (isCollapsed) colors.pageTitle.copy(alpha = 0.45f) else colors.pageTitle,
                         )
