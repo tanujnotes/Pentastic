@@ -116,6 +116,10 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             fun prioritySort(notes: List<Note>) =
                 notes.sortedWith(compareByDescending<Note> { it.priority }.thenByDescending { it.orderAt })
 
+            // Sections up to This weekend start expanded, the rest collapsed —
+            // except on weekends, when the imminent Next week starts expanded too
+            val isWeekendToday = today.dayOfWeek.isoDayNumber >= 6
+
             buildList {
                 TimelineSection.entries.filter { it != TimelineSection.SOMEDAY }.forEach { section ->
                     val sectionNotes = prioritySort(grouped[TimelineBucket.Section(section)] ?: emptyList())
@@ -127,7 +131,11 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                             label = section.label,
                             subtitle = sectionSubtitle(section, today),
                             notes = sectionNotes,
-                            collapsedByDefault = false,
+                            collapsedByDefault = when {
+                                section.ordinal <= TimelineSection.THIS_WEEKEND.ordinal -> false
+                                section == TimelineSection.NEXT_WEEK && isWeekendToday -> false
+                                else -> true
+                            },
                         )
                     )
                 }
@@ -153,7 +161,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         key = TimelineSection.SOMEDAY.name,
                         label = TimelineSection.SOMEDAY.label,
                         notes = prioritySort(someday),
-                        collapsedByDefault = false,
+                        collapsedByDefault = true,
                     )
                 )
 
@@ -168,7 +176,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                             key = "UNSCHEDULED",
                             label = "Unscheduled",
                             notes = unscheduled,
-                            collapsedByDefault = false,
+                            collapsedByDefault = true,
                         )
                     )
                 }
