@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.Icon
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.pentastic.data.Note
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.TimelineBucket
@@ -88,10 +89,14 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     val timelinePage by viewModel.timelinePage.collectAsState()
 
     val timeZone = TimeZone.currentSystemDefault()
-    val today = Clock.System.now().toLocalDateTime(timeZone).date
-
-    // Repeat state can go stale mid-session; refresh pending tasks whenever the timeline opens
-    LaunchedEffect(Unit) { viewModel.resetRepeatingTasksTodo() }
+    // Refreshed on every resume so a session left open across midnight re-buckets
+    // sections and un-checks lapsed repeat tasks (runs on first composition too)
+    var today by remember { mutableStateOf(Clock.System.now().toLocalDateTime(timeZone).date) }
+    LifecycleResumeEffect(Unit) {
+        today = Clock.System.now().toLocalDateTime(timeZone).date
+        viewModel.resetRepeatingTasksTodo()
+        onPauseOrDispose { }
+    }
 
     var noteForDueDateDialog by remember { mutableStateOf<Note?>(null) }
     var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }

@@ -10,6 +10,7 @@ import app.pentastic.MainActivity
 import app.pentastic.R
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.db.PentasticDatabase
+import app.pentastic.utils.hasRepeatIntervalPassed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,6 +54,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
             val isRepeatingTask = note.repeatFrequency > 0
             val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
 
+            // Already completed within the current cycle (e.g. done at 8 AM before a
+            // 9 AM reminder): keep it done and stay quiet, but still advance the
+            // reminder chain below so future cycles fire
+            val doneThisCycle = isRepeatingTask && note.done &&
+                    !note.taskLastDoneAt.hasRepeatIntervalPassed(frequency)
+
             notificationBody = if (isRepeatingTask)
                 "${frequency.label} reminder"
             else
@@ -69,8 +76,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                 }
 
                 val updatedNote = note.copy(
-                    done = false,
-                    orderAt = now,
+                    done = if (doneThisCycle) note.done else false,
+                    orderAt = if (doneThisCycle) note.orderAt else now,
                     updatedAt = now,
                     reminderAt = nextReminderAt
                 )
@@ -81,6 +88,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                     reminderScheduler.scheduleReminder(updatedNote)
                 }
             }
+
+            if (doneThisCycle) return@launch
 
             // Build and show notification after DB lookup
             val openAppIntent = Intent(context, MainActivity::class.java).apply {
