@@ -469,7 +469,8 @@ fun NotePage(
                                     val isRepeating = note.repeatFrequency > 0
                                     val nowMillis = Clock.System.now().toEpochMilliseconds()
                                     val hasUpcomingReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
-                                    val hasDueDate = note.hasDueDate
+                                    // Repeat and due date are mutually exclusive; hide any stale due date
+                                    val hasDueDate = note.hasDueDate && !isRepeating
                                     if (isRepeating || hasUpcomingReminder || hasDueDate) {
                                         Row(
                                             modifier = Modifier.padding(top = 7.dp, end = 8.dp),
@@ -1078,7 +1079,9 @@ internal fun NoteActionsMenu(
         "Reminder"
     }
 
-    val dueDateLabel = if (note.hasDueDate) {
+    // Repeat and due date are mutually exclusive: repeating tasks schedule themselves
+    val isRepeating = currentFrequency != RepeatFrequency.NONE
+    val dueDateLabel = if (note.hasDueDate && !isRepeating) {
         formatDueDateLabel(note.dueStartAt, note.dueEndAt)
     } else {
         "Due date"
@@ -1119,8 +1122,8 @@ internal fun NoteActionsMenu(
         MenuAction(
             label = dueDateLabel,
             icon = Icons.Outlined.CalendarMonth,
-            tint = colors.primaryText,
-            onClick = { onSetDueDate(); onDismissRequest() }
+            tint = if (isRepeating) colors.primaryText.copy(alpha = 0.33f) else colors.primaryText,
+            onClick = if (isRepeating) ({}) else ({ onSetDueDate(); onDismissRequest() })
         ),
         MenuAction(
             label = "Edit",

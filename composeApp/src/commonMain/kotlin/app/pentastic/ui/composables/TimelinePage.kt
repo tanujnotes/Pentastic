@@ -42,11 +42,16 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material3.Icon
 import app.pentastic.data.Note
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.TimelineBucket
 import app.pentastic.data.TimelineSection
 import app.pentastic.data.classifyDueDate
+import app.pentastic.data.classifyRepeatTask
 import app.pentastic.data.hasDueDate
 import app.pentastic.data.timelineSectionDropRange
 import app.pentastic.ui.theme.AppTheme
@@ -85,6 +90,9 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     val timeZone = TimeZone.currentSystemDefault()
     val today = Clock.System.now().toLocalDateTime(timeZone).date
 
+    // Repeat state can go stale mid-session; refresh pending tasks whenever the timeline opens
+    LaunchedEffect(Unit) { viewModel.resetRepeatingTasksTodo() }
+
     var noteForDueDateDialog by remember { mutableStateOf<Note?>(null) }
     var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
     var noteForReminderDialog by remember { mutableStateOf<Note?>(null) }
@@ -106,11 +114,16 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 subPagesByParent.values.forEach { subs -> subs.forEach { add(it.id) } }
                 timelinePage?.let { add(it.id) }
             }
+            // Repeat tasks are included even when done: their next occurrence can preview
+            // (e.g. a weekly task in Tomorrow the day before it comes back)
             val grouped = notesByPage
                 .filterKeys { it in livePageIds }
                 .values.flatten()
-                .filter { it.hasDueDate && !it.done }
-                .groupBy { classifyDueDate(it.dueStartAt, it.dueEndAt, today, timeZone) }
+                .filter { it.repeatFrequency > 0 || (it.hasDueDate && !it.done) }
+                .groupBy {
+                    if (it.repeatFrequency > 0) classifyRepeatTask(it, today, timeZone)
+                    else classifyDueDate(it.dueStartAt, it.dueEndAt, today, timeZone)
+                }
 
             // Same ordering as task pages: priority tasks first, then dragged order (newest first)
             fun prioritySort(notes: List<Note>) =
@@ -166,9 +179,11 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 )
 
                 // Safety nets for tasks that live ON the Timeline page itself (shown only when non-empty)
+                // Repeat tasks are excluded from both nets: they are always scheduled by
+                // their repeat and cycle rather than finish
                 val timelineOwnNotes = timelinePage?.id?.let { notesByPage[it] } ?: emptyList()
                 val unscheduled = prioritySort(
-                    timelineOwnNotes.filter { !it.done && it.dueStartAt == 0L }
+                    timelineOwnNotes.filter { !it.done && it.dueStartAt == 0L && it.repeatFrequency == 0 }
                 )
                 if (unscheduled.isNotEmpty()) {
                     add(
@@ -181,7 +196,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     )
                 }
                 val completed = timelineOwnNotes
-                    .filter { it.done }
+                    .filter { it.done && it.repeatFrequency == 0 }
                     .sortedByDescending { it.orderAt }
                 if (completed.isNotEmpty()) {
                     add(
@@ -266,6 +281,13 @@ fun TimelinePage(modifier: Modifier = Modifier) {
         val loc = locateNote(localSections, noteId) ?: return@persist
         val section = localSections[loc.sectionIdx]
         val note = section.notes[loc.noteIdx]
+        val sectionChanged = origin != null && origin != section.key
+        // Repeat tasks derive their section from the schedule, never from due dates:
+        // cross-section drops don't apply to them (snap back)
+        if (sectionChanged && note.repeatFrequency > 0) {
+            localSections = sections
+            return@persist
+        }
         val range = timelineSectionDropRange(section.key, today, timeZone) ?: run {
             localSections = sections // defensive: snap back instead of leaving a stale arrangement
             return@persist
@@ -291,7 +313,6 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             newPriority == above.priority -> above.orderAt - step
             else -> below.orderAt + step
         }
-        val sectionChanged = origin != null && origin != section.key
         viewModel.moveTimelineTask(
             note = note,
             dueStartAt = if (sectionChanged) range.first else note.dueStartAt,
@@ -603,7 +624,12 @@ private fun LazyItemScope.TimelineDraggableRow(
                 onDragStarted = { onDragStarted(note.id) },
                 onDragStopped = { onDragStopped(note.id) },
             ),
-            onToggleDone = { viewModel.toggleNoteDone(note) },
+            onToggleDone = {
+                // A done repeating task on the timeline is a preview of its next
+                // occurrence: toggling completes that cycle early instead of un-completing
+                if (note.done && note.repeatFrequency > 0) viewModel.completeRepeatingTaskEarly(note)
+                else viewModel.toggleNoteDone(note)
+            },
             onDelete = { viewModel.deleteNote(note) },
             onSetPriority = {
                 viewModel.updateNote(
@@ -687,6 +713,14 @@ private fun TimelineNoteRow(
                 maxLines = if (showMenu) Int.MAX_VALUE else if (isDimmed) 1 else 3,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (note.repeatFrequency > 0) {
+                Icon(
+                    imageVector = Icons.Filled.Repeat,
+                    contentDescription = "Repeating task",
+                    modifier = Modifier.padding(top = 7.dp, end = 8.dp).size(16.dp),
+                    tint = colors.primaryText.copy(alpha = if (isDimmed) 0.33f else 0.4f)
+                )
+            }
         }
 
         NoteActionsMenu(

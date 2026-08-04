@@ -291,6 +291,18 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Completing a repeating task that is still marked done (a previewed upcoming
+     * occurrence on the timeline) early: re-stamp the cycle instead of un-completing,
+     * pushing the next occurrence one interval out from now.
+     */
+    fun completeRepeatingTaskEarly(note: Note) {
+        viewModelScope.launch {
+            val now = Clock.System.now().toEpochMilliseconds()
+            repository.updateNote(note.copy(taskLastDoneAt = now, orderAt = now, updatedAt = now))
+        }
+    }
+
     fun setNoteRepeatFrequency(
         note: Note,
         frequency: RepeatFrequency,
@@ -304,6 +316,9 @@ class MainViewModel(
                 repeatFrequency = frequency.ordinal,
                 updatedAt = now,
                 repeatTaskStartFrom = if (frequency != RepeatFrequency.NONE) startDate else 0L,
+                // Repeat and due date are mutually exclusive: the schedule owns timeline placement
+                dueStartAt = if (frequency != RepeatFrequency.NONE) 0L else note.dueStartAt,
+                dueEndAt = if (frequency != RepeatFrequency.NONE) 0L else note.dueEndAt,
                 reminderAt = reminderTime ?: 0L,
                 reminderEnabled = if (reminderEnabled && frequency != RepeatFrequency.NONE) 1 else 0
             )

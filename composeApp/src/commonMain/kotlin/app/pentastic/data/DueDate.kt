@@ -11,6 +11,7 @@ import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import app.pentastic.utils.nextRepeatDate
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -168,6 +169,59 @@ fun classifyDueDate(
         end <= nextMonthEnd -> TimelineBucket.Section(TimelineSection.NEXT_MONTH)
         else -> TimelineBucket.Year(end.year)
     }
+}
+
+/**
+ * The date a repeat task's current cycle is (or will be) due. For a pending task this
+ * is the day it came due — its start date if never completed, otherwise one interval
+ * after the last completion. For a completed task it is the upcoming comeback date.
+ * A future "start from" acts as a floor so an edited schedule waits for its start.
+ */
+fun Note.repeatOccurrenceDate(
+    today: LocalDate,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): LocalDate? {
+    val frequency = RepeatFrequency.fromOrdinal(repeatFrequency)
+    if (frequency == RepeatFrequency.NONE) return null
+    val base = when {
+        taskLastDoneAt > 0 -> nextRepeatDate(epochMillisToLocalDate(taskLastDoneAt, timeZone), frequency)
+        repeatTaskStartFrom > 0 -> epochMillisToLocalDate(repeatTaskStartFrom, timeZone)
+        else -> today
+    }
+    val startFrom = if (repeatTaskStartFrom > 0) epochMillisToLocalDate(repeatTaskStartFrom, timeZone) else null
+    return if (startFrom != null && startFrom > base) startFrom else base
+}
+
+/**
+ * Buckets a repeat task by its virtual occurrence instead of due dates (the two are
+ * mutually exclusive). Repeat tasks surface only inside their frequency's lead window:
+ * daily on the day itself, weekly/monthly/quarterly one day ahead, yearly once the
+ * occurrence's calendar week begins. A pending task past its day goes to Overdue.
+ * Returns null while the task is outside its window (hidden from the timeline).
+ */
+fun classifyRepeatTask(
+    note: Note,
+    today: LocalDate,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): TimelineBucket? {
+    val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+    val occurrence = note.repeatOccurrenceDate(today, timeZone) ?: return null
+    if (!note.done && occurrence < today) return TimelineBucket.Section(TimelineSection.OVERDUE)
+    val horizon = when (frequency) {
+        RepeatFrequency.NONE -> return null
+        RepeatFrequency.DAILY -> today
+        RepeatFrequency.WEEKLY,
+        RepeatFrequency.MONTHLY,
+        RepeatFrequency.QUARTERLY -> today.plus(1, DateTimeUnit.DAY)
+
+        RepeatFrequency.YEARLY -> today.plus(7 - today.dayOfWeek.isoDayNumber, DateTimeUnit.DAY)
+    }
+    if (occurrence > horizon) return null
+    // A done task whose comeback date is not in the future just means the reset
+    // hasn't flipped it yet — it belongs in Today
+    val effective = if (occurrence < today) today else occurrence
+    val effectiveMillis = effective.toStartOfDayMillis(timeZone)
+    return classifyDueDate(effectiveMillis, effectiveMillis, today, timeZone)
 }
 
 /**

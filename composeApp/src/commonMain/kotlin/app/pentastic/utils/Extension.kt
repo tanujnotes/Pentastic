@@ -3,7 +3,10 @@
 package app.pentastic.utils
 
 import app.pentastic.data.RepeatFrequency
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -86,6 +89,21 @@ fun Long.hasRepeatIntervalPassed(frequency: RepeatFrequency): Boolean {
             }
         }
     }
+}
+
+/**
+ * The first calendar date on which [hasRepeatIntervalPassed] becomes true for a task
+ * last done (or starting) on [from]. kotlinx-datetime clamps month/year arithmetic the
+ * same way as the predicate (e.g. Jan 31 + 1 month = Feb 28), keeping timeline
+ * placement and the repeat reset in agreement.
+ */
+fun nextRepeatDate(from: LocalDate, frequency: RepeatFrequency): LocalDate = when (frequency) {
+    RepeatFrequency.NONE -> from
+    RepeatFrequency.DAILY -> from.plus(1, DateTimeUnit.DAY)
+    RepeatFrequency.WEEKLY -> from.plus(7, DateTimeUnit.DAY)
+    RepeatFrequency.MONTHLY -> from.plus(1, DateTimeUnit.MONTH)
+    RepeatFrequency.QUARTERLY -> from.plus(3, DateTimeUnit.MONTH)
+    RepeatFrequency.YEARLY -> from.plus(1, DateTimeUnit.YEAR)
 }
 
 private fun isLeapYear(year: Int): Boolean {
