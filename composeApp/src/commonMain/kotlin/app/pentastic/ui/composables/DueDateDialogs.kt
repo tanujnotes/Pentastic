@@ -61,11 +61,14 @@ internal fun DueDateOptionsDialog(
     currentDueEndAt: Long,
     onDismiss: () -> Unit,
     onApply: (dueStartAt: Long, dueEndAt: Long) -> Unit,
+    // Clearing removes a task from the timeline, so the timeline hides the option
+    showClear: Boolean = true,
 ) {
     val colors = AppTheme.colors
     val timeZone = TimeZone.currentSystemDefault()
     val today = remember { Clock.System.now().toLocalDateTime(timeZone).date }
     val hasDueDate = currentDueStartAt != 0L
+    val canClear = showClear && hasDueDate
 
     // Map the stored range back to a preset for the initial selection
     val initialOption = remember {
@@ -289,14 +292,14 @@ internal fun DueDateOptionsDialog(
 
                 // The options page applies on tap, so only the drill pages need Save/Cancel
                 val needsConfirm = page != DueDatePage.OPTIONS
-                if (needsConfirm || hasDueDate) {
+                if (needsConfirm || canClear) {
                     Spacer(Modifier.height(16.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (hasDueDate) {
+                        if (canClear) {
                             TextButton(onClick = { onApply(0L, 0L) }) {
                                 Text("Clear", color = colors.primaryText.copy(alpha = 0.6f))
                             }

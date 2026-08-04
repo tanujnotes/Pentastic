@@ -434,7 +434,8 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             onApply = { dueStartAt, dueEndAt ->
                 viewModel.setNoteDueDate(note, dueStartAt, dueEndAt)
                 noteForDueDateDialog = null
-            }
+            },
+            showClear = false,
         )
     }
 
