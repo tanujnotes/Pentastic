@@ -23,8 +23,6 @@ enum class DueDateOption(val label: String) {
     TOMORROW("Tomorrow"),
     THIS_WEEK("This week"),
     NEXT_WEEK("Next week"),
-    THIS_WEEKEND("This weekend"),
-    NEXT_WEEKEND("Next weekend"),
     THIS_MONTH("This month"),
     NEXT_MONTH("Next month"),
     THIS_YEAR("This year"),
@@ -45,8 +43,6 @@ fun DueDateOption.resolveRange(today: LocalDate): Pair<LocalDate, LocalDate>? {
         DueDateOption.TOMORROW -> today.plus(1, DateTimeUnit.DAY).let { it to it }
         DueDateOption.THIS_WEEK -> weekStart to weekStart.plus(6, DateTimeUnit.DAY)
         DueDateOption.NEXT_WEEK -> weekStart.plus(7, DateTimeUnit.DAY) to weekStart.plus(13, DateTimeUnit.DAY)
-        DueDateOption.THIS_WEEKEND -> weekStart.plus(5, DateTimeUnit.DAY) to weekStart.plus(6, DateTimeUnit.DAY)
-        DueDateOption.NEXT_WEEKEND -> weekStart.plus(12, DateTimeUnit.DAY) to weekStart.plus(13, DateTimeUnit.DAY)
         DueDateOption.THIS_MONTH -> monthStart to monthStart.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
         DueDateOption.NEXT_MONTH -> monthStart.plus(1, DateTimeUnit.MONTH) to monthStart.plus(2, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
         DueDateOption.THIS_YEAR -> LocalDate(today.year, 1, 1) to LocalDate(today.year, 12, 31)
