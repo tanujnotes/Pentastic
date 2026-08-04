@@ -403,6 +403,21 @@ class MainViewModel(
         }
     }
 
+    /** Persists a timeline drag-and-drop: new position and (on section change) new due range. */
+    fun moveTimelineTask(note: Note, dueStartAt: Long, dueEndAt: Long, orderAt: Long, priority: Int) {
+        viewModelScope.launch {
+            repository.updateNote(
+                note.copy(
+                    dueStartAt = dueStartAt,
+                    dueEndAt = dueEndAt,
+                    orderAt = orderAt,
+                    priority = priority,
+                    updatedAt = Clock.System.now().toEpochMilliseconds()
+                )
+            )
+        }
+    }
+
     // Trash operations
 
     fun restorePage(page: Page) {

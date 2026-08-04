@@ -169,3 +169,39 @@ fun classifyDueDate(
         else -> TimelineBucket.Year(end.year)
     }
 }
+
+/**
+ * The full due-date block written when a task is dropped into a timeline section.
+ * Keys match TimelinePage's section keys: TimelineSection names plus "YEAR_<y>".
+ * Returns null for sections that are not drop targets (Overdue and the
+ * timeline-page-only Unscheduled/Completed safety nets).
+ */
+fun timelineSectionDropRange(
+    sectionKey: String,
+    today: LocalDate,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Pair<Long, Long>? {
+    if (sectionKey == TimelineSection.SOMEDAY.name) return DUE_SOMEDAY to DUE_SOMEDAY
+    if (sectionKey.startsWith("YEAR_")) {
+        val year = sectionKey.removePrefix("YEAR_").toIntOrNull() ?: return null
+        return LocalDate(year, 1, 1).toStartOfDayMillis(timeZone) to
+                LocalDate(year, 12, 31).toStartOfDayMillis(timeZone)
+    }
+    val section = TimelineSection.entries.firstOrNull { it.name == sectionKey } ?: return null
+    val range = when (section) {
+        TimelineSection.TODAY -> DueDateOption.TODAY.resolveRange(today)!!
+        TimelineSection.TOMORROW -> DueDateOption.TOMORROW.resolveRange(today)!!
+        TimelineSection.THIS_WEEK -> DueDateOption.THIS_WEEK.resolveRange(today)!!
+        // No DueDateOption for the weekend: Sat-Sun of the current week
+        TimelineSection.THIS_WEEKEND -> {
+            val weekStart = today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
+            weekStart.plus(5, DateTimeUnit.DAY) to weekStart.plus(6, DateTimeUnit.DAY)
+        }
+
+        TimelineSection.NEXT_WEEK -> DueDateOption.NEXT_WEEK.resolveRange(today)!!
+        TimelineSection.THIS_MONTH -> DueDateOption.THIS_MONTH.resolveRange(today)!!
+        TimelineSection.NEXT_MONTH -> DueDateOption.NEXT_MONTH.resolveRange(today)!!
+        TimelineSection.OVERDUE, TimelineSection.SOMEDAY -> return null
+    }
+    return range.first.toStartOfDayMillis(timeZone) to range.second.toStartOfDayMillis(timeZone)
+}

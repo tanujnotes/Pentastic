@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +48,7 @@ import app.pentastic.data.TimelineBucket
 import app.pentastic.data.TimelineSection
 import app.pentastic.data.classifyDueDate
 import app.pentastic.data.hasDueDate
+import app.pentastic.data.timelineSectionDropRange
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.datetime.DateTimeUnit
@@ -59,6 +63,9 @@ import org.jetbrains.compose.resources.Font
 import org.koin.compose.viewmodel.koinViewModel
 import pentastic.composeapp.generated.resources.Merriweather_Light
 import pentastic.composeapp.generated.resources.Res
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.ReorderableLazyListState
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -101,12 +108,13 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 .filter { it.hasDueDate && !it.done }
                 .groupBy { classifyDueDate(it.dueStartAt, it.dueEndAt, today, timeZone) }
 
-            fun datedSort(notes: List<Note>) =
-                notes.sortedWith(compareBy({ it.dueEndAt }, { it.dueStartAt }))
+            // Same ordering as task pages: priority tasks first, then dragged order (newest first)
+            fun prioritySort(notes: List<Note>) =
+                notes.sortedWith(compareByDescending<Note> { it.priority }.thenByDescending { it.orderAt })
 
             buildList {
                 TimelineSection.entries.filter { it != TimelineSection.SOMEDAY }.forEach { section ->
-                    val sectionNotes = datedSort(grouped[TimelineBucket.Section(section)] ?: emptyList())
+                    val sectionNotes = prioritySort(grouped[TimelineBucket.Section(section)] ?: emptyList())
                     // Overdue only appears when something is actually overdue
                     if (section == TimelineSection.OVERDUE && sectionNotes.isEmpty()) return@forEach
                     add(
@@ -129,7 +137,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         TimelineSectionUi(
                             key = "YEAR_$year",
                             label = year.toString(),
-                            notes = datedSort(grouped[TimelineBucket.Year(year)] ?: emptyList()),
+                            notes = prioritySort(grouped[TimelineBucket.Year(year)] ?: emptyList()),
                             collapsedByDefault = true,
                         )
                     )
@@ -139,16 +147,16 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     TimelineSectionUi(
                         key = TimelineSection.SOMEDAY.name,
                         label = TimelineSection.SOMEDAY.label,
-                        notes = someday.sortedByDescending { it.orderAt },
+                        notes = prioritySort(someday),
                         collapsedByDefault = false,
                     )
                 )
 
                 // Safety nets for tasks that live ON the Timeline page itself (shown only when non-empty)
                 val timelineOwnNotes = timelinePage?.id?.let { notesByPage[it] } ?: emptyList()
-                val unscheduled = timelineOwnNotes
-                    .filter { !it.done && it.dueStartAt == 0L }
-                    .sortedByDescending { it.orderAt }
+                val unscheduled = prioritySort(
+                    timelineOwnNotes.filter { !it.done && it.dueStartAt == 0L }
+                )
                 if (unscheduled.isNotEmpty()) {
                     add(
                         TimelineSectionUi(
@@ -176,14 +184,119 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             }
         }
 
+    val lazyListState = rememberLazyListState()
+    // Shadow of the derived sections that drag gestures permute synchronously; resynced on
+    // every DB emission (after a drop the DB round-trip lands in the same arrangement)
+    var localSections by remember { mutableStateOf(sections) }
+    LaunchedEffect(sections) { localSections = sections }
+    var draggingNoteId by remember { mutableStateOf<Long?>(null) }
+    var dragOriginSectionKey by remember { mutableStateOf<String?>(null) }
+    var dragDidMove by remember { mutableStateOf(false) }
+
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        val noteId = from.key as? Long ?: return@rememberReorderableLazyListState
+        val src = locateNote(localSections, noteId) ?: return@rememberReorderableLazyListState
+        val movingDown = to.index > from.index
+
+        val (destSectionIdx, destNoteIdx) = when (val toKey = to.key) {
+            is Long -> {
+                val target = locateNote(localSections, toKey) ?: return@rememberReorderableLazyListState
+                if (target.sectionIdx == src.sectionIdx) {
+                    target.sectionIdx to target.noteIdx
+                } else {
+                    // Replicates flat-list add(to, removeAt(from)) semantics: moving down
+                    // lands after the target row, moving up lands before it
+                    target.sectionIdx to (if (movingDown) target.noteIdx + 1 else target.noteIdx)
+                }
+            }
+            // Drop slot under a section header: insert at the top of that section
+            is String -> {
+                if (!toKey.startsWith("slot_")) return@rememberReorderableLazyListState
+                val sectionIdx = localSections.indexOfFirst { it.key == toKey.removePrefix("slot_") }
+                if (sectionIdx < 0) return@rememberReorderableLazyListState
+                sectionIdx to 0
+            }
+
+            else -> return@rememberReorderableLazyListState
+        }
+        if (destSectionIdx == src.sectionIdx && destNoteIdx == src.noteIdx) return@rememberReorderableLazyListState
+
+        val moved = localSections[src.sectionIdx].notes[src.noteIdx]
+        localSections = localSections.mapIndexed { idx, section ->
+            when {
+                idx == src.sectionIdx && idx == destSectionIdx ->
+                    section.copy(notes = section.notes.toMutableList().apply { add(destNoteIdx, removeAt(src.noteIdx)) })
+
+                idx == src.sectionIdx -> section.copy(notes = section.notes.filterNot { it.id == noteId })
+                idx == destSectionIdx -> section.copy(notes = section.notes.toMutableList().apply { add(destNoteIdx, moved) })
+                else -> section
+            }
+        }
+        dragDidMove = true
+    }
+
+    val onRowDragStarted: (Long) -> Unit = { noteId ->
+        draggingNoteId = noteId
+        dragDidMove = false
+        dragOriginSectionKey = locateNote(localSections, noteId)?.let { localSections[it.sectionIdx].key }
+    }
+
+    // Persists the drop: new orderAt from destination neighbors (sections sort orderAt DESC),
+    // plus the destination's full due block when the section changed
+    val onRowDragStopped: (Long) -> Unit = persist@{ noteId ->
+        val moved = dragDidMove
+        val origin = dragOriginSectionKey
+        dragDidMove = false
+        dragOriginSectionKey = null
+        draggingNoteId = null
+        if (!moved) return@persist
+        val loc = locateNote(localSections, noteId) ?: return@persist
+        val section = localSections[loc.sectionIdx]
+        val note = section.notes[loc.noteIdx]
+        val range = timelineSectionDropRange(section.key, today, timeZone) ?: run {
+            localSections = sections // defensive: snap back instead of leaving a stale arrangement
+            return@persist
+        }
+        val above = section.notes.getOrNull(loc.noteIdx - 1)
+        val below = section.notes.getOrNull(loc.noteIdx + 1)
+        val step = 1_000_000L
+        val now = Clock.System.now().toEpochMilliseconds()
+        // Sections sort priority-first: adopt the neighbors' priority so the drop
+        // position always sticks (same rule as task pages)
+        val newPriority = when {
+            above == null -> below?.priority ?: note.priority
+            below == null || above.priority == below.priority -> above.priority
+            else -> note.priority
+        }
+        val newOrderAt = when {
+            above == null && below == null -> now
+            // Top insert: must exceed the section max even if it was touched this same ms
+            above == null -> maxOf(now, below!!.orderAt + step)
+            below == null -> above.orderAt - step
+            above.priority == below.priority -> below.orderAt + (above.orderAt - below.orderAt) / 2
+            // Dropped on the priority boundary: join whichever band the task's priority matches
+            newPriority == above.priority -> above.orderAt - step
+            else -> below.orderAt + step
+        }
+        val sectionChanged = origin != null && origin != section.key
+        viewModel.moveTimelineTask(
+            note = note,
+            dueStartAt = if (sectionChanged) range.first else note.dueStartAt,
+            dueEndAt = if (sectionChanged) range.second else note.dueEndAt,
+            orderAt = newOrderAt,
+            priority = newPriority,
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize().background(colors.background)) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), state = lazyListState) {
             // Tasks are numbered continuously across all sections (collapsed ones keep their numbers)
             var taskNumber = 0
-            sections.forEachIndexed { sectionIndex, sectionUi ->
+            localSections.forEachIndexed { sectionIndex, sectionUi ->
                 val isFirst = sectionIndex == 0
                 val notes = sectionUi.notes
                 val isCollapsed = (sectionUi.key in toggledSections) != sectionUi.collapsedByDefault
+                val isDroppable = timelineSectionDropRange(sectionUi.key, today, timeZone) != null
                 val sectionStart = taskNumber
                 taskNumber += notes.size
                 item(key = "header_${sectionUi.key}") {
@@ -213,30 +326,53 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         HorizontalDivider(modifier = Modifier.weight(1f), color = colors.divider)
                     }
                 }
+                // Always-present drop target so empty and collapsed sections can receive rows
+                if (isDroppable) {
+                    item(key = "slot_${sectionUi.key}") {
+                        ReorderableItem(reorderableState, key = "slot_${sectionUi.key}") {
+                            Spacer(Modifier.fillMaxWidth().height(6.dp))
+                        }
+                    }
+                }
                 if (!isCollapsed) {
                     itemsIndexed(notes, key = { _, note -> note.id }) { index, note ->
-                        TimelineNoteRow(
+                        TimelineDraggableRow(
                             note = note,
-                            index = sectionStart + index + 1,
-                            modifier = Modifier.animateItem(),
-                            isDimmed = sectionUi.isDimmed,
-                            onToggleDone = { viewModel.toggleNoteDone(note) },
-                            onDelete = { viewModel.deleteNote(note) },
-                            onSetPriority = {
-                                viewModel.updateNote(
-                                    note.copy(
-                                        priority = if (note.priority == 0) 1 else 0,
-                                        done = false,
-                                        orderAt = Clock.System.now().toEpochMilliseconds()
-                                    )
-                                )
-                            },
-                            onEdit = { viewModel.setEditingNote(note) },
-                            onSetRepeat = { noteForRepeatDialog = note },
-                            onSetReminder = { noteForReminderDialog = note },
-                            onSetDueDate = { noteForDueDateDialog = note },
-                            onMoveTo = { noteForMoveDialog = note },
+                            number = sectionStart + index + 1,
+                            sectionUi = sectionUi,
+                            isDroppable = isDroppable,
+                            reorderableState = reorderableState,
+                            onDragStarted = onRowDragStarted,
+                            onDragStopped = onRowDragStopped,
+                            viewModel = viewModel,
+                            onOpenRepeat = { noteForRepeatDialog = it },
+                            onOpenReminder = { noteForReminderDialog = it },
+                            onOpenDueDate = { noteForDueDateDialog = it },
+                            onOpenMove = { noteForMoveDialog = it },
                         )
+                    }
+                } else {
+                    // Keep the dragged row composed inside a collapsed section so the drag
+                    // survives pass-through and can drop here (renders as a live preview)
+                    val draggedIdx = notes.indexOfFirst { it.id == draggingNoteId }
+                    if (draggedIdx >= 0) {
+                        val note = notes[draggedIdx]
+                        item(key = note.id) {
+                            TimelineDraggableRow(
+                                note = note,
+                                number = sectionStart + draggedIdx + 1,
+                                sectionUi = sectionUi,
+                                isDroppable = isDroppable,
+                                reorderableState = reorderableState,
+                                onDragStarted = onRowDragStarted,
+                                onDragStopped = onRowDragStopped,
+                                viewModel = viewModel,
+                                onOpenRepeat = { noteForRepeatDialog = it },
+                                onOpenReminder = { noteForReminderDialog = it },
+                                onOpenDueDate = { noteForDueDateDialog = it },
+                                onOpenMove = { noteForMoveDialog = it },
+                            )
+                        }
                     }
                 }
             }
@@ -364,6 +500,64 @@ private data class TimelineSectionUi(
     val isDimmed: Boolean = false,
 )
 
+private data class NoteLocation(val sectionIdx: Int, val noteIdx: Int)
+
+private fun locateNote(sections: List<TimelineSectionUi>, noteId: Long): NoteLocation? {
+    sections.forEachIndexed { sectionIdx, section ->
+        val noteIdx = section.notes.indexOfFirst { it.id == noteId }
+        if (noteIdx >= 0) return NoteLocation(sectionIdx, noteIdx)
+    }
+    return null
+}
+
+@Composable
+private fun LazyItemScope.TimelineDraggableRow(
+    note: Note,
+    number: Int,
+    sectionUi: TimelineSectionUi,
+    isDroppable: Boolean,
+    reorderableState: ReorderableLazyListState,
+    onDragStarted: (Long) -> Unit,
+    onDragStopped: (Long) -> Unit,
+    viewModel: MainViewModel,
+    onOpenRepeat: (Note) -> Unit,
+    onOpenReminder: (Note) -> Unit,
+    onOpenDueDate: (Note) -> Unit,
+    onOpenMove: (Note) -> Unit,
+) {
+    // enabled=false keeps rows in non-droppable sections (Overdue, Unscheduled) from
+    // receiving other rows, while their own handle still lets them be dragged out
+    ReorderableItem(reorderableState, key = note.id, enabled = isDroppable) { isDragging ->
+        TimelineNoteRow(
+            note = note,
+            index = number,
+            isDimmed = sectionUi.isDimmed,
+            isDragging = isDragging,
+            // Completed rows are inert; everything else long-press drags
+            dragHandleModifier = if (sectionUi.isDimmed) Modifier else Modifier.longPressDraggableHandle(
+                onDragStarted = { onDragStarted(note.id) },
+                onDragStopped = { onDragStopped(note.id) },
+            ),
+            onToggleDone = { viewModel.toggleNoteDone(note) },
+            onDelete = { viewModel.deleteNote(note) },
+            onSetPriority = {
+                viewModel.updateNote(
+                    note.copy(
+                        priority = if (note.priority == 0) 1 else 0,
+                        done = false,
+                        orderAt = Clock.System.now().toEpochMilliseconds()
+                    )
+                )
+            },
+            onEdit = { viewModel.setEditingNote(note) },
+            onSetRepeat = { onOpenRepeat(note) },
+            onSetReminder = { onOpenReminder(note) },
+            onSetDueDate = { onOpenDueDate(note) },
+            onMoveTo = { onOpenMove(note) },
+        )
+    }
+}
+
 @Composable
 private fun TimelineNoteRow(
     note: Note,
@@ -378,6 +572,8 @@ private fun TimelineNoteRow(
     onMoveTo: () -> Unit,
     modifier: Modifier = Modifier,
     isDimmed: Boolean = false,
+    isDragging: Boolean = false,
+    dragHandleModifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
     var showMenu by remember { mutableStateOf(false) }
@@ -397,7 +593,8 @@ private fun TimelineNoteRow(
                     },
                     onDoubleTap = { onToggleDone() },
                 )
-            },
+            }
+            .then(dragHandleModifier),
     ) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
             Text(
@@ -413,6 +610,7 @@ private fun TimelineNoteRow(
                 modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 5.dp, bottom = 5.dp).weight(1f),
                 text = note.text,
                 color = when {
+                    isDragging -> colors.hint
                     isDimmed -> colors.primaryText.copy(alpha = 0.33f)
                     note.priority == 1 -> colors.priorityText
                     else -> colors.primaryText
