@@ -1120,12 +1120,6 @@ internal fun NoteActionsMenu(
             onClick = { onSetReminder(); onDismissRequest() }
         ),
         MenuAction(
-            label = dueDateLabel,
-            icon = Icons.Outlined.CalendarMonth,
-            tint = if (isRepeating) colors.primaryText.copy(alpha = 0.33f) else colors.primaryText,
-            onClick = if (isRepeating) ({}) else ({ onSetDueDate(); onDismissRequest() })
-        ),
-        MenuAction(
             label = "Edit",
             icon = Icons.Outlined.EditNote,
             tint = colors.primaryText,
@@ -1138,16 +1132,22 @@ internal fun NoteActionsMenu(
             onClick = { onSetRepeat(); onDismissRequest() }
         ),
         MenuAction(
-            label = "Delete",
-            icon = Icons.Default.Delete,
-            tint = colors.primaryText,
-            onClick = { onDelete(); onDismissRequest() }
-        ),
-        MenuAction(
             label = "Move to",
             icon = Icons.Outlined.ArrowOutward,
             tint = colors.primaryText,
             onClick = { onMoveTo(); onDismissRequest() },
+        ),
+        MenuAction(
+            label = dueDateLabel,
+            icon = Icons.Outlined.CalendarMonth,
+            tint = if (isRepeating) colors.primaryText.copy(alpha = 0.33f) else colors.primaryText,
+            onClick = if (isRepeating) ({}) else ({ onSetDueDate(); onDismissRequest() })
+        ),
+        MenuAction(
+            label = "Delete",
+            icon = Icons.Default.Delete,
+            tint = colors.primaryText,
+            onClick = { onDelete(); onDismissRequest() }
         ),
     )
 
