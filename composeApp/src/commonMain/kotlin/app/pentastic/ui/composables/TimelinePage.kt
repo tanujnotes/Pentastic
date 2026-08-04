@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -215,6 +216,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         TimelineNoteRow(
                             note = note,
                             index = sectionStart + index + 1,
+                            modifier = Modifier.animateItem(),
                             isDimmed = sectionUi.isDimmed,
                             onToggleDone = { viewModel.toggleNoteDone(note) },
                             onDelete = { viewModel.deleteNote(note) },
@@ -372,25 +374,32 @@ private fun TimelineNoteRow(
     onSetReminder: () -> Unit,
     onSetDueDate: () -> Unit,
     onMoveTo: () -> Unit,
+    modifier: Modifier = Modifier,
     isDimmed: Boolean = false,
 ) {
     val colors = AppTheme.colors
     var showMenu by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pointerInput(note) {
-                    detectTapGestures(
-                        onTap = { showMenu = true },
-                        onDoubleTap = { onToggleDone() },
-                    )
-                },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    val focusManager = LocalFocusManager.current
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            // 6.dp per row: sections already add vertical rhythm, so rows sit 4.dp
+            // tighter than on note pages
+            .padding(vertical = 6.dp)
+            .pointerInput(note) {
+                detectTapGestures(
+                    onTap = {
+                        focusManager.clearFocus()
+                        showMenu = true
+                    },
+                    onDoubleTap = { onToggleDone() },
+                )
+            },
+    ) {
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
             Text(
-                modifier = Modifier.padding(start = 12.dp).defaultMinSize(minWidth = 28.dp),
+                modifier = Modifier.padding(start = 12.dp, top = 6.dp).defaultMinSize(minWidth = 28.dp),
                 fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
                 text = "$index.",
                 color = colors.primaryText.copy(alpha = 0.33f),
@@ -410,7 +419,7 @@ private fun TimelineNoteRow(
                 fontSize = 18.sp,
                 lineHeight = 20.sp,
                 letterSpacing = 0.5.sp,
-                maxLines = 1,
+                maxLines = if (showMenu) Int.MAX_VALUE else if (isDimmed) 1 else 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }
