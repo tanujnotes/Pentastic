@@ -5,6 +5,7 @@ package app.pentastic.ui.composables
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,9 +53,13 @@ import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
@@ -121,6 +125,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         TimelineSectionUi(
                             key = section.name,
                             label = section.label,
+                            subtitle = sectionSubtitle(section, today),
                             notes = sectionNotes,
                             collapsedByDefault = false,
                         )
@@ -303,8 +308,12 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 14.dp, end = 14.dp, top = 12.dp)
-                            .clickable {
+                            // Same title inset as note pages
+                            .padding(start = 18.dp, end = 14.dp, top = 12.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
                                 toggledSections = if (sectionUi.key in toggledSections) {
                                     toggledSections - sectionUi.key
                                 } else {
@@ -321,9 +330,17 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                             // the rest fall back to the theme's sans (Inter)
                             fontFamily = if (isFirst) FontFamily(Font(Res.font.Merriweather_Light)) else null,
                             color = if (isCollapsed) colors.pageTitle.copy(alpha = 0.45f) else colors.pageTitle,
+                            modifier = Modifier.alignByBaseline(),
                         )
-                        Spacer(Modifier.width(12.dp))
-                        HorizontalDivider(modifier = Modifier.weight(1f), color = colors.divider)
+                        if (sectionUi.subtitle != null) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "· ${sectionUi.subtitle}",
+                                fontSize = 16.sp,
+                                color = colors.hint,
+                                modifier = Modifier.alignByBaseline(),
+                            )
+                        }
                     }
                 }
                 // Always-present drop target so empty and collapsed sections can receive rows
@@ -498,7 +515,47 @@ private data class TimelineSectionUi(
     val notes: List<Note>,
     val collapsedByDefault: Boolean,
     val isDimmed: Boolean = false,
+    val subtitle: String? = null,
 )
+
+/** Light-grey date context shown next to a section title, e.g. "Tue, 4 Aug" or "3–9 Aug". */
+private fun sectionSubtitle(section: TimelineSection, today: LocalDate): String? {
+    val weekStart = today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
+    return when (section) {
+        TimelineSection.TODAY -> dayDateLabel(today)
+        TimelineSection.TOMORROW -> dayDateLabel(today.plus(1, DateTimeUnit.DAY))
+        TimelineSection.THIS_WEEK ->
+            rangeLabel(weekStart, weekStart.plus(6, DateTimeUnit.DAY))
+
+        TimelineSection.THIS_WEEKEND ->
+            rangeLabel(weekStart.plus(5, DateTimeUnit.DAY), weekStart.plus(6, DateTimeUnit.DAY))
+
+        TimelineSection.NEXT_WEEK ->
+            rangeLabel(weekStart.plus(7, DateTimeUnit.DAY), weekStart.plus(13, DateTimeUnit.DAY))
+
+        TimelineSection.THIS_MONTH -> monthFullLabel(today.month)
+        TimelineSection.NEXT_MONTH ->
+            monthFullLabel(LocalDate(today.year, today.month, 1).plus(1, DateTimeUnit.MONTH).month)
+
+        TimelineSection.OVERDUE, TimelineSection.SOMEDAY -> null
+    }
+}
+
+private fun dayDateLabel(date: LocalDate): String =
+    "${dayAbbrev(date)}, ${date.dayOfMonth} ${monthAbbrev(date.month)}"
+
+private fun rangeLabel(start: LocalDate, end: LocalDate): String =
+    if (start.month == end.month) "${start.dayOfMonth}–${end.dayOfMonth} ${monthAbbrev(start.month)}"
+    else "${start.dayOfMonth} ${monthAbbrev(start.month)} – ${end.dayOfMonth} ${monthAbbrev(end.month)}"
+
+private fun dayAbbrev(date: LocalDate): String =
+    date.dayOfWeek.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+
+private fun monthAbbrev(month: Month): String =
+    month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+
+private fun monthFullLabel(month: Month): String =
+    month.name.lowercase().replaceFirstChar { it.uppercase() }
 
 private data class NoteLocation(val sectionIdx: Int, val noteIdx: Int)
 
