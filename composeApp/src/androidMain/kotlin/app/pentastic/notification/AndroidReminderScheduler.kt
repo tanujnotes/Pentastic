@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
+import app.pentastic.data.RepeatFrequency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -79,8 +80,22 @@ class AndroidReminderScheduler(
     override suspend fun rescheduleAllReminders() = withContext(Dispatchers.IO) {
         val notes = repository.getNotesWithActiveReminders()
         val now = System.currentTimeMillis()
-        notes.filter { it.reminderAt > now }.forEach { note ->
-            scheduleReminder(note)
+        notes.forEach { note ->
+            val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+            val nextAt = nextFutureReminderTime(note.reminderAt, frequency, now)
+            if (nextAt > now) {
+                // Repeating chains whose fire was missed are fast-forwarded to the
+                // next occurrence and persisted so the chain survives
+                val toSchedule = if (nextAt != note.reminderAt) {
+                    note.copy(reminderAt = nextAt, updatedAt = now)
+                        .also { repository.updateNote(it) }
+                } else note
+                scheduleReminder(toSchedule)
+            } else {
+                // Missed one-off: schedule as-is — AlarmManager delivers past-due
+                // alarms immediately, so it fires late instead of never
+                scheduleReminder(note)
+            }
         }
     }
 

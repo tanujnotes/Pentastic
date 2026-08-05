@@ -2,6 +2,7 @@ package app.pentastic.notification
 
 import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
+import app.pentastic.data.RepeatFrequency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -61,9 +62,18 @@ class IOSReminderScheduler(
 
     override suspend fun rescheduleAllReminders() = withContext(Dispatchers.IO) {
         val notes = repository.getNotesWithActiveReminders()
-        val now = NSDate().timeIntervalSince1970 * 1000
-        notes.filter { it.reminderAt > now.toLong() }.forEach { note ->
-            scheduleReminder(note)
+        val now = (NSDate().timeIntervalSince1970 * 1000).toLong()
+        notes.forEach { note ->
+            val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+            val nextAt = nextFutureReminderTime(note.reminderAt, frequency, now)
+            if (nextAt > now) {
+                // Fast-forward missed repeating chains and persist, mirroring Android
+                val toSchedule = if (nextAt != note.reminderAt) {
+                    note.copy(reminderAt = nextAt, updatedAt = now)
+                        .also { repository.updateNote(it) }
+                } else note
+                scheduleReminder(toSchedule)
+            }
         }
     }
 

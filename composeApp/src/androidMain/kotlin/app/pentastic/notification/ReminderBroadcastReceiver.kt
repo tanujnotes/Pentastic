@@ -14,14 +14,6 @@ import app.pentastic.utils.hasRepeatIntervalPassed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.LocalTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.plus
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.time.Clock
@@ -79,9 +71,11 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
             if (!isSnooze) {
                 val now = Clock.System.now().toEpochMilliseconds()
 
-                // Calculate next reminder time for repeating tasks
+                // Calculate next reminder time for repeating tasks. Fast-forwarding
+                // (not a single +interval step) keeps the chain alive when this
+                // alarm was delivered more than one interval late
                 val nextReminderAt = if (isRepeatingTask && note.reminderEnabled == 1) {
-                    calculateNextReminderTime(note.reminderAt, frequency)
+                    nextFutureReminderTime(note.reminderAt, frequency, now)
                 } else {
                     note.reminderAt
                 }
@@ -153,22 +147,5 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
 
             notificationManager.notify(noteUuid.hashCode(), notification)
         }.invokeOnCompletion { pendingResult.finish() }
-    }
-
-    private fun calculateNextReminderTime(currentReminderAt: Long, frequency: RepeatFrequency): Long {
-        val timeZone = TimeZone.currentSystemDefault()
-        val currentDateTime = Instant.fromEpochMilliseconds(currentReminderAt).toLocalDateTime(timeZone)
-        val reminderTime = LocalTime(currentDateTime.hour, currentDateTime.minute)
-
-        val nextDate = when (frequency) {
-            RepeatFrequency.NONE -> currentDateTime.date
-            RepeatFrequency.DAILY -> currentDateTime.date.plus(1, DateTimeUnit.DAY)
-            RepeatFrequency.WEEKLY -> currentDateTime.date.plus(7, DateTimeUnit.DAY)
-            RepeatFrequency.MONTHLY -> currentDateTime.date.plus(1, DateTimeUnit.MONTH)
-            RepeatFrequency.QUARTERLY -> currentDateTime.date.plus(3, DateTimeUnit.MONTH)
-            RepeatFrequency.YEARLY -> currentDateTime.date.plus(1, DateTimeUnit.YEAR)
-        }
-
-        return LocalDateTime(nextDate, reminderTime).toInstant(timeZone).toEpochMilliseconds()
     }
 }

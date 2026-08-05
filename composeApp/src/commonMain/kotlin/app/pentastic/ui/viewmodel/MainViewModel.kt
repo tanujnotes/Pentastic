@@ -10,6 +10,7 @@ import app.pentastic.data.PageType
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.ThemeMode
 import app.pentastic.notification.ReminderScheduler
+import app.pentastic.notification.nextFutureReminderTime
 import app.pentastic.utils.hasBeenHours
 import app.pentastic.utils.hasRepeatIntervalPassed
 import kotlinx.coroutines.flow.Flow
@@ -445,8 +446,17 @@ class MainViewModel(
     fun restoreNote(note: Note) {
         viewModelScope.launch {
             repository.restoreNote(note.id)
-            if (note.reminderEnabled == 1 && note.reminderAt > Clock.System.now().toEpochMilliseconds()) {
-                reminderScheduler.scheduleReminder(note)
+            if (note.reminderEnabled == 1 && note.reminderAt > 0) {
+                val now = Clock.System.now().toEpochMilliseconds()
+                // A repeating note restored after its fire time gets its chain
+                // fast-forwarded; the advanced time is scheduled (not persisted —
+                // the first fire writes it back) so the chain doesn't die in trash
+                val nextAt = nextFutureReminderTime(
+                    note.reminderAt, RepeatFrequency.fromOrdinal(note.repeatFrequency), now
+                )
+                if (nextAt > now) {
+                    reminderScheduler.scheduleReminder(note.copy(reminderAt = nextAt))
+                }
             }
         }
     }
