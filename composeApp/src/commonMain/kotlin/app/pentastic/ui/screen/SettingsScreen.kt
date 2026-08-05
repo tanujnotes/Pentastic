@@ -20,10 +20,8 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.ViewTimeline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -61,7 +59,6 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val themeMode by viewModel.themeMode.collectAsState()
-    val showTimeline by viewModel.showTimeline.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -93,18 +90,6 @@ fun SettingsScreen(
                     text = themeMode.label,
                     fontSize = 14.sp,
                     color = colors.hint,
-                )
-            }
-        )
-
-        SettingsItem(
-            icon = { Icon(Icons.Outlined.ViewTimeline, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
-            title = "Timeline",
-            onClick = { viewModel.toggleShowTimeline() },
-            trailing = {
-                Switch(
-                    checked = showTimeline,
-                    onCheckedChange = { viewModel.toggleShowTimeline() }
                 )
             }
         )

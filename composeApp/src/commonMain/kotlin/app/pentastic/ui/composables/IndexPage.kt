@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -281,41 +282,74 @@ fun IndexPage(
                 modifier = Modifier.fillMaxSize(),
                 state = lazyListState
             ) {
-                // Pinned Timeline entry: not deletable, not reorderable
-                if (showTimeline && !isReorderMode) {
+                // Timeline entry: always present, not deletable, not reorderable.
+                // Long-press toggles whether the timeline is pinned as a pager page
+                // or opens as a pushed screen from here
+                if (!isReorderMode) {
                     item(key = "timeline_row") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { onTimelineClick() },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(modifier = Modifier.defaultMinSize(minWidth = 32.dp)) {
-                                Icon(
-                                    imageVector = Icons.Outlined.ViewTimeline,
-                                    contentDescription = "Timeline",
-                                    tint = colors.primaryText.copy(alpha = 0.33f),
-                                    modifier = Modifier.size(18.dp)
+                        var showTimelineMenu by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .combinedClickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { onTimelineClick() },
+                                        onLongClick = { showTimelineMenu = true }
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.defaultMinSize(minWidth = 32.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.ViewTimeline,
+                                        contentDescription = "Timeline",
+                                        tint = colors.primaryText.copy(alpha = 0.33f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Spacer(Modifier.width(6.dp))
+
+                                Text(
+                                    text = "Timeline",
+                                    fontSize = 18.sp,
+                                    maxLines = 1,
+                                    color = colors.primaryText,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
+
+                                Spacer(Modifier.width(6.dp))
+
+                                DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
                             }
 
-                            Spacer(Modifier.width(6.dp))
-
-                            Text(
-                                text = "Timeline",
-                                fontSize = 18.sp,
-                                maxLines = 1,
-                                color = colors.primaryText,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-
-                            Spacer(Modifier.width(6.dp))
-
-                            DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
+                            DropdownMenu(
+                                expanded = showTimelineMenu,
+                                onDismissRequest = { showTimelineMenu = false },
+                                offset = DpOffset(x = 80.dp, y = 0.dp),
+                                modifier = Modifier.background(color = colors.menuBackground),
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (showTimeline) "Unpin from pages" else "Pin to pages",
+                                            color = colors.primaryText
+                                        )
+                                    },
+                                    onClick = {
+                                        showTimelineMenu = false
+                                        viewModel.toggleShowTimeline()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.PushPin, tint = colors.icon, contentDescription = null,
+                                            modifier = Modifier.padding(end = 4.dp).size(24.dp)
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }

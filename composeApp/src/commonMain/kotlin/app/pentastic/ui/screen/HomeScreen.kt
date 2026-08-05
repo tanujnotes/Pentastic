@@ -56,6 +56,7 @@ import kotlin.time.ExperimentalTime
 fun HomeScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToArchivedNotes: (Long) -> Unit = {},
+    onNavigateToTimeline: () -> Unit = {},
     prefs: DataStore<Preferences> = koinInject(),
 ) {
     val viewModel = koinViewModel<MainViewModel>()
@@ -250,7 +251,9 @@ fun HomeScreen(
                             onPageUnarchive = { page -> viewModel.unarchivePage(page) },
                             onNavigateToSettings = onNavigateToSettings,
                             showTimeline = showTimeline,
-                            onTimelineClick = { openTimeline() },
+                            // Pinned: scroll to the pager page. Unpinned: push the
+                            // standalone Timeline screen
+                            onTimelineClick = { if (showTimeline) openTimeline() else onNavigateToTimeline() },
                         )
 
                         VerticalDivider(color = AppTheme.colors.divider)
@@ -390,7 +393,7 @@ fun HomeScreen(
                                     onPageUnarchive = { page -> viewModel.unarchivePage(page) },
                                     onNavigateToSettings = onNavigateToSettings,
                                     showTimeline = showTimeline,
-                                    onTimelineClick = { openTimeline() },
+                                    onTimelineClick = { if (showTimeline) openTimeline() else onNavigateToTimeline() },
                                 )
                             else if (showTimeline && pageIndex == 1) {
                                 TimelinePage()

@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import app.pentastic.ui.screen.ArchivedNotesScreen
 import app.pentastic.ui.screen.HomeScreen
 import app.pentastic.ui.screen.SettingsScreen
+import app.pentastic.ui.screen.TimelineScreen
 import app.pentastic.ui.screen.TrashScreen
 
 @Composable
@@ -30,8 +31,14 @@ fun SetupNavGraph(
                 },
                 onNavigateToArchivedNotes = { pageId ->
                     navController.navigate(Screen.ArchivedNotes.createRoute(pageId))
+                },
+                onNavigateToTimeline = {
+                    navController.navigate(Screen.Timeline.route)
                 }
             )
+        }
+        composable(route = Screen.Timeline.route) {
+            TimelineScreen()
         }
         composable(route = Screen.Settings.route) {
             SettingsScreen(
