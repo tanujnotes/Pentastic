@@ -119,7 +119,9 @@ fun HomeScreen(
 
     // Handle deep link navigation from notification
     val deepLinkPageId = getDeepLinkPageId()
-    var hasNavigatedFromDeepLink by remember { mutableStateOf(false) }
+    // Saveable: a deep link that pushes the Timeline screen would otherwise re-fire
+    // when that screen is popped and this one is recomposed, trapping the user
+    var hasNavigatedFromDeepLink by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.resetRepeatingTasksTodo()
@@ -166,7 +168,20 @@ fun HomeScreen(
             }
 
             // Navigate to the page from deep link (notification tap)
-            LaunchedEffect(deepLinkPageId, pages, hasNavigatedFromDeepLink) {
+            LaunchedEffect(deepLinkPageId, pages, timelinePage, hasNavigatedFromDeepLink) {
+                // Tasks living on the Timeline page: it is not a root or sub-page, so
+                // open the timeline wherever it currently lives
+                if (deepLinkPageId != null && !hasNavigatedFromDeepLink &&
+                    timelinePage?.id == deepLinkPageId
+                ) {
+                    when {
+                        !showTimeline -> onNavigateToTimeline()
+                        isWideLayout -> wideShowsTimeline = true
+                        else -> pagerState.scrollToPage(1)
+                    }
+                    hasNavigatedFromDeepLink = true
+                    return@LaunchedEffect
+                }
                 if (deepLinkPageId != null && pages.isNotEmpty() && !hasNavigatedFromDeepLink) {
                     val rootPageIndex = pages.indexOfFirst { it.id == deepLinkPageId }
                     if (rootPageIndex >= 0) {
