@@ -131,11 +131,10 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 subPagesByParent.values.forEach { subs -> subs.forEach { add(it.id) } }
                 timelinePage?.let { add(it.id) }
             }
+            val liveNotes = notesByPage.filterKeys { it in livePageIds }.values.flatten()
             // Repeat tasks are included even when done: their next occurrence can preview
             // (e.g. a weekly task in Tomorrow the day before it comes back)
-            val grouped = notesByPage
-                .filterKeys { it in livePageIds }
-                .values.flatten()
+            val grouped = liveNotes
                 .filter { it.repeatFrequency > 0 || (it.hasDueDate && !it.done) }
                 .groupBy {
                     if (it.repeatFrequency > 0) classifyRepeatTask(it, today, timeZone)
@@ -231,8 +230,16 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         )
                     )
                 }
-                val completed = timelineOwnNotes
-                    .filter { it.done && it.repeatFrequency == 0 }
+                // Completing a task on the timeline drops it out of its dated section;
+                // catching every completed due-dated task here (not just the ones on the
+                // Timeline page) keeps an accidental double-tap undoable without having
+                // to hunt down the task's own page. Newest first, so it lands on top.
+                val timelinePageId = timelinePage?.id
+                val completed = liveNotes
+                    .filter {
+                        it.done && it.repeatFrequency == 0 &&
+                                (it.hasDueDate || it.pageId == timelinePageId)
+                    }
                     .sortedByDescending { it.orderAt }
                 if (completed.isNotEmpty()) {
                     add(
