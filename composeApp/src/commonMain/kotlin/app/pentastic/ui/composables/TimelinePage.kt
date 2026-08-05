@@ -53,6 +53,7 @@ import app.pentastic.data.TimelineBucket
 import app.pentastic.data.TimelineSection
 import app.pentastic.data.classifyDueDate
 import app.pentastic.data.classifyRepeatTask
+import app.pentastic.data.epochMillisToLocalDate
 import app.pentastic.data.hasDueDate
 import app.pentastic.data.timelineSectionDropRange
 import app.pentastic.ui.theme.AppTheme
@@ -230,15 +231,23 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                         )
                     )
                 }
-                // Completing a task on the timeline drops it out of its dated section;
-                // catching every completed due-dated task here (not just the ones on the
-                // Timeline page) keeps an accidental double-tap undoable without having
-                // to hunt down the task's own page. Newest first, so it lands on top.
+                // Completing a task on the timeline drops it out of its dated section, so
+                // this section catches it for undo. Tasks that live on the Timeline page
+                // stay for good (it is their only home); tasks borrowed from other pages
+                // only linger a day, since their own page lists them permanently anyway.
+                // Newest first, so a just-completed task lands on top.
                 val timelinePageId = timelinePage?.id
+                val yesterday = today.minus(1, DateTimeUnit.DAY)
                 val completed = liveNotes
-                    .filter {
-                        it.done && it.repeatFrequency == 0 &&
-                                (it.hasDueDate || it.pageId == timelinePageId)
+                    .filter { note ->
+                        if (!note.done || note.repeatFrequency > 0) return@filter false
+                        if (note.pageId == timelinePageId) return@filter true
+                        if (!note.hasDueDate) return@filter false
+                        // taskLastDoneAt is stamped on every completion path; 0 means a
+                        // legacy row whose completion date is unknown, so leave it out
+                        if (note.taskLastDoneAt <= 0) return@filter false
+                        val doneOn = epochMillisToLocalDate(note.taskLastDoneAt, timeZone)
+                        doneOn == today || doneOn == yesterday
                     }
                     .sortedByDescending { it.orderAt }
                 if (completed.isNotEmpty()) {
