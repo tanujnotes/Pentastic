@@ -54,6 +54,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
             val isRepeatingTask = note.repeatFrequency > 0
             val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
 
+            // A disabled reminder or a completed one-off task means this alarm is an
+            // orphan (scheduled before the reminder was turned off or the task was
+            // done): drop it without un-checking or notifying
+            if (note.reminderEnabled == 0 || (note.done && !isRepeatingTask)) {
+                reminderScheduler.cancelReminder(noteUuid)
+                return@launch
+            }
+
             // Already completed within the current cycle (e.g. done at 8 AM before a
             // 9 AM reminder): keep it done and stay quiet, but still advance the
             // reminder chain below so future cycles fire

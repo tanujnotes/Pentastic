@@ -62,7 +62,11 @@ class AndroidReminderScheduler(
     }
 
     override suspend fun cancelReminder(noteUuid: String) {
-        val intent = Intent(context, ReminderBroadcastReceiver::class.java)
+        // Must mirror scheduleReminder's action: PendingIntent lookup matches on
+        // Intent.filterEquals, so a missing action means FLAG_NO_CREATE never finds it
+        val intent = Intent(context, ReminderBroadcastReceiver::class.java).apply {
+            action = "app.pentastic.REMINDER_NOTIFICATION"
+        }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             noteUuid.hashCode(),
