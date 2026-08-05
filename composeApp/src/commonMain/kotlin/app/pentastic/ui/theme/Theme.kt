@@ -2,6 +2,10 @@ package app.pentastic.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButtonColors
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -57,6 +61,35 @@ object AppTheme {
     val colors: AppColors
         @Composable
         get() = LocalAppColors.current
+}
+
+/**
+ * M3 control colors drawn from [AppColors]. No colorScheme is set on MaterialTheme,
+ * so any M3 component left with its defaults renders in the light-scheme purple —
+ * wrong against this palette and barely visible on the dark menu background.
+ */
+@Composable
+fun appRadioButtonColors(): RadioButtonColors {
+    val colors = AppTheme.colors
+    return RadioButtonDefaults.colors(
+        selectedColor = colors.primaryText,
+        unselectedColor = colors.hint,
+        disabledSelectedColor = colors.primaryText.copy(alpha = 0.38f),
+        disabledUnselectedColor = colors.hint.copy(alpha = 0.38f),
+    )
+}
+
+@Composable
+fun appSwitchColors(): SwitchColors {
+    val colors = AppTheme.colors
+    return SwitchDefaults.colors(
+        checkedThumbColor = colors.background,
+        checkedTrackColor = colors.primaryText,
+        checkedBorderColor = colors.primaryText,
+        uncheckedThumbColor = colors.hint,
+        uncheckedTrackColor = colors.background,
+        uncheckedBorderColor = colors.hint,
+    )
 }
 
 @OptIn(ExperimentalTime::class)

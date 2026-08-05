@@ -96,6 +96,8 @@ import app.pentastic.data.PageType
 import app.pentastic.data.ThemeMode
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.theme.AppTheme.colors
+import app.pentastic.ui.theme.appRadioButtonColors
+import app.pentastic.ui.theme.appSwitchColors
 import app.pentastic.ui.viewmodel.MainViewModel
 import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -352,13 +354,7 @@ fun IndexPage(
                                         checked = showTimeline,
                                         onCheckedChange = { onSetTimelineEnabled(true) },
                                         modifier = Modifier.scale(0.8f).height(24.dp),
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = colors.background,
-                                            checkedTrackColor = colors.primaryText,
-                                            uncheckedThumbColor = colors.hint,
-                                            uncheckedTrackColor = colors.background,
-                                            uncheckedBorderColor = colors.hint,
-                                        )
+                                        colors = appSwitchColors(),
                                     )
                                 }
                             }
@@ -1132,7 +1128,8 @@ fun ThemeSelectionDialog(
                     ) {
                         RadioButton(
                             selected = selectedTheme == theme,
-                            onClick = { selectedTheme = theme }
+                            onClick = { selectedTheme = theme },
+                            colors = appRadioButtonColors(),
                         )
                         Text(text = theme.label, color = colors.primaryText)
                     }

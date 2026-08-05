@@ -45,6 +45,7 @@ import app.pentastic.data.dueValueToLocalDate
 import app.pentastic.data.resolveRange
 import app.pentastic.data.toDueValue
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.appRadioButtonColors
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
@@ -159,7 +160,8 @@ internal fun DueDateOptionsDialog(
                                     ) {
                                         RadioButton(
                                             selected = selectedOption == option,
-                                            onClick = { onOptionTap(option) }
+                                            onClick = { onOptionTap(option) },
+                                            colors = appRadioButtonColors(),
                                         )
                                         Text(text = option.label, color = colors.primaryText)
                                     }

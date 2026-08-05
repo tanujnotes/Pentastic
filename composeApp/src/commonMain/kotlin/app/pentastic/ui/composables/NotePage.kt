@@ -98,6 +98,8 @@ import app.pentastic.data.formatDueDateLabel
 import app.pentastic.data.hasDueDate
 import app.pentastic.data.isDueOverdue
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.appRadioButtonColors
+import app.pentastic.ui.theme.appSwitchColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1317,7 +1319,8 @@ internal fun RepeatFrequencyDialog(
                             ) {
                                 RadioButton(
                                     selected = selectedFrequency == frequency,
-                                    onClick = { selectedFrequency = frequency }
+                                    onClick = { selectedFrequency = frequency },
+                                    colors = appRadioButtonColors(),
                                 )
                                 Text(text = frequency.label, color = colors.primaryText)
                             }
@@ -1372,7 +1375,8 @@ internal fun RepeatFrequencyDialog(
                         Text("Remind me", color = colors.primaryText, fontSize = 15.sp)
                         androidx.compose.material3.Switch(
                             checked = reminderEnabled,
-                            onCheckedChange = { reminderEnabled = it }
+                            onCheckedChange = { reminderEnabled = it },
+                            colors = appSwitchColors(),
                         )
                     }
 

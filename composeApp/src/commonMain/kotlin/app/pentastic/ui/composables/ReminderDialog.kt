@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.appSwitchColors
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
@@ -131,7 +132,8 @@ fun ReminderDialog(
                         Text("Enabled", color = colors.primaryText)
                         Switch(
                             checked = isEnabled,
-                            onCheckedChange = { isEnabled = it }
+                            onCheckedChange = { isEnabled = it },
+                            colors = appSwitchColors(),
                         )
                     }
                 }
