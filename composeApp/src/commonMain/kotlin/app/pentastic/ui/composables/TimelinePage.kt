@@ -328,6 +328,10 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     }
 
     Column(modifier = modifier.fillMaxSize().background(colors.background)) {
+        if (sections.all { it.notes.isEmpty() }) {
+            TimelineEmptyState(today = today)
+            return@Column
+        }
         LazyColumn(modifier = Modifier.fillMaxSize(), state = lazyListState) {
             // Tasks are numbered continuously across all sections (collapsed ones keep their numbers)
             var taskNumber = 0
@@ -552,6 +556,42 @@ private data class TimelineSectionUi(
     val isDimmed: Boolean = false,
     val subtitle: String? = null,
 )
+
+/** Replaces the section scaffold while nothing is scheduled anywhere. */
+@Composable
+private fun TimelineEmptyState(today: LocalDate) {
+    val colors = AppTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Same title inset and rhythm as the top section header
+            .padding(start = 18.dp, end = 14.dp, top = 12.dp)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = TimelineSection.TODAY.label,
+            fontSize = 36.sp,
+            fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+            color = colors.pageTitle,
+            modifier = Modifier.alignByBaseline(),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = "· ${dayDateLabel(today)}",
+            fontSize = 16.sp,
+            color = colors.hint,
+            modifier = Modifier.alignByBaseline(),
+        )
+    }
+    Text(
+        text = "Nothing scheduled yet.\n\nAdd a task below, or open any task's menu and set a due date — it will show up here.",
+        color = colors.hint,
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
+        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+    )
+}
 
 /** Light-grey date context shown next to a section title, e.g. "Tue, 4 Aug" or "3–9 Aug". */
 private fun sectionSubtitle(section: TimelineSection, today: LocalDate): String? {
