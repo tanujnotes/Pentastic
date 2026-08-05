@@ -84,7 +84,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                     done = if (doneThisCycle) note.done else false,
                     orderAt = if (doneThisCycle) note.orderAt else now,
                     updatedAt = now,
-                    reminderAt = nextReminderAt
+                    // One-offs consume their time on delivery (0) so reschedulers
+                    // can't re-fire them on every app start; snooze still works
+                    // because it only needs the uuid, not the stored time
+                    reminderAt = if (isRepeatingTask) nextReminderAt else 0L
                 )
                 database.noteDao.updateNote(updatedNote)
 
