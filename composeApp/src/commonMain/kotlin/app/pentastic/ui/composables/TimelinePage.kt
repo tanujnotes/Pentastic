@@ -57,6 +57,7 @@ import app.pentastic.data.hasDueDate
 import app.pentastic.data.timelineSectionDropRange
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.delay
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
@@ -64,6 +65,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
@@ -77,6 +79,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
 @Composable
@@ -89,13 +92,22 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     val timelinePage by viewModel.timelinePage.collectAsState()
 
     val timeZone = TimeZone.currentSystemDefault()
-    // Refreshed on every resume so a session left open across midnight re-buckets
-    // sections and un-checks lapsed repeat tasks (runs on first composition too)
+    // Refreshed on resume and at each local midnight so an open session re-buckets
+    // sections and un-checks lapsed repeat tasks as the day rolls over (the resume
+    // effect also runs on first composition)
     var today by remember { mutableStateOf(Clock.System.now().toLocalDateTime(timeZone).date) }
     LifecycleResumeEffect(Unit) {
         today = Clock.System.now().toLocalDateTime(timeZone).date
         viewModel.resetRepeatingTasksTodo()
         onPauseOrDispose { }
+    }
+    // Keyed on today: each firing (or a resume-driven change) schedules the next
+    // midnight; the buffer keeps the recomputed date safely past the rollover
+    LaunchedEffect(today) {
+        val nextMidnight = today.plus(1, DateTimeUnit.DAY).atStartOfDayIn(timeZone)
+        delay(nextMidnight - Clock.System.now() + 250.milliseconds)
+        today = Clock.System.now().toLocalDateTime(timeZone).date
+        viewModel.resetRepeatingTasksTodo()
     }
 
     var noteForDueDateDialog by remember { mutableStateOf<Note?>(null) }
