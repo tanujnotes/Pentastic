@@ -234,6 +234,23 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     // every DB emission (after a drop the DB round-trip lands in the same arrangement)
     var localSections by remember { mutableStateOf(sections) }
     LaunchedEffect(sections) { localSections = sections }
+    // A late-loading source (the Timeline page's own notes arrive after the first
+    // render) can insert a new first section — usually Overdue — above the top row,
+    // and LazyColumn's anchoring keeps the old first header pinned, hiding the new
+    // section above the fold. Snap up when the viewport is still sitting on the old
+    // first header; a user scrolled anywhere else is left alone.
+    var previousFirstSectionKey by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(localSections.firstOrNull()?.key) {
+        val newFirst = localSections.firstOrNull()?.key
+        val oldFirst = previousFirstSectionKey
+        previousFirstSectionKey = newFirst
+        if (oldFirst != null && newFirst != null && oldFirst != newFirst &&
+            lazyListState.firstVisibleItemScrollOffset == 0 &&
+            lazyListState.layoutInfo.visibleItemsInfo.firstOrNull()?.key == "header_$oldFirst"
+        ) {
+            lazyListState.scrollToItem(0)
+        }
+    }
     var draggingNoteId by remember { mutableStateOf<Long?>(null) }
     var dragOriginSectionKey by remember { mutableStateOf<String?>(null) }
     var dragDidMove by remember { mutableStateOf(false) }
