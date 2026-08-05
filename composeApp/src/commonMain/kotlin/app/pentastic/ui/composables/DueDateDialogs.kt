@@ -41,9 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.DUE_SOMEDAY
 import app.pentastic.data.DueDateOption
-import app.pentastic.data.epochMillisToLocalDate
+import app.pentastic.data.dueValueToLocalDate
 import app.pentastic.data.resolveRange
-import app.pentastic.data.toStartOfDayMillis
+import app.pentastic.data.toDueValue
 import app.pentastic.ui.theme.AppTheme
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -75,8 +75,8 @@ internal fun DueDateOptionsDialog(
         when {
             currentDueStartAt == DUE_SOMEDAY -> DueDateOption.SOMEDAY
             hasDueDate -> {
-                val start = epochMillisToLocalDate(currentDueStartAt, timeZone)
-                val end = epochMillisToLocalDate(currentDueEndAt, timeZone)
+                val start = dueValueToLocalDate(currentDueStartAt, timeZone)
+                val end = dueValueToLocalDate(currentDueEndAt, timeZone)
                 DueDateOption.entries.firstOrNull { it.resolveRange(today) == start to end }
                     ?: DueDateOption.CUSTOM
             }
@@ -88,7 +88,7 @@ internal fun DueDateOptionsDialog(
 
     // Seed for the Custom wheel picker: existing due end date, else today
     val customDate = remember {
-        if (currentDueStartAt > 0) epochMillisToLocalDate(currentDueEndAt, timeZone) else today
+        if (currentDueStartAt > 0) dueValueToLocalDate(currentDueEndAt, timeZone) else today
     }
     var showCustomDatePicker by remember { mutableStateOf(false) }
 
@@ -104,7 +104,7 @@ internal fun DueDateOptionsDialog(
             option == DueDateOption.TODAY || option == DueDateOption.TOMORROW -> {
                 selectedOption = option
                 val (start, end) = option.resolveRange(today)!!
-                onApply(start.toStartOfDayMillis(timeZone), end.toStartOfDayMillis(timeZone))
+                onApply(start.toDueValue(), end.toDueValue())
             }
 
             option == DueDateOption.SOMEDAY -> {
@@ -327,10 +327,7 @@ internal fun DueDateOptionsDialog(
 
                                                 else -> option.resolveRange(today)!!
                                             }
-                                            onApply(
-                                                start.toStartOfDayMillis(timeZone),
-                                                end.toStartOfDayMillis(timeZone)
-                                            )
+                                            onApply(start.toDueValue(), end.toDueValue())
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
@@ -355,10 +352,7 @@ internal fun DueDateOptionsDialog(
             onConfirm = { date ->
                 showCustomDatePicker = false
                 selectedOption = DueDateOption.CUSTOM
-                onApply(
-                    date.toStartOfDayMillis(timeZone),
-                    date.toStartOfDayMillis(timeZone)
-                )
+                onApply(date.toDueValue(), date.toDueValue())
             },
             title = "Select date",
         )

@@ -6,7 +6,6 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
@@ -52,8 +51,21 @@ fun DueDateOption.resolveRange(today: LocalDate): Pair<LocalDate, LocalDate>? {
     }
 }
 
-fun LocalDate.toStartOfDayMillis(timeZone: TimeZone = TimeZone.currentSystemDefault()): Long =
-    atStartOfDayIn(timeZone).toEpochMilliseconds()
+/**
+ * Due dates are stored as epoch days: a plain calendar date that never shifts when
+ * the device timezone changes. Values above [LEGACY_DUE_MILLIS_THRESHOLD] were
+ * written by pre-release builds as local start-of-day epoch millis and are decoded
+ * in the current zone.
+ */
+fun LocalDate.toDueValue(): Long = toEpochDays().toLong()
+
+// Unambiguous split: absurd as epoch days (~year 275000) yet earlier than any
+// real millis timestamp (1970-01-02)
+private const val LEGACY_DUE_MILLIS_THRESHOLD = 100_000_000L
+
+fun dueValueToLocalDate(value: Long, timeZone: TimeZone = TimeZone.currentSystemDefault()): LocalDate =
+    if (value > LEGACY_DUE_MILLIS_THRESHOLD) epochMillisToLocalDate(value, timeZone)
+    else LocalDate.fromEpochDays(value.toInt())
 
 fun epochMillisToLocalDate(millis: Long, timeZone: TimeZone = TimeZone.currentSystemDefault()): LocalDate =
     Instant.fromEpochMilliseconds(millis).toLocalDateTime(timeZone).date
@@ -63,7 +75,7 @@ val Note.hasDueDate: Boolean get() = dueStartAt != 0L
 val Note.isDueSomeday: Boolean get() = dueStartAt == DUE_SOMEDAY
 
 fun Note.isDueOverdue(nowMillis: Long, timeZone: TimeZone = TimeZone.currentSystemDefault()): Boolean =
-    dueStartAt > 0 && epochMillisToLocalDate(dueEndAt, timeZone) < epochMillisToLocalDate(nowMillis, timeZone)
+    dueStartAt > 0 && dueValueToLocalDate(dueEndAt, timeZone) < epochMillisToLocalDate(nowMillis, timeZone)
 
 fun formatDueDateLabel(
     dueStartAt: Long,
@@ -71,8 +83,8 @@ fun formatDueDateLabel(
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): String {
     if (dueStartAt == DUE_SOMEDAY) return "Someday"
-    val start = epochMillisToLocalDate(dueStartAt, timeZone)
-    val end = epochMillisToLocalDate(dueEndAt, timeZone)
+    val start = dueValueToLocalDate(dueStartAt, timeZone)
+    val end = dueValueToLocalDate(dueEndAt, timeZone)
     val currentYear = Clock.System.now().toLocalDateTime(timeZone).date.year
 
     if (start.year != end.year) {
@@ -128,8 +140,8 @@ fun classifyDueDate(
     if (dueStartAt == 0L) return null
     if (dueStartAt == DUE_SOMEDAY) return TimelineBucket.Section(TimelineSection.SOMEDAY)
 
-    val start = epochMillisToLocalDate(dueStartAt, timeZone)
-    val end = epochMillisToLocalDate(dueEndAt, timeZone)
+    val start = dueValueToLocalDate(dueStartAt, timeZone)
+    val end = dueValueToLocalDate(dueEndAt, timeZone)
     val weekStart = today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
     val monthStart = LocalDate(today.year, today.month, 1)
     val thisMonthEnd = monthStart.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
@@ -220,8 +232,8 @@ fun classifyRepeatTask(
     // A done task whose comeback date is not in the future just means the reset
     // hasn't flipped it yet — it belongs in Today
     val effective = if (occurrence < today) today else occurrence
-    val effectiveMillis = effective.toStartOfDayMillis(timeZone)
-    return classifyDueDate(effectiveMillis, effectiveMillis, today, timeZone)
+    val effectiveValue = effective.toDueValue()
+    return classifyDueDate(effectiveValue, effectiveValue, today, timeZone)
 }
 
 /**
@@ -233,13 +245,11 @@ fun classifyRepeatTask(
 fun timelineSectionDropRange(
     sectionKey: String,
     today: LocalDate,
-    timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): Pair<Long, Long>? {
     if (sectionKey == TimelineSection.SOMEDAY.name) return DUE_SOMEDAY to DUE_SOMEDAY
     if (sectionKey.startsWith("YEAR_")) {
         val year = sectionKey.removePrefix("YEAR_").toIntOrNull() ?: return null
-        return LocalDate(year, 1, 1).toStartOfDayMillis(timeZone) to
-                LocalDate(year, 12, 31).toStartOfDayMillis(timeZone)
+        return LocalDate(year, 1, 1).toDueValue() to LocalDate(year, 12, 31).toDueValue()
     }
     val section = TimelineSection.entries.firstOrNull { it.name == sectionKey } ?: return null
     val range = when (section) {
@@ -257,5 +267,5 @@ fun timelineSectionDropRange(
         TimelineSection.NEXT_MONTH -> DueDateOption.NEXT_MONTH.resolveRange(today)!!
         TimelineSection.OVERDUE, TimelineSection.SOMEDAY -> return null
     }
-    return range.first.toStartOfDayMillis(timeZone) to range.second.toStartOfDayMillis(timeZone)
+    return range.first.toDueValue() to range.second.toDueValue()
 }

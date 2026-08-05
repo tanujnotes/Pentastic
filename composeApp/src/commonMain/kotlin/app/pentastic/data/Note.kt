@@ -46,7 +46,7 @@ data class Note(
     val reminderEnabled: Int = 0,  // 0 = disabled, 1 = enabled
 
     @ColumnInfo(defaultValue = "0")
-    val dueStartAt: Long = 0,  // 0 = no due date, -1 = Someday, else start-of-day millis
+    val dueStartAt: Long = 0,  // 0 = no due date, -1 = Someday, else the due day as epoch days
     @ColumnInfo(defaultValue = "0")
     val dueEndAt: Long = 0,  // mirrors dueStartAt
 

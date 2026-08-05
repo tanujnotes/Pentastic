@@ -305,7 +305,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             localSections = sections
             return@persist
         }
-        val range = timelineSectionDropRange(section.key, today, timeZone) ?: run {
+        val range = timelineSectionDropRange(section.key, today) ?: run {
             localSections = sections // defensive: snap back instead of leaving a stale arrangement
             return@persist
         }
@@ -351,7 +351,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 val isFirst = sectionIndex == 0
                 val notes = sectionUi.notes
                 val isCollapsed = (sectionUi.key in toggledSections) != sectionUi.collapsedByDefault
-                val isDroppable = timelineSectionDropRange(sectionUi.key, today, timeZone) != null
+                val isDroppable = timelineSectionDropRange(sectionUi.key, today) != null
                 val sectionStart = taskNumber
                 taskNumber += notes.size
                 item(key = "header_${sectionUi.key}") {
