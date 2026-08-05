@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -107,8 +108,10 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
     var selectedSubPageByParent by remember { mutableStateOf<Map<Long, Long?>>(emptyMap()) }
-    var selectedWidePageIndex by remember { mutableIntStateOf(0) }
-    var wideShowsTimeline by remember { mutableStateOf(false) }
+    // Saveable so a layout switch driven by rotation syncs to the page the user was
+    // actually on, rather than a reset-to-zero
+    var selectedWidePageIndex by rememberSaveable { mutableIntStateOf(0) }
+    var wideShowsTimeline by rememberSaveable { mutableStateOf(false) }
     // Task text waiting for a due date before being added to the Timeline page
     var pendingTimelineTask by remember { mutableStateOf<String?>(null) }
     // Set when the timeline is enabled from the index, to jump to it once it exists
@@ -133,8 +136,17 @@ fun HomeScreen(
         ) {
             val isWideLayout = maxWidth >= 600.dp
 
-            // Sync state when switching between layouts
+            // Sync state when switching between layouts. Skipped unless the layout
+            // actually changed: this screen is recomposed from scratch whenever a
+            // pushed screen (Settings, Trash, Timeline) is popped, and syncing then
+            // would scroll the restored pager position away to the first page
+            var lastWideLayout by rememberSaveable { mutableStateOf<Boolean?>(null) }
             LaunchedEffect(isWideLayout) {
+                val previousWideLayout = lastWideLayout
+                lastWideLayout = isWideLayout
+                if (previousWideLayout == null || previousWideLayout == isWideLayout) {
+                    return@LaunchedEffect
+                }
                 if (isWideLayout) {
                     // Switching to wide: sync from pager
                     if (showTimeline && pagerState.currentPage == 1) {
