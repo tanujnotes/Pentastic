@@ -26,6 +26,7 @@ class MarkDoneReceiver : BroadcastReceiver(), KoinComponent {
         notificationManager.cancel(noteUuid.hashCode())
 
         // Mark the note as done in the database
+        val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             val note = database.noteDao.getNoteByUuid(noteUuid)
             if (note != null && !note.done) {
@@ -39,6 +40,6 @@ class MarkDoneReceiver : BroadcastReceiver(), KoinComponent {
                 )
                 database.noteDao.updateNote(updatedNote)
             }
-        }
+        }.invokeOnCompletion { pendingResult.finish() }
     }
 }

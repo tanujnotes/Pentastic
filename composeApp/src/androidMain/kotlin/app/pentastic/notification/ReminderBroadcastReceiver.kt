@@ -41,6 +41,9 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
         val notificationManager = context.getSystemService(NotificationManager::class.java)
 
         // Reset the task (mark as not done), determine notification title, and schedule next reminder
+        // goAsync keeps the process from being killed once onReceive returns, which
+        // would race the DB write and next-cycle scheduling
+        val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             var notificationBody = "To-do reminder"
 
@@ -149,7 +152,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                 .build()
 
             notificationManager.notify(noteUuid.hashCode(), notification)
-        }
+        }.invokeOnCompletion { pendingResult.finish() }
     }
 
     private fun calculateNextReminderTime(currentReminderAt: Long, frequency: RepeatFrequency): Long {

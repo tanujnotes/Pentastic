@@ -32,6 +32,7 @@ class SnoozeReceiver : BroadcastReceiver(), KoinComponent {
         val notificationManager = context.getSystemService(NotificationManager::class.java)
         notificationManager.cancel(noteUuid.hashCode())
 
+        val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             val note = database.noteDao.getNoteByUuid(noteUuid)
             if (note == null || note.deletedAt > 0) return@launch
@@ -69,6 +70,6 @@ class SnoozeReceiver : BroadcastReceiver(), KoinComponent {
                     AlarmManager.RTC_WAKEUP, snoozeTime, pendingIntent
                 )
             }
-        }
+        }.invokeOnCompletion { pendingResult.finish() }
     }
 }

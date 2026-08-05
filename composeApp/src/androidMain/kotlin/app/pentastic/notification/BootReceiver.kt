@@ -14,9 +14,12 @@ class BootReceiver : BroadcastReceiver(), KoinComponent {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            // goAsync keeps the process from being killed once onReceive returns,
+            // which would race the DB query and alarm re-registration
+            val pendingResult = goAsync()
             CoroutineScope(Dispatchers.IO).launch {
                 reminderScheduler.rescheduleAllReminders()
-            }
+            }.invokeOnCompletion { pendingResult.finish() }
         }
     }
 }
