@@ -620,6 +620,32 @@ private fun TimelineEmptyState(today: LocalDate) {
         lineHeight = 22.sp,
         modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
     )
+    // Preview the structure ahead with the next two section headers
+    listOf(TimelineSection.TOMORROW, TimelineSection.THIS_WEEK).forEach { section ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 18.dp, end = 14.dp, top = 12.dp)
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = section.label,
+                fontSize = 18.sp,
+                color = colors.pageTitle,
+                modifier = Modifier.alignByBaseline(),
+            )
+            sectionSubtitle(section, today)?.let { subtitle ->
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "· $subtitle",
+                    fontSize = 16.sp,
+                    color = colors.hint,
+                    modifier = Modifier.alignByBaseline(),
+                )
+            }
+        }
+    }
 }
 
 /** Light-grey date context shown next to a section title, e.g. "Tue, 4 Aug" or "3–9 Aug". */
