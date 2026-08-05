@@ -39,6 +39,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import app.pentastic.data.Note
 import app.pentastic.data.PageType
+import app.pentastic.data.timelineUrgentNotes
 import app.pentastic.navigation.getDeepLinkPageId
 import app.pentastic.ui.composables.CommonInput
 import app.pentastic.ui.composables.DueDateOptionsDialog
@@ -47,9 +48,13 @@ import app.pentastic.ui.composables.NotePage
 import app.pentastic.ui.composables.TimelinePage
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 @Composable
@@ -71,8 +76,30 @@ fun HomeScreen(
     val showRateButton by viewModel.showRateButton.collectAsState()
     val showCompletedTasks by viewModel.showCompletedTasks.collectAsState()
     val showTimeline by viewModel.showTimeline.collectAsState()
+    val timelinePage by viewModel.timelinePage.collectAsState()
     // With Timeline enabled, pager index 1 is the Timeline page and real pages shift by one
     val timelineOffset = if (showTimeline) 1 else 0
+
+    // Index row count: the timeline's Overdue + Today tasks. Refreshed on resume so
+    // a session left open across midnight re-counts
+    val timeZone = TimeZone.currentSystemDefault()
+    var today by remember { mutableStateOf(Clock.System.now().toLocalDateTime(timeZone).date) }
+    LifecycleResumeEffect(Unit) {
+        today = Clock.System.now().toLocalDateTime(timeZone).date
+        onPauseOrDispose { }
+    }
+    val timelineUrgent = remember(notesByPage, pages, subPagesByParent, timelinePage, today) {
+        val livePageIds = buildSet {
+            pages.forEach { add(it.id) }
+            subPagesByParent.values.forEach { subs -> subs.forEach { add(it.id) } }
+            timelinePage?.let { add(it.id) }
+        }
+        timelineUrgentNotes(
+            notesByPage.filterKeys { it in livePageIds }.values.flatten(), today, timeZone
+        )
+    }
+    val timelineNotesCount = timelineUrgent.size
+    val timelinePriorityCount = timelineUrgent.count { it.priority > 0 }
     val pagerState = rememberPagerState(
         initialPage = 1,
         pageCount = { (pages.size + 1 + (if (showTimeline) 1 else 0)).coerceAtLeast(2) }
@@ -84,6 +111,8 @@ fun HomeScreen(
     var wideShowsTimeline by remember { mutableStateOf(false) }
     // Task text waiting for a due date before being added to the Timeline page
     var pendingTimelineTask by remember { mutableStateOf<String?>(null) }
+    // Set when the timeline is enabled from the index, to jump to it once it exists
+    var pendingOpenTimeline by remember { mutableStateOf(false) }
 
     // Handle deep link navigation from notification
     val deepLinkPageId = getDeepLinkPageId()
@@ -205,6 +234,14 @@ fun HomeScreen(
                 }
             }
 
+            // Enabling from the index lands on the timeline, once it is a pager page
+            LaunchedEffect(showTimeline, pendingOpenTimeline) {
+                if (pendingOpenTimeline && showTimeline) {
+                    pendingOpenTimeline = false
+                    openTimeline()
+                }
+            }
+
             // Determine current page for input bar logic
             val isOnTimelinePage = if (isWideLayout) {
                 wideShowsTimeline && showTimeline
@@ -254,6 +291,12 @@ fun HomeScreen(
                             // Pinned: scroll to the pager page. Unpinned: push the
                             // standalone Timeline screen
                             onTimelineClick = { if (showTimeline) openTimeline() else onNavigateToTimeline() },
+                            onSetTimelineEnabled = { enabled ->
+                                if (enabled) pendingOpenTimeline = true
+                                viewModel.toggleShowTimeline()
+                            },
+                            timelineNotesCount = timelineNotesCount,
+                            timelinePriorityCount = timelinePriorityCount,
                         )
 
                         VerticalDivider(color = AppTheme.colors.divider)
@@ -394,6 +437,12 @@ fun HomeScreen(
                                     onNavigateToSettings = onNavigateToSettings,
                                     showTimeline = showTimeline,
                                     onTimelineClick = { if (showTimeline) openTimeline() else onNavigateToTimeline() },
+                            onSetTimelineEnabled = { enabled ->
+                                if (enabled) pendingOpenTimeline = true
+                                viewModel.toggleShowTimeline()
+                            },
+                            timelineNotesCount = timelineNotesCount,
+                            timelinePriorityCount = timelinePriorityCount,
                                 )
                             else if (showTimeline && pageIndex == 1) {
                                 TimelinePage()

@@ -237,6 +237,27 @@ fun classifyRepeatTask(
 }
 
 /**
+ * The pending tasks the timeline shows under Overdue or Today — what the index row
+ * counts. Mirrors TimelinePage's bucketing (repeat tasks by schedule, everything
+ * else by due date) but drops completed ones, so the count matches how other index
+ * rows count their pages.
+ */
+fun timelineUrgentNotes(
+    notes: List<Note>,
+    today: LocalDate,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): List<Note> = notes.filter { note ->
+    if (note.done) return@filter false
+    val bucket = when {
+        note.repeatFrequency > 0 -> classifyRepeatTask(note, today, timeZone)
+        note.hasDueDate -> classifyDueDate(note.dueStartAt, note.dueEndAt, today, timeZone)
+        else -> null
+    }
+    bucket == TimelineBucket.Section(TimelineSection.TODAY) ||
+            bucket == TimelineBucket.Section(TimelineSection.OVERDUE)
+}
+
+/**
  * The full due-date block written when a task is dropped into a timeline section.
  * Keys match TimelinePage's section keys: TimelineSection names plus "YEAR_<y>".
  * Returns null for sections that are not drop targets (Overdue and the

@@ -41,7 +41,6 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -60,6 +59,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -74,6 +75,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -126,6 +128,9 @@ fun IndexPage(
     onNavigateToSettings: () -> Unit = {},
     showTimeline: Boolean = false,
     onTimelineClick: () -> Unit = {},
+    onSetTimelineEnabled: (Boolean) -> Unit = {},
+    timelineNotesCount: Int = 0,
+    timelinePriorityCount: Int = 0,
 ) {
     val viewModel = koinViewModel<MainViewModel>()
     val showSubPages by viewModel.showSubPages.collectAsState()
@@ -283,8 +288,9 @@ fun IndexPage(
                 state = lazyListState
             ) {
                 // Timeline entry: always present, not deletable, not reorderable.
-                // Long-press toggles whether the timeline is pinned as a pager page
-                // or opens as a pushed screen from here
+                // Enabled: first pager page; long-press offers Disable. Disabled:
+                // tapping opens the timeline as a pushed screen and a trailing
+                // switch re-enables it
                 if (!isReorderMode) {
                     item(key = "timeline_row") {
                         var showTimelineMenu by remember { mutableStateOf(false) }
@@ -323,6 +329,38 @@ fun IndexPage(
                                 Spacer(Modifier.width(6.dp))
 
                                 DottedLeader(modifier = Modifier.weight(1f).padding(horizontal = 2.dp))
+
+                                Spacer(Modifier.width(8.dp))
+
+                                // Overdue + Today, counted like every other page row
+                                Text(
+                                    modifier = Modifier.defaultMinSize(minWidth = 16.dp),
+                                    text = (
+                                            if (timelinePriorityCount > 0) timelinePriorityCount
+                                            else timelineNotesCount
+                                            ).toString(),
+                                    fontSize = 18.sp,
+                                    color = if (timelinePriorityCount > 0) colors.priorityText
+                                    else if (timelineNotesCount > 0) colors.icon
+                                    else colors.hint,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                if (!showTimeline) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Switch(
+                                        checked = showTimeline,
+                                        onCheckedChange = { onSetTimelineEnabled(true) },
+                                        modifier = Modifier.scale(0.8f).height(24.dp),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = colors.background,
+                                            checkedTrackColor = colors.primaryText,
+                                            uncheckedThumbColor = colors.hint,
+                                            uncheckedTrackColor = colors.background,
+                                            uncheckedBorderColor = colors.hint,
+                                        )
+                                    )
+                                }
                             }
 
                             DropdownMenu(
@@ -334,17 +372,18 @@ fun IndexPage(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            if (showTimeline) "Unpin from pages" else "Pin to pages",
+                                            if (showTimeline) "Disable" else "Enable",
                                             color = colors.primaryText
                                         )
                                     },
                                     onClick = {
                                         showTimelineMenu = false
-                                        viewModel.toggleShowTimeline()
+                                        onSetTimelineEnabled(!showTimeline)
                                     },
                                     leadingIcon = {
                                         Icon(
-                                            Icons.Default.PushPin, tint = colors.icon, contentDescription = null,
+                                            if (showTimeline) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                            tint = colors.icon, contentDescription = null,
                                             modifier = Modifier.padding(end = 4.dp).size(24.dp)
                                         )
                                     }
