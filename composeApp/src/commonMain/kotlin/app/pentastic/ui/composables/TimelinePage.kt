@@ -195,10 +195,29 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     )
                 )
 
-                // Safety nets for tasks that live ON the Timeline page itself (shown only when non-empty)
-                // Repeat tasks are excluded from both nets: they are always scheduled by
-                // their repeat and cycle rather than finish
+                // Safety nets for tasks that live ON the Timeline page itself (shown only when non-empty).
+                // Those tasks have no page of their own to fall back on, so every one of
+                // them has to be reachable from some section here
                 val timelineOwnNotes = timelinePage?.id?.let { notesByPage[it] } ?: emptyList()
+                // Repeat tasks surface above only near their next occurrence; the rest
+                // wait here instead of vanishing until their window opens
+                val repeating = prioritySort(
+                    timelineOwnNotes.filter {
+                        it.repeatFrequency > 0 && classifyRepeatTask(it, today, timeZone) == null
+                    }
+                )
+                if (repeating.isNotEmpty()) {
+                    add(
+                        TimelineSectionUi(
+                            key = "REPEATING",
+                            label = "Repeating",
+                            notes = repeating,
+                            collapsedByDefault = true,
+                        )
+                    )
+                }
+                // The remaining two nets hold non-repeating tasks only: a repeat task is
+                // scheduled by its cycle rather than by a due date or a finish
                 val unscheduled = prioritySort(
                     timelineOwnNotes.filter { !it.done && it.dueStartAt == 0L && it.repeatFrequency == 0 }
                 )
