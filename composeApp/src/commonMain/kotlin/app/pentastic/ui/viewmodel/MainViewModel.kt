@@ -592,18 +592,18 @@ class MainViewModel(
                 dataStoreRepository.setFirstLaunchTime(Clock.System.now().toEpochMilliseconds())
                 dataStoreRepository.firstLaunchDone()
 
-                val pageToday = repository.insertPage(Page(name = "Today"))
+                val pageTodo = repository.insertPage(Page(name = "Todo"))
                 repository.insertNote(
-                    Note(pageId = pageToday, text = "Install Pentastic!️", done = true, orderAt = 3L)
+                    Note(pageId = pageTodo, text = "Install Pentastic!️", done = true, orderAt = 3L)
                 )
                 repository.insertNote(
-                    Note(pageId = pageToday, text = "Double tap to mark a task as done. ✔", orderAt = 2L)
+                    Note(pageId = pageTodo, text = "Double tap to mark a task as done. ✔", orderAt = 2L)
                 )
                 repository.insertNote(
-                    Note(pageId = pageToday, text = "Single tap for menu; long press to reorder.", orderAt = 1L)
+                    Note(pageId = pageTodo, text = "Single tap for menu; long press to reorder.", orderAt = 1L)
                 )
                 repository.insertNote(
-                    Note(pageId = pageToday, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L)
+                    Note(pageId = pageTodo, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L)
                 )
 
                 val pageReminders = repository.insertPage(Page(name = "Reminders"))
