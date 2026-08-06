@@ -586,6 +586,9 @@ class MainViewModel(
     private fun checkFirstLaunch() {
         viewModelScope.launch {
             if (dataStoreRepository.firstLaunch.first()) {
+                // Pin the choice before firstLaunchDone(), so this install is never briefly
+                // mistaken for an upgrade while the two writes land.
+                dataStoreRepository.setShowTimeline(true)
                 dataStoreRepository.setFirstLaunchTime(Clock.System.now().toEpochMilliseconds())
                 dataStoreRepository.firstLaunchDone()
 
@@ -676,6 +679,10 @@ class MainViewModel(
                         priority = 1,
                     )
                 )
+            } else if (!dataStoreRepository.showTimelineChosen.first()) {
+                // Upgraded from a version that shipped without the timeline. Leave it off until
+                // the user enables it from the index row.
+                dataStoreRepository.setShowTimeline(false)
             }
         }
     }

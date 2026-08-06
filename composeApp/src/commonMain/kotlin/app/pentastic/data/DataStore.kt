@@ -82,7 +82,14 @@ class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
     }
 
     val showTimeline: Flow<Boolean> = dataStore.data.map { preferences ->
-        preferences[DatastoreKeys.SHOW_TIMELINE] ?: true
+        // No stored choice means the user has never seen the toggle. Fresh installs get the
+        // timeline; upgrades don't, so an existing list doesn't rearrange itself on update.
+        // FIRST_LAUNCH is only ever written once a version has already run.
+        preferences[DatastoreKeys.SHOW_TIMELINE] ?: (preferences[DatastoreKeys.FIRST_LAUNCH] == null)
+    }
+
+    val showTimelineChosen: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.SHOW_TIMELINE] != null
     }
 
     suspend fun setShowTimeline(show: Boolean) {
