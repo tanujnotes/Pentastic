@@ -334,22 +334,21 @@ fun IndexPage(
 
                                 Spacer(Modifier.width(8.dp))
 
-                                // Overdue + Today, counted like every other page row
-                                Text(
-                                    modifier = Modifier.defaultMinSize(minWidth = 16.dp),
-                                    text = (
-                                            if (timelinePriorityCount > 0) timelinePriorityCount
-                                            else timelineNotesCount
-                                            ).toString(),
-                                    fontSize = 18.sp,
-                                    color = if (timelinePriorityCount > 0) colors.priorityText
-                                    else if (timelineNotesCount > 0) colors.icon
-                                    else colors.hint,
-                                    textAlign = TextAlign.Center
-                                )
-
-                                if (!showTimeline) {
-                                    Spacer(Modifier.width(8.dp))
+                                if (showTimeline) {
+                                    // Overdue + Today, counted like every other page row
+                                    Text(
+                                        modifier = Modifier.defaultMinSize(minWidth = 16.dp),
+                                        text = (
+                                                if (timelinePriorityCount > 0) timelinePriorityCount
+                                                else timelineNotesCount
+                                                ).toString(),
+                                        fontSize = 18.sp,
+                                        color = if (timelinePriorityCount > 0) colors.priorityText
+                                        else if (timelineNotesCount > 0) colors.icon
+                                        else colors.hint,
+                                        textAlign = TextAlign.Center
+                                    )
+                                } else {
                                     Switch(
                                         checked = showTimeline,
                                         onCheckedChange = { onSetTimelineEnabled(true) },
