@@ -804,6 +804,10 @@ private fun TimelineNoteRow(
 ) {
     val colors = AppTheme.colors
     var showMenu by remember { mutableStateOf(false) }
+    // A truncated row takes two taps: the first reveals the rest of the text, the
+    // second opens the menu. Untruncated rows open the menu on the first tap.
+    var isExpanded by remember(note.text, isDimmed) { mutableStateOf(false) }
+    var isTruncated by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboardManager.current
     val focusManager = LocalFocusManager.current
     Box(
@@ -816,7 +820,8 @@ private fun TimelineNoteRow(
                 detectTapGestures(
                     onTap = {
                         focusManager.clearFocus()
-                        showMenu = true
+                        if (isTruncated && !isExpanded) isExpanded = true
+                        else showMenu = true
                     },
                     onDoubleTap = { onToggleDone() },
                 )
@@ -846,8 +851,10 @@ private fun TimelineNoteRow(
                 fontSize = 18.sp,
                 lineHeight = 20.sp,
                 letterSpacing = 0.5.sp,
-                maxLines = if (showMenu) Int.MAX_VALUE else if (isDimmed) 1 else 3,
+                maxLines = if (isExpanded) Int.MAX_VALUE else if (isDimmed) 1 else 3,
                 overflow = TextOverflow.Ellipsis,
+                // Skipped while expanded, where overflow is always false
+                onTextLayout = { if (!isExpanded) isTruncated = it.hasVisualOverflow },
             )
             if (note.repeatFrequency > 0) {
                 Icon(
@@ -862,7 +869,9 @@ private fun TimelineNoteRow(
         NoteActionsMenu(
             note = note,
             expanded = showMenu,
-            onDismissRequest = { showMenu = false },
+            // Every way out of the menu routes through here, so the row also
+            // collapses after picking an action
+            onDismissRequest = { showMenu = false; isExpanded = false },
             onDelete = onDelete,
             onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
             onToggleDone = onToggleDone,

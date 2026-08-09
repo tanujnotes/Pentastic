@@ -377,6 +377,11 @@ fun NotePage(
                         ReorderableItem(reorderableLazyColumnState, note.id) { isDragging ->
                             val interactionSource = remember { MutableInteractionSource() }
                             var showMenu by remember { mutableStateOf(false) }
+                            // A truncated task takes two taps: the first reveals the rest of
+                            // the text, the second opens the menu. Untruncated rows open the
+                            // menu on the first tap as before.
+                            var isExpanded by remember(note.text, note.done) { mutableStateOf(false) }
+                            var isTruncated by remember { mutableStateOf(false) }
                             val colors = AppTheme.colors
                             val styledText = remember(note.text, note.done, note.priority, isDragging, colors) {
                                 mutableStateOf(
@@ -405,7 +410,8 @@ fun NotePage(
                                         detectTapGestures(
                                             onTap = {
                                                 focusManager.clearFocus()
-                                                showMenu = true
+                                                if (isTruncated && !isExpanded) isExpanded = true
+                                                else showMenu = true
                                             },
                                             onDoubleTap = {
                                                 handleToggleDone(
@@ -464,8 +470,10 @@ fun NotePage(
                                         fontSize = 18.sp,
                                         lineHeight = 20.sp,
                                         letterSpacing = 0.5.sp,
-                                        maxLines = if (showMenu) Int.MAX_VALUE else if (note.done) 1 else 3,
-                                        overflow = TextOverflow.Ellipsis
+                                        maxLines = if (isExpanded) Int.MAX_VALUE else if (note.done) 1 else 3,
+                                        overflow = TextOverflow.Ellipsis,
+                                        // Skipped while expanded, where overflow is always false
+                                        onTextLayout = { if (!isExpanded) isTruncated = it.hasVisualOverflow },
                                     )
                                     // Icons for reminder, repeat and due date
                                     val isRepeating = note.repeatFrequency > 0
@@ -513,7 +521,9 @@ fun NotePage(
                                 NoteActionsMenu(
                                     note = note,
                                     expanded = showMenu,
-                                    onDismissRequest = { showMenu = false },
+                                    // Every way out of the menu routes through here, so the
+                                    // row also collapses after picking an action
+                                    onDismissRequest = { showMenu = false; isExpanded = false },
                                     onDelete = { onDeleteNote(note) },
                                     onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
                                     onToggleDone = {
@@ -612,6 +622,9 @@ fun NotePage(
                         if (showCompletedTasks) {
                             itemsIndexed(completedTasks, key = { _, it -> "done_${it.id}" }) { index, note ->
                                 var showMenu by remember { mutableStateOf(false) }
+                                // First tap expands a truncated row, second one opens the menu
+                                var isExpanded by remember(note.text) { mutableStateOf(false) }
+                                var isTruncated by remember { mutableStateOf(false) }
                                 val colors = AppTheme.colors
                                 val styledText = remember(note.text, note.done, note.priority, colors) {
                                     mutableStateOf(
@@ -631,7 +644,8 @@ fun NotePage(
                                             detectTapGestures(
                                                 onTap = {
                                                     focusManager.clearFocus()
-                                                    showMenu = true
+                                                    if (isTruncated && !isExpanded) isExpanded = true
+                                                    else showMenu = true
                                                 },
                                                 onDoubleTap = {
                                                     handleToggleDone(
@@ -663,8 +677,9 @@ fun NotePage(
                                             fontSize = 18.sp,
                                             lineHeight = 20.sp,
                                             letterSpacing = 0.5.sp,
-                                            maxLines = if (showMenu) Int.MAX_VALUE else 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            onTextLayout = { if (!isExpanded) isTruncated = it.hasVisualOverflow },
                                         )
                                         val isRepeating = note.repeatFrequency > 0
                                         val nowMillis = Clock.System.now().toEpochMilliseconds()
@@ -706,7 +721,7 @@ fun NotePage(
                                     NoteActionsMenu(
                                         note = note,
                                         expanded = showMenu,
-                                        onDismissRequest = { showMenu = false },
+                                        onDismissRequest = { showMenu = false; isExpanded = false },
                                         onDelete = { onDeleteNote(note) },
                                         onCopy = { clipboardManager.setText(AnnotatedString(note.text)) },
                                         onToggleDone = {
