@@ -583,13 +583,19 @@ fun NotePage(
                                     // Without this the header snaps to its new position while the
                                     // completed rows below animate into theirs, and the two overlap
                                     .animateItem()
-                                    .padding(horizontal = 14.dp),
+                                    // 10.dp puts the overflow icon's centre 28.dp from the right
+                                    // edge, in line with the add button in the input bar below
+                                    .padding(start = 14.dp, end = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { onToggleShowCompleted() }
+                                        // No ripple: the chevron already answers the tap
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                        ) { onToggleShowCompleted() }
                                         .padding(vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -602,8 +608,7 @@ fun NotePage(
                                     )
                                     Spacer(Modifier.width(18.dp))
                                     Text(
-                                        text = if (showCompletedTasks) "Hide completed (${completedTasks.size})"
-                                        else "Show completed (${completedTasks.size})",
+                                        text = "Completed tasks (${completedTasks.size})",
                                         fontSize = 18.sp,
                                         color = AppTheme.colors.primaryText.copy(alpha = 0.33f),
                                     )
