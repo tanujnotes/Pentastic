@@ -9,14 +9,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -130,6 +131,9 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = AppTheme.colors.background,
+        // Only the top inset is reserved here. The bottom belongs to CommonInput, which
+        // pads it itself so the bar reaches the screen edge
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top),
     ) { paddingValues ->
         BoxWithConstraints(
             modifier = Modifier
@@ -373,7 +377,6 @@ fun HomeScreen(
                             }
 
                             CommonInput(
-                                modifier = Modifier.navigationBarsPadding().imePadding(),
                                 text = text,
                                 onTextChange = { text = it },
                                 onActionClick = {
@@ -517,7 +520,6 @@ fun HomeScreen(
                     }
 
                     CommonInput(
-                        modifier = Modifier.navigationBarsPadding().imePadding(),
                         text = text,
                         onTextChange = { text = it },
                         onActionClick = {

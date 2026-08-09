@@ -3,11 +3,19 @@ package app.pentastic.ui.composables
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -15,8 +23,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -24,7 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -50,39 +56,47 @@ fun CommonInput(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Row(
+        // This bar owns the bottom inset rather than taking it from the caller, so it
+        // reaches the screen edge instead of stopping short of the navigation bar.
+        // union() takes whichever inset is larger, so the bar sits on the keyboard
+        // once it opens.
         modifier = modifier
             .fillMaxWidth()
+            .windowInsetsPadding(
+                WindowInsets.navigationBars.union(WindowInsets.ime).only(WindowInsetsSides.Bottom)
+            )
             .height(80.dp)
-            .padding(start = 4.dp),
+            .padding(start = 16.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextField(
+        BasicTextField(
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(focusRequester),
             value = text,
             onValueChange = { if (it.length <= maxLength) onTextChange(it) },
-            placeholder = if (placeholder.isNotEmpty()) {
-                { Text(placeholder, color = AppTheme.colors.hint, fontSize = 16.sp) }
-            } else null,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedTextColor = AppTheme.colors.primaryText.copy(alpha = 0.9f),
-                unfocusedTextColor = AppTheme.colors.primaryText.copy(alpha = 0.9f),
-                cursorColor = AppTheme.colors.cursor,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            ),
+            cursorBrush = SolidColor(AppTheme.colors.cursor),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Sentences
             ),
+            // Beyond what fits the fixed 80.dp bar the field scrolls, rather than
+            // growing its text up over the list above
+            maxLines = 3,
             textStyle = TextStyle(
+                color = AppTheme.colors.primaryText.copy(alpha = 0.9f),
                 lineHeight = 20.sp,
                 fontSize = 16.sp,
                 letterSpacing = 0.5.sp
-            )
+            ),
+            decorationBox = { innerTextField ->
+                // No vertical padding: the row's CenterVertically is what centers the text
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (text.isEmpty() && placeholder.isNotEmpty()) {
+                        Text(placeholder, color = AppTheme.colors.hint, fontSize = 16.sp)
+                    }
+                    innerTextField()
+                }
+            }
         )
         Box(contentAlignment = Alignment.Center) {
             if (showPriorityButton && text.isNotBlank() && !isEditing) {

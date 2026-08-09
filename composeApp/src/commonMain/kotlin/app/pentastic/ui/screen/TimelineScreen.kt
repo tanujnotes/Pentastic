@@ -4,10 +4,11 @@ package app.pentastic.ui.screen
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,12 +51,14 @@ fun TimelineScreen() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = AppTheme.colors.background,
+        // Only the top inset is reserved here. The bottom belongs to CommonInput, which
+        // pads it itself so the bar reaches the screen edge
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top),
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             TimelinePage(modifier = Modifier.weight(1f))
 
             CommonInput(
-                modifier = Modifier.navigationBarsPadding().imePadding(),
                 text = text,
                 onTextChange = { text = it },
                 onActionClick = {
