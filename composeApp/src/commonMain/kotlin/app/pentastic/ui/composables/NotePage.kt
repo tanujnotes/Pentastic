@@ -194,9 +194,24 @@ fun NotePage(
         }
     }
 
+    // Ids from the previous emission. Only the effect below reads it, so writing it
+    // there costs no recomposition.
+    val previousIds = remember { mutableStateOf(emptyList<Long>()) }
+
     LaunchedEffect(displayedNotes) {
         list = displayedNotes
-        if (displayedNotes.isNotEmpty()) {
+        val ids = displayedNotes.map { it.id }
+        val previous = previousIds.value
+        previousIds.value = ids
+
+        // Jump to the top only when a task actually turns up there: a new one, one
+        // coming back from the completed section, or one bumped up the order. Edits,
+        // reminders, due dates, deletions and drag-reorders leave the scroll alone.
+        val previousSet = previous.toSet()
+        val arrived = ids.any { it !in previousSet }
+        val bumpedUp = ids.size == previous.size &&
+                ids.firstOrNull()?.let { previous.indexOf(it) > 0 } == true
+        if (ids.isNotEmpty() && (arrived || bumpedUp)) {
             lazyListState.animateScrollToItem(0)
         }
     }
