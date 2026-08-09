@@ -450,7 +450,13 @@ fun NotePage(
                                             noteMovedToIndex.value = -1
                                         },
                                         interactionSource = interactionSource,
-                                    ).animateItem(),
+                                    )
+                                    // Toggling done moves a row between this list and the
+                                    // completed section, which are keyed differently, so Compose
+                                    // sees a delete rather than a move. A fade-out would keep
+                                    // drawing the old row at its old offset while the rest of the
+                                    // list reflows around it, stranding a copy of the text.
+                                    .animateItem(fadeOutSpec = null),
                             ) {
                                 Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
                                     Text(
@@ -559,6 +565,9 @@ fun NotePage(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    // Without this the header snaps to its new position while the
+                                    // completed rows below animate into theirs, and the two overlap
+                                    .animateItem()
                                     .padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -658,7 +667,8 @@ fun NotePage(
                                                 },
                                             )
                                         }
-                                        .animateItem(),
+                                        // No fade-out: see the active list above
+                                        .animateItem(fadeOutSpec = null),
                                 ) {
                                     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
                                         Text(
