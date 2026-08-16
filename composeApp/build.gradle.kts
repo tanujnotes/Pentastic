@@ -129,6 +129,7 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "app.pentastic.MainKt"
+        jvmArgs += listOf("-Xdock:name=Pentastic")
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)

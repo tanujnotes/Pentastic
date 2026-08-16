@@ -11,6 +11,6 @@ actual val platformModule: Module
     get() = module {
         single { createDataStore() }
         single { DatabaseFactory() }
-        single { ReminderSchedulerFactory() }
+        single { ReminderSchedulerFactory(get()) }
         single<ReminderScheduler> { get<ReminderSchedulerFactory>().create() }
     }

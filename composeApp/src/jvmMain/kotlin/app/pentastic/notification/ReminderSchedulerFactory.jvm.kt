@@ -1,5 +1,9 @@
 package app.pentastic.notification
 
-actual class ReminderSchedulerFactory {
-    actual fun create(): ReminderScheduler = DesktopReminderScheduler()
+import app.pentastic.data.MyRepository
+
+actual class ReminderSchedulerFactory(
+    private val repository: MyRepository
+) {
+    actual fun create(): ReminderScheduler = DesktopReminderScheduler(repository)
 }
