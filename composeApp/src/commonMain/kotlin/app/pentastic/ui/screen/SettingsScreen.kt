@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import app.pentastic.ui.composables.ThemeSelectionDialog
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.theme.AppTheme.colors
+import app.pentastic.ui.theme.captionBarHeight
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.Font
@@ -66,6 +67,7 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(AppTheme.colors.background)
             .statusBarsPadding()
+            .padding(top = captionBarHeight())
             .navigationBarsPadding()
     ) {
         // Title

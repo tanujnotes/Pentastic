@@ -112,6 +112,7 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun IndexPage(
     modifier: Modifier = Modifier,
+    containerColor: Color = AppTheme.colors.background,
     pages: List<Page>,
     subPagesByParent: Map<Long, List<Page>>,
     notesCountByPage: Map<Long, Int>,
@@ -168,7 +169,7 @@ fun IndexPage(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().background(AppTheme.colors.background)) {
+    Column(modifier = modifier.fillMaxSize().background(containerColor)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -721,7 +722,7 @@ fun IndexPage(
                     .height(10.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(colors.background, Color.Transparent)
+                            colors = listOf(containerColor, Color.Transparent)
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -734,7 +735,7 @@ fun IndexPage(
                     .height(10.dp)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, colors.background)
+                            colors = listOf(Color.Transparent, containerColor)
                         )
                     ).align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center

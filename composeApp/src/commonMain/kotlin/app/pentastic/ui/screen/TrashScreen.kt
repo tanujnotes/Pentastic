@@ -51,6 +51,7 @@ import app.pentastic.data.Note
 import app.pentastic.data.Page
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.theme.AppTheme.colors
+import app.pentastic.ui.theme.captionBarHeight
 import app.pentastic.ui.viewmodel.MainViewModel
 import org.jetbrains.compose.resources.Font
 import org.koin.compose.viewmodel.koinViewModel
@@ -81,7 +82,10 @@ fun TrashScreen(onNavigateBack: () -> Unit) {
     var pageToDelete by remember { mutableStateOf<Page?>(null) }
     var noteToDelete by remember { mutableStateOf<Note?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background).statusBarsPadding().navigationBarsPadding()) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(AppTheme.colors.background)
+            .statusBarsPadding().padding(top = captionBarHeight()).navigationBarsPadding()
+    ) {
         // Top bar
         Row(
             modifier = Modifier

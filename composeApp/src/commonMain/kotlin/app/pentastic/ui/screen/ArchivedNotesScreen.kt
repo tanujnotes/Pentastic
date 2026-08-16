@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +21,7 @@ import app.pentastic.data.PageType
 import app.pentastic.data.Note
 import app.pentastic.ui.composables.NotePage
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.captionBarHeight
 import app.pentastic.ui.viewmodel.MainViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.ExperimentalTime
@@ -70,6 +72,7 @@ fun ArchivedNotesScreen(
             .fillMaxSize()
             .background(AppTheme.colors.background)
             .statusBarsPadding()
+            .padding(top = captionBarHeight())
             .navigationBarsPadding()
     ) {
         NotePage(

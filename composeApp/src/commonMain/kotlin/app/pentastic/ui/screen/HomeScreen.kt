@@ -3,6 +3,7 @@
 package app.pentastic.ui.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.Note
 import app.pentastic.data.PageType
 import app.pentastic.data.timelineUrgentNotes
@@ -49,8 +51,10 @@ import app.pentastic.ui.composables.IndexPage
 import app.pentastic.ui.composables.NotePage
 import app.pentastic.ui.composables.TimelinePage
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.captionBarHeight
 import app.pentastic.ui.viewmodel.MainViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -65,6 +69,7 @@ fun HomeScreen(
     onNavigateToArchivedNotes: (Long) -> Unit = {},
     onNavigateToTimeline: () -> Unit = {},
     prefs: DataStore<Preferences> = koinInject(),
+    dataStoreRepository: DataStoreRepository = koinInject(),
 ) {
     val viewModel = koinViewModel<MainViewModel>()
 
@@ -217,6 +222,21 @@ fun HomeScreen(
                 }
             }
 
+            // The narrow pager already opens on the timeline when it is enabled
+            // (initial page 1); the wide layout starts on the first real page, so
+            // land it on the timeline once the stored flag is read. Saveable so a
+            // pushed screen's pop doesn't re-run the landing; a deep link wins
+            var initialTimelineLandingDone by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                if (initialTimelineLandingDone) return@LaunchedEffect
+                initialTimelineLandingDone = true
+                if (deepLinkPageId == null && isWideLayout &&
+                    dataStoreRepository.showTimeline.first()
+                ) {
+                    wideShowsTimeline = true
+                }
+            }
+
             LaunchedEffect(editingNote) {
                 editingNote?.let { text = it.text }
             }
@@ -298,7 +318,14 @@ fun HomeScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     Row(modifier = Modifier.weight(1f)) {
                         IndexPage(
-                            modifier = Modifier.width(300.dp).fillMaxHeight(),
+                            // The divider between the panes runs to the window top;
+                            // the panes themselves clear the macOS title bar strip.
+                            // Background sits before the padding so the pane's color
+                            // also fills its slice of the title bar
+                            modifier = Modifier.width(300.dp).fillMaxHeight()
+                                .background(AppTheme.colors.indexBackground)
+                                .padding(top = captionBarHeight()),
+                            containerColor = AppTheme.colors.indexBackground,
                             pages = pages,
                             subPagesByParent = subPagesByParent,
                             notesCountByPage = notesCountByPage,
@@ -332,7 +359,10 @@ fun HomeScreen(
 
                         VerticalDivider(color = AppTheme.colors.divider)
 
-                        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        Column(
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                                .padding(top = captionBarHeight())
+                        ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 val widePage = pages.getOrNull(selectedWidePageIndex)
                                 if (isOnTimelinePage) {
@@ -426,7 +456,7 @@ fun HomeScreen(
                     }
                 }
 
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().padding(top = captionBarHeight())) {
                     HorizontalPager(
                         state = pagerState,
                         modifier = Modifier.weight(1f)

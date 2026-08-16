@@ -4,7 +4,9 @@ package app.pentastic.ui.screen
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -23,6 +25,7 @@ import app.pentastic.ui.composables.CommonInput
 import app.pentastic.ui.composables.DueDateOptionsDialog
 import app.pentastic.ui.composables.TimelinePage
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.captionBarHeight
 import app.pentastic.ui.viewmodel.MainViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -53,7 +56,8 @@ fun TimelineScreen() {
         containerColor = AppTheme.colors.background,
         // Only the top inset is reserved here. The bottom belongs to CommonInput, which
         // pads it itself so the bar reaches the screen edge
-        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top),
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top)
+            .add(WindowInsets(top = captionBarHeight())),
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             TimelinePage(modifier = Modifier.weight(1f))

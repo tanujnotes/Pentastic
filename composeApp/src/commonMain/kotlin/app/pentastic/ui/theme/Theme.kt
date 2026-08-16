@@ -18,6 +18,8 @@ import kotlin.time.ExperimentalTime
 
 data class AppColors(
     val background: Color,
+    // Wide layout only: sets the index pane apart from the page next to it
+    val indexBackground: Color,
     val primaryText: Color,
     val pageTitle: Color,
     val priorityText: Color,
@@ -31,6 +33,7 @@ data class AppColors(
 
 val LightColors = AppColors(
     background = Color(0xFFF9FBFF),
+    indexBackground = Color(0xFFF2F4F8),
     primaryText = Color(0xFF284283),
     pageTitle = Color(0xFF933A3A),
     priorityText = Color(0xFFD01616),
@@ -44,6 +47,7 @@ val LightColors = AppColors(
 
 val DarkColors = AppColors(
     background = Color.Black,
+    indexBackground = Color(0xFF141414),
     primaryText = Color(0xFFDBDEE7),
     pageTitle = Color(0xFF93593A),
     priorityText = Color(0xFFFF1111),
