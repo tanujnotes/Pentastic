@@ -133,8 +133,16 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "app.pentastic"
+            packageName = "Pentastic"
             packageVersion = "1.0.0"
+            // From suggestRuntimeModules: jdk.unsupported provides sun.misc.Unsafe
+            // for the sqlite/datastore stack; absent it the packaged app dies on launch
+            modules("java.instrument", "jdk.unsupported")
+            macOS {
+                bundleID = "app.pentastic"
+                dockName = "Pentastic"
+                iconFile.set(project.file("icons/Pentastic.icns"))
+            }
         }
     }
 }
