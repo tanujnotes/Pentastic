@@ -592,6 +592,11 @@ class MainViewModel(
                 dataStoreRepository.setFirstLaunchTime(Clock.System.now().toEpochMilliseconds())
                 dataStoreRepository.firstLaunchDone()
 
+                // A missing marker over a populated DB is a lost or relocated
+                // preferences store (e.g. the desktop DataStore moving out of the
+                // temp dir), not a fresh install: don't seed the samples again
+                if (repository.getRootPages().first().isNotEmpty()) return@launch
+
                 val pageTodo = repository.insertPage(Page(name = "Todo"))
                 repository.insertNote(
                     Note(pageId = pageTodo, text = "Install Pentastic!️", done = true, orderAt = 3L)
