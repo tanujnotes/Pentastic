@@ -46,6 +46,14 @@ kotlin {
 
             implementation(libs.koin.android)
             implementation(libs.koin.androidx.compose)
+
+            // Home-screen widgets. Glance composables render through RemoteViews, not
+            // Compose UI — keep them confined to app.pentastic.widget so a stray
+            // material3/foundation import can't reach them (it compiles, then dies
+            // at runtime on the Applier cast).
+            implementation(libs.androidx.glance.appwidget)
+            // Compile-time access to Configuration.Provider only; see MyApplication
+            implementation(libs.androidx.work.runtime)
         }
         commonMain.dependencies {
             implementation(libs.reorderable)

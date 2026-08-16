@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mandatory android:initialLayout for every appwidget-provider on all API levels.
+  Glance swaps in its own RemoteViews on first render, so this only ever shows
+  for the moment between placement and the first composition.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:text="@string/app_name" />

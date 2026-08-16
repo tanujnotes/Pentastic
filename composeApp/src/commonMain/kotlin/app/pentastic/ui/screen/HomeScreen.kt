@@ -43,6 +43,8 @@ import androidx.datastore.preferences.core.Preferences
 import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.Note
 import app.pentastic.data.PageType
+import app.pentastic.data.livePageIds
+import app.pentastic.data.liveNotes
 import app.pentastic.data.timelineUrgentNotes
 import app.pentastic.navigation.getDeepLinkPageId
 import app.pentastic.ui.composables.CommonInput
@@ -96,13 +98,10 @@ fun HomeScreen(
         onPauseOrDispose { }
     }
     val timelineUrgent = remember(notesByPage, pages, subPagesByParent, timelinePage, today) {
-        val livePageIds = buildSet {
-            pages.forEach { add(it.id) }
-            subPagesByParent.values.forEach { subs -> subs.forEach { add(it.id) } }
-            timelinePage?.let { add(it.id) }
-        }
         timelineUrgentNotes(
-            notesByPage.filterKeys { it in livePageIds }.values.flatten(), today, timeZone
+            liveNotes(notesByPage, livePageIds(pages, subPagesByParent, timelinePage)),
+            today,
+            timeZone,
         )
     }
     val timelineNotesCount = timelineUrgent.size

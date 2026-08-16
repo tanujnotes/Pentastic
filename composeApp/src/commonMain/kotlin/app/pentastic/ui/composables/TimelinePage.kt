@@ -55,6 +55,8 @@ import app.pentastic.data.classifyDueDate
 import app.pentastic.data.classifyRepeatTask
 import app.pentastic.data.epochMillisToLocalDate
 import app.pentastic.data.hasDueDate
+import app.pentastic.data.livePageIds
+import app.pentastic.data.liveNotes
 import app.pentastic.data.timelineSectionDropRange
 import app.pentastic.ui.theme.AppTheme
 import app.pentastic.ui.viewmodel.MainViewModel
@@ -126,13 +128,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
 
     val sections: List<TimelineSectionUi> =
         remember(notesByPage, pages, subPagesByParent, timelinePage, today) {
-            // Live (non-deleted, non-archived) pages = root pages + their sub-pages + the Timeline page itself
-            val livePageIds = buildSet {
-                pages.forEach { add(it.id) }
-                subPagesByParent.values.forEach { subs -> subs.forEach { add(it.id) } }
-                timelinePage?.let { add(it.id) }
-            }
-            val liveNotes = notesByPage.filterKeys { it in livePageIds }.values.flatten()
+            val liveNotes = liveNotes(notesByPage, livePageIds(pages, subPagesByParent, timelinePage))
             // Repeat tasks are included even when done: their next occurrence can preview
             // (e.g. a weekly task in Tomorrow the day before it comes back)
             val grouped = liveNotes

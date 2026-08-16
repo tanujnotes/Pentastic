@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.MyRepository
 import app.pentastic.data.Note
+import app.pentastic.data.NoteActions
 import app.pentastic.data.Page
 import app.pentastic.data.PageType
 import app.pentastic.data.RepeatFrequency
@@ -12,7 +13,6 @@ import app.pentastic.data.ThemeMode
 import app.pentastic.notification.ReminderScheduler
 import app.pentastic.notification.nextFutureReminderTime
 import app.pentastic.utils.hasBeenHours
-import app.pentastic.utils.hasRepeatIntervalPassed
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +29,7 @@ class MainViewModel(
     private val repository: MyRepository,
     private val dataStoreRepository: DataStoreRepository,
     private val reminderScheduler: ReminderScheduler,
+    private val noteActions: NoteActions,
 ) : ViewModel() {
 
     companion object {
@@ -271,24 +272,7 @@ class MainViewModel(
 
     fun toggleNoteDone(note: Note, isNotesType: Boolean = false) {
         viewModelScope.launch {
-            val now = Clock.System.now().toEpochMilliseconds()
-            val newDoneState = !note.done
-            val isRepeatingTask = note.repeatFrequency > 0
-
-            // Cancel reminder when marking as done (except for repeating tasks)
-            if (newDoneState && note.reminderEnabled == 1 && !isRepeatingTask) {
-                reminderScheduler.cancelReminder(note.uuid)
-            }
-
-            repository.updateNote(
-                note.copy(
-                    done = newDoneState,
-                    orderAt = if (isNotesType) note.orderAt else now,
-                    taskLastDoneAt = if (note.done) note.taskLastDoneAt else now,
-                    // Disable reminder when done (except for repeating tasks)
-                    reminderEnabled = if (newDoneState && !isRepeatingTask) 0 else note.reminderEnabled
-                )
-            )
+            noteActions.toggleDone(note, isNotesType)
         }
     }
 
@@ -336,21 +320,7 @@ class MainViewModel(
 
     fun resetRepeatingTasksTodo() {
         viewModelScope.launch {
-            val completedRepeatingNotes = repository.getCompletedRepeatingNotes()
-            val notesToReset = completedRepeatingNotes.filter { note ->
-                val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
-                note.taskLastDoneAt.hasRepeatIntervalPassed(frequency)
-            }
-            if (notesToReset.isNotEmpty()) {
-                val now = Clock.System.now().toEpochMilliseconds()
-                val resetNotes = notesToReset.map { note ->
-                    note.copy(
-                        done = false,
-                        orderAt = now
-                    )
-                }
-                repository.updateNotes(resetNotes)
-            }
+            repository.resetRepeatingTasksTodo()
         }
     }
 

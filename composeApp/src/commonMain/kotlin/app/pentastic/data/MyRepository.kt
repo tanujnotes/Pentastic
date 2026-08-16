@@ -1,6 +1,12 @@
+@file:OptIn(ExperimentalTime::class)
+
 package app.pentastic.data
 
+import app.pentastic.utils.hasRepeatIntervalPassed
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class MyRepository(
     private val noteDao: NoteDao,
@@ -33,6 +39,44 @@ class MyRepository(
 
     suspend fun getNoteById(id: Long): Note? {
         return noteDao.getNoteById(id)
+    }
+
+    suspend fun getNoteByUuid(uuid: String): Note? {
+        return noteDao.getNoteByUuid(uuid)
+    }
+
+    /**
+     * Notes on live pages — the same set the index counts and the Timeline groups.
+     * Callers outside the UI (widgets) need this without a ViewModel, and it must not
+     * drift from what the app shows, so the page filter lives here rather than being
+     * rebuilt per call site. See [livePageIds].
+     */
+    fun liveNotesFlow(): Flow<List<Note>> = combine(
+        noteDao.getAllNotes(),
+        pageDao.getRootPages(),
+        pageDao.getAllPages(),
+        pageDao.getTimelinePage(),
+    ) { notes, rootPages, allPages, timelinePage ->
+        val subPagesByParent = allPages.filter { it.parentId != null }.groupBy { it.parentId!! }
+        val ids = livePageIds(rootPages, subPagesByParent, timelinePage)
+        notes.filter { it.pageId in ids }
+    }
+
+    /**
+     * Flips completed repeating tasks back to pending once their interval has elapsed.
+     * Lives here rather than in the ViewModel because the widget's midnight refresh
+     * runs with no UI attached and must apply the identical reset.
+     */
+    suspend fun resetRepeatingTasksTodo() {
+        val completedRepeatingNotes = getCompletedRepeatingNotes()
+        val notesToReset = completedRepeatingNotes.filter { note ->
+            val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
+            note.taskLastDoneAt.hasRepeatIntervalPassed(frequency)
+        }
+        if (notesToReset.isNotEmpty()) {
+            val now = Clock.System.now().toEpochMilliseconds()
+            updateNotes(notesToReset.map { it.copy(done = false, orderAt = now) })
+        }
     }
 
     fun getAllNotesByPage(pageId: Long): Flow<List<Note>> {
@@ -77,6 +121,10 @@ class MyRepository(
 
     suspend fun getPageById(id: Long): Page? {
         return pageDao.getPageById(id)
+    }
+
+    fun getPageByIdFlow(id: Long): Flow<Page?> {
+        return pageDao.getPageByIdFlow(id)
     }
 
     suspend fun deletePage(id: Long) {

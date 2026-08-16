@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Passed as Glance's rippleOverride to suppress the default click ripple. Glance has
+  no flag for "no ripple"; it swaps this drawable in as the pressed-state background,
+  so a fully transparent shape is what removes it.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>

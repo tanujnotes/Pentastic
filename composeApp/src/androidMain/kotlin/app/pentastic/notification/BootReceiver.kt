@@ -3,6 +3,7 @@ package app.pentastic.notification
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import app.pentastic.widget.WidgetRefreshScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,6 +20,9 @@ class BootReceiver : BroadcastReceiver(), KoinComponent {
             val pendingResult = goAsync()
             CoroutineScope(Dispatchers.IO).launch {
                 reminderScheduler.rescheduleAllReminders()
+                // Alarms don't survive a reboot; the widget refresh chain needs
+                // re-arming the same way reminders do
+                WidgetRefreshScheduler.schedule(context.applicationContext)
             }.invokeOnCompletion { pendingResult.finish() }
         }
     }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Notification permission (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -59,6 +60,74 @@
                 <action android:name="app.pentastic.ACTION_SNOOZE" />
             </intent-filter>
         </receiver>
+
+        <!-- Widget providers must be exported: the launcher runs in another UID and
+             sends APPWIDGET_UPDATE. Nothing from an incoming broadcast may reach a
+             DB write — providers only ever re-render from the database. -->
+        <receiver
+            android:name=".widget.TodayWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_today_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.PageWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_page_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/page_widget_info" />
+        </receiver>
+
+        <!-- Must be exported so the launcher can start it at placement time; it
+             validates the incoming appWidgetId belongs to our own provider. -->
+        <activity
+            android:name=".widget.PageWidgetConfigActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/widget_page_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- TIME_SET and TIMEZONE_CHANGED are protected system broadcasts and are
+             exempt from the API 26 implicit-broadcast ban, so a non-exported manifest
+             receiver still gets them. ACTION_DATE_CHANGED is NOT exempt — the daily
+             rollover comes from the alarm chain instead. -->
+        <receiver
+            android:name=".widget.WidgetUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="app.pentastic.WIDGET_REFRESH" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Glance depends on androidx.work, whose default initializer opens a Room DB
+             at launch. MyApplication implements Configuration.Provider instead, so
+             WorkManager initialises on first use. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>

@@ -3,6 +3,7 @@ package app.pentastic.di
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.MyRepository
+import app.pentastic.data.NoteActions
 import app.pentastic.db.DatabaseFactory
 import app.pentastic.db.PentasticDatabase
 import app.pentastic.ui.viewmodel.MainViewModel
@@ -22,6 +23,7 @@ val sharedModule = module {
     single { get<PentasticDatabase>().pageDao }
     single<MyRepository> { MyRepository(get(), get()) }
     single<DataStoreRepository> { DataStoreRepository(get()) }
+    single<NoteActions> { NoteActions(get(), get()) }
 
     viewModelOf(::MainViewModel)
 }

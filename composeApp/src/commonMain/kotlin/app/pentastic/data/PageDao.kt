@@ -36,6 +36,13 @@ interface PageDao {
     @Query("SELECT * FROM page WHERE id = :id")
     suspend fun getPageById(id: Long): Page?
 
+    /**
+     * Reactive form, for the page widget: it has to notice a rename, archive or delete
+     * of the page it is pinned to without waiting for its Glance session to restart.
+     */
+    @Query("SELECT * FROM page WHERE id = :id")
+    fun getPageByIdFlow(id: Long): Flow<Page?>
+
     @Query("DELETE FROM page WHERE id = :id")
     suspend fun deletePage(id: Long)
 

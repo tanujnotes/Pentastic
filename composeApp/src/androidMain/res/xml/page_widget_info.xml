@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  configure + widgetFeatures="reconfigurable" (API 31+) let the page be changed later
+  from the launcher; PageWidgetConfigActivity handles placement and reconfigure alike.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="app.pentastic.widget.PageWidgetConfigActivity"
+    android:description="@string/widget_page_description"
+    android:initialLayout="@layout/widget_loading"
+    android:maxResizeHeight="600dp"
+    android:maxResizeWidth="360dp"
+    android:minHeight="110dp"
+    android:minResizeHeight="55dp"
+    android:minResizeWidth="110dp"
+    android:minWidth="180dp"
+    android:previewImage="@drawable/widget_preview_image"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="3"
+    android:targetCellWidth="3"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

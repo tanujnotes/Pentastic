@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Pentastic</string>
+
+    <!-- Widgets -->
+    <string name="widget_today_label">Timeline</string>
+    <string name="widget_today_description">Overdue, today and tomorrow\'s tasks</string>
+    <string name="widget_page_label">Page</string>
+    <string name="widget_page_description">Pending tasks from one page</string>
 </resources>

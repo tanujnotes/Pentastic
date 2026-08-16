@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  targetCellWidth/Height, maxResize*, previewLayout, description and widgetFeatures
+  are API 31+; on 26-30 the launcher falls back to minWidth/minHeight/previewImage.
+  updatePeriodMillis=0 because refreshes are driven precisely (data changes and the
+  WidgetRefreshScheduler boundaries) rather than by the 30-minute system floor.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_today_description"
+    android:initialLayout="@layout/widget_loading"
+    android:maxResizeHeight="600dp"
+    android:maxResizeWidth="360dp"
+    android:minHeight="110dp"
+    android:minResizeHeight="55dp"
+    android:minResizeWidth="110dp"
+    android:minWidth="180dp"
+    android:previewImage="@drawable/widget_preview_image"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="3"
+    android:targetCellWidth="3"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  GlanceModifier.cornerRadius() compiles to setViewOutlinePreferredRadius, which is
+  API 31+; on 26-30 the widget would have square corners. This shape supplies them
+  instead. Colour must track LightColors.background in ui/theme/Theme.kt.
+
+  Not a values-night resource: the app's default theme mode is clock-based, so system
+  night mode is the wrong signal. WidgetColors picks between this and widget_bg_dark.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#F9FBFF" />
+    <corners android:radius="16dp" />
+</shape>

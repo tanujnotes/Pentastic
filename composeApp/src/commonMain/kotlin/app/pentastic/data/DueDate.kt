@@ -237,24 +237,57 @@ fun classifyRepeatTask(
 }
 
 /**
+ * The fixed timeline section a *pending* task falls in, using TimelinePage's bucketing
+ * (repeat tasks by schedule, everything else by due date). Null for completed tasks,
+ * unscheduled ones, and anything that buckets into a year rather than a named section.
+ */
+fun Note.pendingTimelineSection(
+    today: LocalDate,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): TimelineSection? {
+    if (done) return null
+    val bucket = when {
+        repeatFrequency > 0 -> classifyRepeatTask(this, today, timeZone)
+        hasDueDate -> classifyDueDate(dueStartAt, dueEndAt, today, timeZone)
+        else -> null
+    }
+    return (bucket as? TimelineBucket.Section)?.section
+}
+
+/**
+ * Pending tasks in [sections], paired with the section they landed in and returned in
+ * section order (enum order is display order). Used by the widgets, which show more
+ * than the urgent set but must still group the way the Timeline does.
+ */
+fun notesBySection(
+    notes: List<Note>,
+    sections: Set<TimelineSection>,
+    today: LocalDate,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): List<Pair<TimelineSection, Note>> = notes
+    .mapNotNull { note ->
+        note.pendingTimelineSection(today, timeZone)
+            ?.takeIf { it in sections }
+            ?.let { it to note }
+    }
+    .sortedWith(
+        compareBy<Pair<TimelineSection, Note>> { it.first.ordinal }
+            .thenByDescending { it.second.priority }
+            .thenByDescending { it.second.orderAt }
+    )
+
+/**
  * The pending tasks the timeline shows under Overdue or Today — what the index row
- * counts. Mirrors TimelinePage's bucketing (repeat tasks by schedule, everything
- * else by due date) but drops completed ones, so the count matches how other index
- * rows count their pages.
+ * counts. Drops completed ones, so the count matches how other index rows count
+ * their pages.
  */
 fun timelineUrgentNotes(
     notes: List<Note>,
     today: LocalDate,
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): List<Note> = notes.filter { note ->
-    if (note.done) return@filter false
-    val bucket = when {
-        note.repeatFrequency > 0 -> classifyRepeatTask(note, today, timeZone)
-        note.hasDueDate -> classifyDueDate(note.dueStartAt, note.dueEndAt, today, timeZone)
-        else -> null
-    }
-    bucket == TimelineBucket.Section(TimelineSection.TODAY) ||
-            bucket == TimelineBucket.Section(TimelineSection.OVERDUE)
+    note.pendingTimelineSection(today, timeZone)
+        .let { it == TimelineSection.TODAY || it == TimelineSection.OVERDUE }
 }
 
 /**
