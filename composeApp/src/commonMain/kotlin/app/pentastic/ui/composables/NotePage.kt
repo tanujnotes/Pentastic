@@ -72,12 +72,12 @@ import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -85,11 +85,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.pentastic.data.AppCalendar
 import app.pentastic.data.Note
 import app.pentastic.data.Page
 import app.pentastic.data.PageType
@@ -98,8 +100,10 @@ import app.pentastic.data.formatDueDateLabel
 import app.pentastic.data.hasDueDate
 import app.pentastic.data.isDueOverdue
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.titleFontFamily
 import app.pentastic.ui.theme.appRadioButtonColors
 import app.pentastic.ui.theme.appSwitchColors
+import app.pentastic.utils.JalaliCalendar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -112,10 +116,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import org.jetbrains.compose.resources.Font
-import pentastic.composeapp.generated.resources.Merriweather_Light
-import pentastic.composeapp.generated.resources.Merriweather_Regular
-import pentastic.composeapp.generated.resources.Res
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.Clock
@@ -145,6 +145,7 @@ fun NotePage(
     onToggleShowCompleted: () -> Unit = {},
     onDeleteCompletedTasks: (List<Note>) -> Unit = {},
 ) {
+    val strings = AppTheme.strings
     val isNotesType = pageType == PageType.NOTES
     val noteMovedToIndex = remember { mutableStateOf(-1) }
     var noteForRepeatDialog by remember { mutableStateOf<Note?>(null) }
@@ -228,7 +229,7 @@ fun NotePage(
                 style = TextStyle(
                     color = AppTheme.colors.pageTitle,
                     fontSize = 36.sp,
-                    fontFamily = FontFamily(Font(Res.font.Merriweather_Light))
+                    fontFamily = titleFontFamily()
                 )
             )
         }
@@ -243,17 +244,14 @@ fun NotePage(
         }
 
         // Pre-compute date strings for notes-type grouping (outside LazyColumn scope)
-        val noteDateStrings = remember(list, isNotesType) {
+        val dateTexts = AppTheme.dateTexts
+        val noteDateStrings = remember(list, isNotesType, dateTexts) {
             if (isNotesType) {
                 val timeZone = TimeZone.currentSystemDefault()
                 list.map { note ->
                     val dt = Instant.fromEpochMilliseconds(note.createdAt)
                         .toLocalDateTime(timeZone)
-                    val day = dt.dayOfMonth
-                    val month = dt.month.name.take(3).lowercase()
-                        .replaceFirstChar { it.uppercase() }
-                    val year = dt.year
-                    "$day $month $year"
+                    dateTexts.dayMonthYear(dt.date.toEpochDays().toInt())
                 }
             } else emptyList()
         }
@@ -288,18 +286,10 @@ fun NotePage(
                             )
                         }
 
-                        val timeLabel = remember(note.createdAt) {
+                        val timeLabel = remember(note.createdAt, dateTexts) {
                             val dateTime = Instant.fromEpochMilliseconds(note.createdAt)
                                 .toLocalDateTime(timeZone)
-                            val hour = dateTime.hour
-                            val minute = dateTime.minute
-                            val amPm = if (hour < 12) "AM" else "PM"
-                            val hour12 = when {
-                                hour == 0 -> 12
-                                hour > 12 -> hour - 12
-                                else -> hour
-                            }
-                            "$hour12:${minute.toString().padStart(2, '0')} $amPm"
+                            dateTexts.time12(dateTime.hour, dateTime.minute)
                         }
 
 
@@ -476,7 +466,7 @@ fun NotePage(
                                 Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
                                     Text(
                                         modifier = Modifier.padding(start = 12.dp, top = 6.dp).defaultMinSize(minWidth = 28.dp),
-                                        fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+                                        fontFamily = titleFontFamily(),
                                         text = (index + 1).toString() + ".",
                                         // color = if (note.priority == 1 && note.done.not()) colors.priorityText.copy(alpha = 0.7f) else colors.primaryText.copy(alpha = 0.33f),
                                         color = colors.primaryText.copy(alpha = 0.33f),
@@ -510,7 +500,7 @@ fun NotePage(
                                             if (isRepeating) {
                                                 Icon(
                                                     imageVector = Icons.Filled.Repeat,
-                                                    contentDescription = "Repeating task",
+                                                    contentDescription = strings.repeatingTask,
                                                     modifier = Modifier.size(16.dp),
                                                     tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
                                                 )
@@ -518,7 +508,7 @@ fun NotePage(
                                             if (hasUpcomingReminder) {
                                                 Icon(
                                                     imageVector = Icons.Outlined.Notifications,
-                                                    contentDescription = "Upcoming reminder",
+                                                    contentDescription = strings.upcomingReminder,
                                                     modifier = Modifier.size(16.dp),
                                                     tint = colors.primaryText.copy(alpha = if (note.done) 0.33f else 0.4f)
                                                 )
@@ -526,7 +516,7 @@ fun NotePage(
                                             if (hasDueDate) {
                                                 Icon(
                                                     imageVector = Icons.Outlined.CalendarMonth,
-                                                    contentDescription = "Due date",
+                                                    contentDescription = strings.dueDate,
                                                     modifier = Modifier.size(16.dp),
                                                     tint = when {
                                                         note.done -> colors.primaryText.copy(alpha = 0.33f)
@@ -608,7 +598,7 @@ fun NotePage(
                                     )
                                     Spacer(Modifier.width(18.dp))
                                     Text(
-                                        text = "Completed tasks (${completedTasks.size})",
+                                        text = strings.completedTasks(completedTasks.size),
                                         fontSize = 18.sp,
                                         color = AppTheme.colors.primaryText.copy(alpha = 0.33f),
                                     )
@@ -617,7 +607,7 @@ fun NotePage(
                                 Box {
                                     Icon(
                                         imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "More options",
+                                        contentDescription = strings.moreOptions,
                                         tint = AppTheme.colors.primaryText.copy(alpha = 0.33f),
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(percent = 50))
@@ -633,7 +623,7 @@ fun NotePage(
                                         DropdownMenuItem(
                                             text = {
                                                 Text(
-                                                    text = "Delete completed",
+                                                    text = strings.deleteCompleted,
                                                     color = AppTheme.colors.primaryText,
                                                     fontSize = 16.sp,
                                                 )
@@ -693,7 +683,7 @@ fun NotePage(
                                     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
                                         Text(
                                             modifier = Modifier.padding(start = 12.dp, top = 6.dp).defaultMinSize(minWidth = 28.dp),
-                                            fontFamily = FontFamily(Font(Res.font.Merriweather_Regular)),
+                                            fontFamily = titleFontFamily(FontWeight.Normal),
                                             text = (list.size + index + 1).toString() + ".",
                                             color = colors.primaryText.copy(alpha = 0.33f),
                                             textAlign = TextAlign.Center,
@@ -723,7 +713,7 @@ fun NotePage(
                                                 if (isRepeating) {
                                                     Icon(
                                                         imageVector = Icons.Filled.Repeat,
-                                                        contentDescription = "Repeating task",
+                                                        contentDescription = strings.repeatingTask,
                                                         modifier = Modifier.size(16.dp),
                                                         tint = colors.primaryText.copy(alpha = 0.33f)
                                                     )
@@ -731,7 +721,7 @@ fun NotePage(
                                                 if (hasUpcomingReminder) {
                                                     Icon(
                                                         imageVector = Icons.Outlined.Notifications,
-                                                        contentDescription = "Upcoming reminder",
+                                                        contentDescription = strings.upcomingReminder,
                                                         modifier = Modifier.size(16.dp),
                                                         tint = colors.primaryText.copy(alpha = 0.33f)
                                                     )
@@ -739,7 +729,7 @@ fun NotePage(
                                                 if (hasDueDate) {
                                                     Icon(
                                                         imageVector = Icons.Outlined.CalendarMonth,
-                                                        contentDescription = "Due date",
+                                                        contentDescription = strings.dueDate,
                                                         modifier = Modifier.size(16.dp),
                                                         tint = colors.primaryText.copy(alpha = 0.33f)
                                                     )
@@ -926,9 +916,9 @@ fun NotePage(
 
             if (showDeleteCompletedDialog) {
                 ConfirmationDialog(
-                    title = "Delete completed",
-                    message = "Move all ${completedTasks.size} completed tasks to trash?",
-                    confirmText = "Move to trash",
+                    title = strings.deleteCompleted,
+                    message = strings.moveCompletedMessage(completedTasks.size),
+                    confirmText = strings.moveToTrash,
                     onDismiss = { showDeleteCompletedDialog = false },
                     onConfirm = {
                         onDeleteCompletedTasks(completedTasks)
@@ -1086,52 +1076,34 @@ internal fun NoteActionsMenu(
     onMoveTo: () -> Unit,
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
     val currentFrequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
     val nowMillis = Clock.System.now().toEpochMilliseconds()
     val hasActiveReminder = note.reminderAt > nowMillis && note.reminderEnabled == 1
 
     // Format reminder time for display (only if reminder is in the future)
+    val dateTexts = AppTheme.dateTexts
     val reminderLabel = if (hasActiveReminder) {
         val timeZone = TimeZone.currentSystemDefault()
         val now = Clock.System.now().toLocalDateTime(timeZone)
         val reminderDateTime = Instant.fromEpochMilliseconds(note.reminderAt)
             .toLocalDateTime(timeZone)
-
-        when {
-            // Same day - show time only
-            reminderDateTime.date == now.date -> {
-                val hour = reminderDateTime.hour
-                val minute = reminderDateTime.minute
-                val amPm = if (hour < 12) "AM" else "PM"
-                val hour12 = when {
-                    hour == 0 -> 12
-                    hour > 12 -> hour - 12
-                    else -> hour
-                }
-                "$hour12:${minute.toString().padStart(2, '0')} $amPm"
-            }
-            // Same year - show month and date
-            reminderDateTime.year == now.year -> {
-                val day = reminderDateTime.dayOfMonth
-                val month = reminderDateTime.month.name.take(3).lowercase()
-                    .replaceFirstChar { it.uppercase() }
-                "$day $month"
-            }
-            // Different year - show year only
-            else -> {
-                reminderDateTime.year.toString()
-            }
-        }
+        dateTexts.reminderLabel(
+            reminderEpochDays = reminderDateTime.date.toEpochDays().toInt(),
+            hour = reminderDateTime.hour,
+            minute = reminderDateTime.minute,
+            todayEpochDays = now.date.toEpochDays().toInt(),
+        )
     } else {
-        "Reminder"
+        strings.reminder
     }
 
     // Repeat and due date are mutually exclusive: repeating tasks schedule themselves
     val isRepeating = currentFrequency != RepeatFrequency.NONE
     val dueDateLabel = if (note.hasDueDate && !isRepeating) {
-        formatDueDateLabel(note.dueStartAt, note.dueEndAt)
+    formatDueDateLabel(note.dueStartAt, note.dueEndAt, AppTheme.dateTexts, strings.someday)
     } else {
-        "Due date"
+        strings.dueDate
     }
 
     data class MenuAction(
@@ -1143,19 +1115,19 @@ internal fun NoteActionsMenu(
 
     val actions = listOf(
         MenuAction(
-            label = if (note.done) "Todo" else "Done",
+            label = if (note.done) strings.markTodo else strings.markDone,
             icon = Icons.Default.Check,
             tint = colors.primaryText,
             onClick = { onToggleDone(); onDismissRequest() }
         ),
         MenuAction(
-            label = "Priority",
+            label = strings.priority,
             icon = if (note.priority == 0) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
             tint = colors.primaryText,
             onClick = { onSetPriority(); onDismissRequest() }
         ),
         MenuAction(
-            label = "Copy",
+            label = strings.copy,
             icon = Icons.Default.ContentCopy,
             tint = colors.primaryText,
             onClick = { onCopy(); onDismissRequest() }
@@ -1167,19 +1139,19 @@ internal fun NoteActionsMenu(
             onClick = { onSetReminder(); onDismissRequest() }
         ),
         MenuAction(
-            label = "Edit",
+            label = strings.edit,
             icon = Icons.Outlined.EditNote,
             tint = colors.primaryText,
             onClick = { onEdit(); onDismissRequest() }
         ),
         MenuAction(
-            label = if (currentFrequency == RepeatFrequency.NONE) "Repeat" else currentFrequency.label,
+            label = if (currentFrequency == RepeatFrequency.NONE) strings.repeatLabel else strings.repeatFrequency(currentFrequency),
             icon = Icons.Default.Repeat,
             tint = colors.primaryText,
             onClick = { onSetRepeat(); onDismissRequest() }
         ),
         MenuAction(
-            label = "Move to",
+            label = strings.moveTo,
             icon = Icons.Outlined.ArrowOutward,
             tint = colors.primaryText,
             onClick = { onMoveTo(); onDismissRequest() },
@@ -1191,7 +1163,7 @@ internal fun NoteActionsMenu(
             onClick = if (isRepeating) ({}) else ({ onSetDueDate(); onDismissRequest() })
         ),
         MenuAction(
-            label = "Delete",
+            label = strings.delete,
             icon = Icons.Default.Delete,
             tint = colors.primaryText,
             onClick = { onDelete(); onDismissRequest() }
@@ -1301,6 +1273,7 @@ internal fun RepeatFrequencyDialog(
     var reminderEnabled by remember { mutableStateOf(isReminderEnabled) }
     var showStartDatePicker by remember { mutableStateOf(false) }
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
     val timeZone = TimeZone.currentSystemDefault()
     val now = Clock.System.now()
 
@@ -1326,12 +1299,11 @@ internal fun RepeatFrequencyDialog(
     var selectedReminderHour by remember { mutableStateOf(initialReminderTime.hour) }
     var selectedReminderMinute by remember { mutableStateOf(initialReminderTime.minute) }
 
+    val dateTexts = AppTheme.dateTexts
+
     // Format selected start date for display
-    val startDateLabel = remember(selectedStartDate) {
-        val day = selectedStartDate.dayOfMonth
-        val month = selectedStartDate.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-        val year = selectedStartDate.year
-        "$day $month $year"
+    val startDateLabel = remember(selectedStartDate, dateTexts) {
+        dateTexts.dayMonthYear(selectedStartDate.toEpochDays().toInt())
     }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
@@ -1341,7 +1313,7 @@ internal fun RepeatFrequencyDialog(
             shadowElevation = 8.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Repeat task", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Text(strings.repeatTask, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(16.dp))
 
                 // 2 column grid for frequency options
@@ -1367,7 +1339,7 @@ internal fun RepeatFrequencyDialog(
                                     onClick = { selectedFrequency = frequency },
                                     colors = appRadioButtonColors(),
                                 )
-                                Text(text = frequency.label, color = colors.primaryText)
+                                Text(text = strings.repeatFrequency(frequency), color = colors.primaryText)
                             }
                         }
                         // Add empty space if odd number of items in last row
@@ -1394,7 +1366,7 @@ internal fun RepeatFrequencyDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Start from", color = colors.primaryText, fontSize = 15.sp)
+                        Text(strings.startFrom, color = colors.primaryText, fontSize = 15.sp)
                         Text(
                             text = startDateLabel,
                             color = colors.primaryText.copy(alpha = 0.7f),
@@ -1417,7 +1389,7 @@ internal fun RepeatFrequencyDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Remind me", color = colors.primaryText, fontSize = 15.sp)
+                        Text(strings.remindMe, color = colors.primaryText, fontSize = 15.sp)
                         androidx.compose.material3.Switch(
                             checked = reminderEnabled,
                             onCheckedChange = { reminderEnabled = it },
@@ -1450,7 +1422,7 @@ internal fun RepeatFrequencyDialog(
                         TextButton(onClick = {
                             onConfirm(RepeatFrequency.NONE, 0L, null, false)
                         }) {
-                            Text("Clear", color = colors.primaryText.copy(alpha = 0.6f))
+                            Text(strings.clear, color = colors.primaryText.copy(alpha = 0.6f))
                         }
                     } else {
                         Spacer(Modifier.width(1.dp))
@@ -1458,7 +1430,7 @@ internal fun RepeatFrequencyDialog(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onDismiss) {
-                            Text("Cancel", color = colors.primaryText)
+                            Text(strings.cancel, color = colors.primaryText)
                         }
                         Button(
                             onClick = {
@@ -1504,7 +1476,7 @@ internal fun RepeatFrequencyDialog(
                                 contentColor = colors.menuBackground
                             )
                         ) {
-                            Text("Save")
+                            Text(strings.save)
                         }
                     }
                 }
@@ -1532,6 +1504,7 @@ private fun RepeatReminderTimePicker(
     onTimeSelected: (hour: Int, minute: Int) -> Unit,
 ) {
     val colors = AppTheme.colors
+    val dateTexts = AppTheme.dateTexts
 
     // Convert 24-hour to 12-hour format
     val isAm = selectedHour < 12
@@ -1556,42 +1529,66 @@ private fun RepeatReminderTimePicker(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Hour picker (1-12)
-            CompactWheelPicker(
-                items = (1..12).toList(),
-                selectedItem = hour12,
-                onItemSelected = { newHour12 ->
-                    onTimeSelected(toHour24(newHour12, isAm), selectedMinute)
-                }
-            )
+            // Digits read left-to-right even in Farsi, so the time keeps its hour : minute
+            // order in both languages; only the AM/PM marker moves, matching how the
+            // formatted labels render («ب.ظ ۳:۰۵»). Under an RTL layout direction the
+            // Row mirrors child order, so there the children are declared minute-first.
+            val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
-            Text(
-                text = ":",
-                color = colors.icon,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-            )
+            val hourWheel: @Composable () -> Unit = {
+                // Hour picker (1-12)
+                CompactWheelPicker(
+                    items = (1..12).toList(),
+                    selectedItem = hour12,
+                    onItemSelected = { newHour12 ->
+                        onTimeSelected(toHour24(newHour12, isAm), selectedMinute)
+                    },
+                    format = { dateTexts.num2(it) }
+                )
+            }
+            val colon: @Composable () -> Unit = {
+                Text(
+                    text = ":",
+                    color = colors.icon,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            val minuteWheel: @Composable () -> Unit = {
+                // Minute picker
+                CompactWheelPicker(
+                    items = (0..59).toList(),
+                    selectedItem = selectedMinute,
+                    onItemSelected = { onTimeSelected(selectedHour, it) },
+                    format = { dateTexts.num2(it) }
+                )
+            }
+            val amPmWheel: @Composable () -> Unit = {
+                Spacer(Modifier.width(8.dp))
 
-            // Minute picker
-            CompactWheelPicker(
-                items = (0..59).toList(),
-                selectedItem = selectedMinute,
-                onItemSelected = { onTimeSelected(selectedHour, it) }
-            )
+                // AM/PM picker
+                CompactWheelPickerGeneric(
+                    items = listOf(true, false),
+                    selectedItem = isAm,
+                    onItemSelected = { newIsAm ->
+                        onTimeSelected(toHour24(hour12, newIsAm), selectedMinute)
+                    },
+                    format = { dateTexts.amPm(it) },
+                    itemWidth = 52.dp
+                )
+            }
 
-            Spacer(Modifier.width(8.dp))
-
-            // AM/PM picker
-            CompactWheelPickerGeneric(
-                items = listOf("AM", "PM"),
-                selectedItem = if (isAm) "AM" else "PM",
-                onItemSelected = { amPm ->
-                    val newIsAm = amPm == "AM"
-                    onTimeSelected(toHour24(hour12, newIsAm), selectedMinute)
-                },
-                format = { it },
-                itemWidth = 52.dp
-            )
+            if (rtl) {
+                minuteWheel()
+                colon()
+                hourWheel()
+                amPmWheel()
+            } else {
+                hourWheel()
+                colon()
+                minuteWheel()
+                amPmWheel()
+            }
         }
     }
 }
@@ -1601,6 +1598,7 @@ private fun CompactWheelPicker(
     items: List<Int>,
     selectedItem: Int,
     onItemSelected: (Int) -> Unit,
+    format: (Int) -> String = { it.toString() },
 ) {
     val colors = AppTheme.colors
     val listState = rememberLazyListState()
@@ -1686,7 +1684,7 @@ private fun CompactWheelPicker(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (item < 10) "0$item" else item.toString(),
+                        text = format(item),
                         color = if (isSelected) colors.primaryText else colors.primaryText.copy(alpha = 0.4f),
                         fontSize = if (isSelected) 18.sp else 14.sp,
                         fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
@@ -1805,33 +1803,46 @@ internal fun StartDatePickerDialog(
     initialDate: LocalDate,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
-    title: String = "Select start date",
+    title: String = AppTheme.strings.selectStartDate,
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
+    val dateTexts = AppTheme.dateTexts
+    val isJalali = AppTheme.calendar == AppCalendar.JALALI
     var selectedDate by remember { mutableStateOf(initialDate) }
     val timeZone = TimeZone.currentSystemDefault()
     val today = remember { Clock.System.now().toLocalDateTime(timeZone).date }
 
-    // Generate year range
-    val years = remember { ((today.year - 1)..(today.year + 10)).toList() }
-    val months = remember { kotlinx.datetime.Month.entries.toList() }
+    // Today and the selected date, broken down in the active calendar
+    val todayParts = dateTexts.parts(today.toEpochDays().toInt())
+    val selectedParts = dateTexts.parts(selectedDate.toEpochDays().toInt())
 
-    var selectedYear by remember { mutableStateOf(selectedDate.year) }
-    var selectedMonth by remember { mutableStateOf(selectedDate.month) }
-    var selectedDay by remember { mutableStateOf(selectedDate.dayOfMonth) }
+    // Generate year range (last year to +10 years) in the active calendar
+    val years = remember(todayParts.year) { ((todayParts.year - 1)..(todayParts.year + 10)).toList() }
+    val months = remember { (1..12).toList() }
 
-    val daysInMonth = remember(selectedYear, selectedMonth) {
-        when (selectedMonth) {
-            kotlinx.datetime.Month.JANUARY, kotlinx.datetime.Month.MARCH, kotlinx.datetime.Month.MAY,
-            kotlinx.datetime.Month.JULY, kotlinx.datetime.Month.AUGUST, kotlinx.datetime.Month.OCTOBER,
-            kotlinx.datetime.Month.DECEMBER,
-                -> 31
+    var selectedYear by remember { mutableStateOf(selectedParts.year) }
+    var selectedMonth by remember { mutableStateOf(selectedParts.month) }
+    var selectedDay by remember { mutableStateOf(selectedParts.day) }
 
-            kotlinx.datetime.Month.APRIL, kotlinx.datetime.Month.JUNE, kotlinx.datetime.Month.SEPTEMBER,
-            kotlinx.datetime.Month.NOVEMBER,
-                -> 30
+    // Calculate days in the selected month, in the active calendar
+    val daysInMonth = remember(selectedYear, selectedMonth, isJalali) {
+        if (isJalali) {
+            JalaliCalendar.monthLength(selectedYear, selectedMonth)
+        } else {
+            val gregorianMonth = kotlinx.datetime.Month.entries[selectedMonth - 1]
+            when (gregorianMonth) {
+                kotlinx.datetime.Month.JANUARY, kotlinx.datetime.Month.MARCH, kotlinx.datetime.Month.MAY,
+                kotlinx.datetime.Month.JULY, kotlinx.datetime.Month.AUGUST, kotlinx.datetime.Month.OCTOBER,
+                kotlinx.datetime.Month.DECEMBER,
+                    -> 31
 
-            kotlinx.datetime.Month.FEBRUARY -> if ((selectedYear % 4 == 0 && selectedYear % 100 != 0) || (selectedYear % 400 == 0)) 29 else 28
+                kotlinx.datetime.Month.APRIL, kotlinx.datetime.Month.JUNE, kotlinx.datetime.Month.SEPTEMBER,
+                kotlinx.datetime.Month.NOVEMBER,
+                    -> 30
+
+                kotlinx.datetime.Month.FEBRUARY -> if ((selectedYear % 4 == 0 && selectedYear % 100 != 0) || (selectedYear % 400 == 0)) 29 else 28
+            }
         }
     }
     val days = remember(daysInMonth) { (1..daysInMonth).toList() }
@@ -1843,7 +1854,12 @@ internal fun StartDatePickerDialog(
     }
 
     LaunchedEffect(selectedYear, selectedMonth, selectedDay) {
-        val newDate = LocalDate(selectedYear, selectedMonth, selectedDay.coerceAtMost(daysInMonth))
+        val day = selectedDay.coerceAtMost(daysInMonth)
+        val newDate = if (isJalali) {
+            LocalDate.fromEpochDays(JalaliCalendar.toEpochDays(selectedYear, selectedMonth, day))
+        } else {
+            LocalDate(selectedYear, selectedMonth, day)
+        }
         if (newDate != selectedDate) {
             selectedDate = newDate
         }
@@ -1870,37 +1886,55 @@ internal fun StartDatePickerDialog(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Year picker
-                    StartDateWheelPicker(
-                        items = years,
-                        selectedItem = selectedYear,
-                        onItemSelected = { selectedYear = it },
-                        format = { it.toString() },
-                        itemWidth = 64.dp
-                    )
+                    // Digits and month names read left-to-right even in Farsi, so the wheels keep
+                    // their year | month | day left-to-right order in both languages. Under an RTL
+                    // layout direction the Row mirrors child order, so there the wheels are
+                    // declared day-first to cancel the mirroring and match the date labels.
+                    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
-                    Spacer(Modifier.width(8.dp))
+                    val yearWheel: @Composable () -> Unit = {
+                        // Year picker
+                        StartDateWheelPicker(
+                            items = years,
+                            selectedItem = selectedYear,
+                            onItemSelected = { selectedYear = it },
+                            format = { dateTexts.num(it) },
+                            itemWidth = 64.dp
+                        )
+                    }
+                    val monthWheel: @Composable () -> Unit = {
+                        // Month picker
+                        StartDateWheelPicker(
+                            items = months,
+                            selectedItem = selectedMonth,
+                            onItemSelected = { selectedMonth = it },
+                            format = { dateTexts.monthAbbrev(it) },
+                            itemWidth = 92.dp
+                        )
+                    }
+                    val dayWheel: @Composable () -> Unit = {
+                        // Day picker
+                        StartDateWheelPicker(
+                            items = days,
+                            selectedItem = selectedDay,
+                            onItemSelected = { selectedDay = it },
+                            format = { dateTexts.num(it) }
+                        )
+                    }
 
-                    // Month picker
-                    StartDateWheelPicker(
-                        items = months,
-                        selectedItem = selectedMonth,
-                        onItemSelected = { selectedMonth = it },
-                        format = { month ->
-                            month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-                        },
-                        itemWidth = 72.dp
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    // Day picker
-                    StartDateWheelPicker(
-                        items = days,
-                        selectedItem = selectedDay,
-                        onItemSelected = { selectedDay = it },
-                        format = { it.toString() }
-                    )
+                    if (rtl) {
+                        dayWheel()
+                        Spacer(Modifier.width(8.dp))
+                        monthWheel()
+                        Spacer(Modifier.width(8.dp))
+                        yearWheel()
+                    } else {
+                        yearWheel()
+                        Spacer(Modifier.width(8.dp))
+                        monthWheel()
+                        Spacer(Modifier.width(8.dp))
+                        dayWheel()
+                    }
                 }
 
                 Spacer(Modifier.height(20.dp))
@@ -1911,7 +1945,7 @@ internal fun StartDatePickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
@@ -1922,7 +1956,7 @@ internal fun StartDatePickerDialog(
                         ),
                         shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("Done")
+                        Text(strings.done)
                     }
                 }
             }
@@ -2042,6 +2076,7 @@ internal fun MoveToDialog(
     onConfirm: (Long) -> Unit,
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -2051,7 +2086,7 @@ internal fun MoveToDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    "Move to",
+                    strings.moveTo,
                     color = colors.primaryText,
                     fontWeight = FontWeight.Medium,
                     fontSize = 18.sp
@@ -2090,7 +2125,7 @@ internal fun MoveToDialog(
                                 if (isCurrentPage) {
                                     Spacer(Modifier.weight(1f))
                                     Text(
-                                        text = "Current",
+                                        text = strings.current,
                                         color = colors.primaryText.copy(alpha = 0.4f),
                                         fontSize = 12.sp
                                     )
@@ -2123,7 +2158,7 @@ internal fun MoveToDialog(
                                 if (isCurrentSubPage) {
                                     Spacer(Modifier.weight(1f))
                                     Text(
-                                        text = "Current",
+                                        text = strings.current,
                                         color = colors.primaryText.copy(alpha = 0.4f),
                                         fontSize = 12.sp
                                     )
@@ -2139,7 +2174,7 @@ internal fun MoveToDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
                 }
             }
@@ -2156,6 +2191,7 @@ private fun ConfirmationDialog(
     onConfirm: () -> Unit,
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
@@ -2169,7 +2205,7 @@ private fun ConfirmationDialog(
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
                     Button(
                         onClick = onConfirm,

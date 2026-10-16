@@ -122,6 +122,7 @@ private fun ExplanationDialog(
     onDismiss: () -> Unit
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -131,7 +132,7 @@ private fun ExplanationDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "Permission required",
+                    text = strings.permissionRequired,
                     color = colors.primaryText,
                     fontWeight = FontWeight.Medium,
                     fontSize = 18.sp
@@ -140,7 +141,7 @@ private fun ExplanationDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "To set reminders, we need permission to send notifications and schedule alarms.",
+                    text = strings.permissionMessage,
                     color = colors.primaryText
                 )
 
@@ -151,7 +152,7 @@ private fun ExplanationDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
 
                     Button(
@@ -161,7 +162,7 @@ private fun ExplanationDialog(
                             contentColor = colors.menuBackground
                         )
                     ) {
-                        Text("Continue")
+                        Text(strings.continueLabel)
                     }
                 }
             }

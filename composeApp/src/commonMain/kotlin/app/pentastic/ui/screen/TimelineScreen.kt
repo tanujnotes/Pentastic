@@ -36,6 +36,7 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable
 fun TimelineScreen() {
+    val strings = AppTheme.strings
     val viewModel = koinViewModel<MainViewModel>()
     val editingNote by viewModel.editingNote.collectAsState()
     var text by remember { mutableStateOf("") }
@@ -75,7 +76,7 @@ fun TimelineScreen() {
                     }
                 },
                 isEditing = editingNote != null,
-                placeholder = if (editingNote != null) "" else "Add a task...",
+                placeholder = if (editingNote != null) "" else strings.addTask,
             )
         }
     }

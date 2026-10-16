@@ -8,11 +8,14 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import app.pentastic.MainActivity
 import app.pentastic.R
+import app.pentastic.data.AppLanguage
+import app.pentastic.data.DataStoreRepository
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.db.PentasticDatabase
 import app.pentastic.utils.hasRepeatIntervalPassed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -23,6 +26,7 @@ import kotlin.time.ExperimentalTime
 class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
     private val database: PentasticDatabase by inject()
     private val reminderScheduler: ReminderScheduler by inject()
+    private val dataStoreRepository: DataStoreRepository by inject()
 
     override fun onReceive(context: Context, intent: Intent) {
         val noteUuid = intent.getStringExtra("note_uuid") ?: return
@@ -37,7 +41,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
         // would race the DB write and next-cycle scheduling
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
-            var notificationBody = "To-do reminder"
+            // Notifications are built outside any Compose composition, so the
+            // language comes straight from DataStore instead of LocalStrings
+            val texts = NotificationStrings(
+                AppLanguage.fromOrdinal(dataStoreRepository.language.first())
+            )
+            var notificationBody = texts.todoReminder()
 
             val note = database.noteDao.getNoteByUuid(noteUuid)
             if (note == null || note.deletedAt > 0) {
@@ -64,9 +73,9 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                     !note.taskLastDoneAt.hasRepeatIntervalPassed(frequency)
 
             notificationBody = if (isRepeatingTask)
-                "${frequency.label} reminder"
+                texts.repeatReminder(frequency)
             else
-                "To-do reminder"
+                texts.todoReminder()
 
             if (!isSnooze) {
                 val now = Clock.System.now().toEpochMilliseconds()
@@ -144,8 +153,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver(), KoinComponent {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(contentPendingIntent)
-                .addAction(0, "Mark as done", markDonePendingIntent)
-                .addAction(0, "Snooze (1 hour)", snoozePendingIntent)
+                .addAction(0, texts.markAsDone(), markDonePendingIntent)
+                .addAction(0, texts.snoozeOneHour(), snoozePendingIntent)
                 .build()
 
             notificationManager.notify(noteUuid.hashCode(), notification)

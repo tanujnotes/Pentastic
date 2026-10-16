@@ -9,6 +9,10 @@ import app.pentastic.data.Page
 import app.pentastic.data.PageType
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.ThemeMode
+import app.pentastic.data.AppLanguage
+import app.pentastic.data.AppCalendar
+import app.pentastic.data.WeekStart
+import app.pentastic.ui.strings.stringsFor
 import app.pentastic.notification.ReminderScheduler
 import app.pentastic.notification.nextFutureReminderTime
 import app.pentastic.utils.hasBeenHours
@@ -40,6 +44,17 @@ class MainViewModel(
 
     private val _themeMode = MutableStateFlow(ThemeMode.DAY_NIGHT)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _language = MutableStateFlow(AppLanguage.FARSI)
+    val language: StateFlow<AppLanguage> = _language.asStateFlow()
+
+    private val _calendar = MutableStateFlow(AppCalendar.GREGORIAN)
+    val calendar: StateFlow<AppCalendar> = _calendar.asStateFlow()
+
+    /** The saved preference, or null while the user hasn't picked one yet. */
+    private val _weekStartPref = MutableStateFlow<Int?>(null)
+    private val _weekStart = MutableStateFlow(WeekStart.MONDAY)
+    val weekStart: StateFlow<WeekStart> = _weekStart.asStateFlow()
 
     private val _notesByPage = MutableStateFlow<Map<Long, List<Note>>>(emptyMap())
     val notesByPage: StateFlow<Map<Long, List<Note>>> = _notesByPage.asStateFlow()
@@ -101,6 +116,9 @@ class MainViewModel(
         loadSubPages()
         checkForRateButton()
         loadThemeMode()
+        loadLanguage()
+        loadCalendar()
+        loadWeekStart()
         loadShowCompletedTasks()
         loadShowTimeline()
         loadShowSubPages()
@@ -244,7 +262,16 @@ class MainViewModel(
     fun addTimelineTask(text: String, dueStartAt: Long, dueEndAt: Long) {
         viewModelScope.launch {
             val timelinePageId = repository.getTimelinePageOnce()?.id
-                ?: repository.insertPage(Page(name = "Timeline", pageType = PageType.TIMELINE.ordinal))
+                ?: repository.insertPage(
+                    Page(
+                        // Name the page in the saved language; lookup is by page
+                        // type, so the name stays freely renameable by the user
+                        name = stringsFor(
+                            AppLanguage.fromOrdinal(dataStoreRepository.languageOnce())
+                        ).timeline,
+                        pageType = PageType.TIMELINE.ordinal
+                    )
+                )
             repository.insertNote(
                 Note(pageId = timelinePageId, text = text, dueStartAt = dueStartAt, dueEndAt = dueEndAt)
             )
@@ -339,7 +366,7 @@ class MainViewModel(
             val completedRepeatingNotes = repository.getCompletedRepeatingNotes()
             val notesToReset = completedRepeatingNotes.filter { note ->
                 val frequency = RepeatFrequency.fromOrdinal(note.repeatFrequency)
-                note.taskLastDoneAt.hasRepeatIntervalPassed(frequency)
+                note.taskLastDoneAt.hasRepeatIntervalPassed(frequency, calendar.value)
             }
             if (notesToReset.isNotEmpty()) {
                 val now = Clock.System.now().toEpochMilliseconds()
@@ -524,6 +551,80 @@ class MainViewModel(
         }
     }
 
+    private fun loadLanguage() {
+        viewModelScope.launch {
+            dataStoreRepository.language.collect { ordinal ->
+                _language.value = AppLanguage.fromOrdinal(ordinal)
+                resolveWeekStart()
+            }
+        }
+    }
+
+    fun setLanguage(language: AppLanguage) {
+        viewModelScope.launch {
+            val previous = AppLanguage.fromOrdinal(dataStoreRepository.languageOnce())
+            _language.value = language
+            dataStoreRepository.saveLanguage(language.ordinal)
+            if (previous != language) syncSeedPageNames(previous, language)
+        }
+    }
+
+    /**
+     * Renames untouched sample pages to their name in the new language, so the
+     * demo content follows the app language. A page the user has renamed no
+     * longer matches a sample name and is left alone.
+     */
+    private suspend fun syncSeedPageNames(from: AppLanguage, to: AppLanguage) {
+        val updates = (
+            repository.getAllPages().first() +
+                repository.getArchivedPages().first() +
+                repository.getTrashedPages().first()
+            )
+            .mapNotNull { page ->
+                OnboardingSeedTexts.translatedName(page.name, from, to)
+                    ?.let { page.copy(name = it) }
+            }
+        if (updates.isNotEmpty()) repository.updatePages(updates)
+    }
+
+    private fun loadCalendar() {
+        viewModelScope.launch {
+            dataStoreRepository.calendar.collect { ordinal ->
+                _calendar.value = AppCalendar.fromOrdinal(ordinal)
+            }
+        }
+    }
+
+    fun setCalendar(calendar: AppCalendar) {
+        viewModelScope.launch {
+            _calendar.value = calendar
+            dataStoreRepository.saveCalendar(calendar.ordinal)
+        }
+    }
+
+    private fun loadWeekStart() {
+        viewModelScope.launch {
+            dataStoreRepository.weekStart.collect { pref ->
+                _weekStartPref.value = pref
+                resolveWeekStart()
+            }
+        }
+    }
+
+    fun setWeekStart(weekStart: WeekStart) {
+        viewModelScope.launch {
+            _weekStartPref.value = weekStart.ordinal
+            resolveWeekStart()
+            dataStoreRepository.saveWeekStart(weekStart.ordinal)
+        }
+    }
+
+    /** Unset preference falls back by language: Saturday for Farsi, Monday otherwise. */
+    private fun resolveWeekStart() {
+        _weekStart.value = _weekStartPref.value?.let { WeekStart.fromOrdinal(it) }
+            ?: if (_language.value == AppLanguage.FARSI) WeekStart.SATURDAY else WeekStart.MONDAY
+    }
+
     private fun loadShowCompletedTasks() {
         viewModelScope.launch {
             dataStoreRepository.showCompletedTasks.collect { show ->
@@ -597,90 +698,98 @@ class MainViewModel(
                 // temp dir), not a fresh install: don't seed the samples again
                 if (repository.getRootPages().first().isNotEmpty()) return@launch
 
-                val pageTodo = repository.insertPage(Page(name = "Todo"))
-                repository.insertNote(
-                    Note(pageId = pageTodo, text = "Install Pentastic!️", done = true, orderAt = 3L)
-                )
-                repository.insertNote(
-                    Note(pageId = pageTodo, text = "Double tap to mark a task as done. ✔", orderAt = 2L)
-                )
-                repository.insertNote(
-                    Note(pageId = pageTodo, text = "Single tap for menu; long press to reorder.", orderAt = 1L)
-                )
-                repository.insertNote(
-                    Note(pageId = pageTodo, text = "And swipe right... because we're a perfect match. 😎", orderAt = 0L)
+                // Seed in the language the user chose on the welcome screen
+                // (the welcome flow writes it before the home screen — and this
+                // seeding — ever runs). Texts are stored content, so later
+                // language changes don't rewrite them.
+                val seed = OnboardingSeedTexts(
+                    AppLanguage.fromOrdinal(dataStoreRepository.languageOnce()) == AppLanguage.FARSI
                 )
 
-                val pageReminders = repository.insertPage(Page(name = "Reminders"))
+                val pageTodo = repository.insertPage(Page(name = seed.pageTodo))
+                repository.insertNote(
+                    Note(pageId = pageTodo, text = seed.todoInstall, done = true, orderAt = 3L)
+                )
+                repository.insertNote(
+                    Note(pageId = pageTodo, text = seed.todoDoubleTap, orderAt = 2L)
+                )
+                repository.insertNote(
+                    Note(pageId = pageTodo, text = seed.todoSingleTap, orderAt = 1L)
+                )
+                repository.insertNote(
+                    Note(pageId = pageTodo, text = seed.todoSwipe, orderAt = 0L)
+                )
+
+                val pageReminders = repository.insertPage(Page(name = seed.pageReminders))
                 repository.insertNote(
                     Note(
                         pageId = pageReminders,
-                        text = "You can set reminders for your one-off or repeating tasks. Tap on the task to open the menu.",
+                        text = seed.remindersText,
                     )
                 )
 
-                val pageThings = repository.insertPage(Page(name = "Stuff"))
-                repository.insertPage(Page(name = "To do", parentId = pageThings))
-                repository.insertPage(Page(name = "Read", parentId = pageThings))
-                repository.insertPage(Page(name = "Watch", parentId = pageThings))
+                val pageThings = repository.insertPage(Page(name = seed.pageThings))
+                repository.insertPage(Page(name = seed.pageThingsTodo, parentId = pageThings))
+                repository.insertPage(Page(name = seed.pageThingsRead, parentId = pageThings))
+                repository.insertPage(Page(name = seed.pageThingsWatch, parentId = pageThings))
                 repository.insertNote(
                     Note(
                         pageId = pageThings,
-                        text = "so that you don't forget to actually do it! 😄",
+                        text = seed.thingsTextForget,
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = pageThings,
-                        text = "A place to note down all the fun stuff you want to do, read, or watch...",
+                        text = seed.thingsTextIntro,
                     )
                 )
 
-                val pageNotes = repository.insertPage(Page(name = "Notes", pageType = PageType.NOTES.ordinal))
+                val pageNotes = repository.insertPage(Page(name = seed.pageNotes, pageType = PageType.NOTES.ordinal))
                 repository.insertNote(
                     Note(
                         pageId = pageNotes,
-                        text = "This is a Notes page with timestamps for each note. 📝",
+                        text = seed.notesTextTimestamps,
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = pageNotes,
-                        text = "You can change the type of a page from the Index page.",
+                        text = seed.notesTextType,
                     )
                 )
 
-                val pageIdeas = repository.insertPage(Page(name = "Ideas", pageType = PageType.NOTES.ordinal))
+                val pageIdeas = repository.insertPage(Page(name = seed.pageIdeas, pageType = PageType.NOTES.ordinal))
                 repository.insertNote(
                     Note(
                         pageId = pageIdeas,
-                        text = "Scribble your random thoughts and ideas here to revisit later.",
+                        text = seed.ideasTextScribble,
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = pageIdeas,
-                        text = " Happy scribbling! :)",
+                        text = seed.ideasTextHappy,
                     )
                 )
 
-                val pageDontDo = repository.insertPage(Page(name = "Don't do"))
+                val pageDontDo = repository.insertPage(Page(name = seed.pageDontDo))
                 repository.insertNote(
                     Note(
                         pageId = pageDontDo,
-                        text = "Press BACK to go to the Index page.",
+                        text = seed.dontDoTextBack,
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = pageDontDo,
-                        text = "Priority tasks will appear in red. Tap on any task to change priority. 👆",
+                        text = seed.dontDoTextPriority,
                     )
                 )
                 repository.insertNote(
                     Note(
                         pageId = pageDontDo,
-                        text = "It's okay... we all need this list. :D",
+                        text = seed.dontDoTextOkay,
                         priority = 1,
                     )
                 )

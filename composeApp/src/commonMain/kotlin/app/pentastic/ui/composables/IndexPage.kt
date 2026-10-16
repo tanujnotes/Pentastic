@@ -82,7 +82,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -92,18 +91,19 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pentastic.data.Page
+import app.pentastic.data.AppLanguage
+import app.pentastic.data.AppCalendar
+import app.pentastic.data.WeekStart
 import app.pentastic.data.PageType
 import app.pentastic.data.ThemeMode
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.titleFontFamily
 import app.pentastic.ui.theme.AppTheme.colors
 import app.pentastic.ui.theme.appRadioButtonColors
 import app.pentastic.ui.theme.appSwitchColors
 import app.pentastic.ui.viewmodel.MainViewModel
-import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
-import pentastic.composeapp.generated.resources.Merriweather_Light
-import pentastic.composeapp.generated.resources.Res
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.time.ExperimentalTime
@@ -135,6 +135,7 @@ fun IndexPage(
     timelineNotesCount: Int = 0,
     timelinePriorityCount: Int = 0,
 ) {
+    val strings = AppTheme.strings
     val viewModel = koinViewModel<MainViewModel>()
     val showSubPages by viewModel.showSubPages.collectAsState()
 
@@ -178,16 +179,16 @@ fun IndexPage(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = if (isReorderMode) "Reorder" else "Index",
+                text = if (isReorderMode) strings.reorder else strings.index,
                 style = TextStyle(
                     color = colors.pageTitle,
                     fontSize = 36.sp,
-                    fontFamily = FontFamily(Font(Res.font.Merriweather_Light))
+                    fontFamily = titleFontFamily()
                 )
             )
             if (isReorderMode) {
                 Text(
-                    text = "Done",
+                    text = strings.done,
                     style = TextStyle(color = colors.primaryText, fontWeight = FontWeight.Medium),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp).clickable(onClick = {
                         isReorderMode = false
@@ -199,7 +200,7 @@ fun IndexPage(
                         IconButton(onClick = { showTopMenu = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Options",
+                                contentDescription = strings.options,
                                 tint = colors.icon
                             )
                         }
@@ -211,7 +212,7 @@ fun IndexPage(
                         ) {
                             if (showRateButton) {
                                 DropdownMenuItem(
-                                    text = { Text("Rate", color = colors.primaryText) },
+                                    text = { Text(strings.rate, color = colors.primaryText) },
                                     onClick = {
                                         showTopMenu = false
                                         viewModel.onRateClicked()
@@ -228,7 +229,7 @@ fun IndexPage(
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Reorder", color = colors.primaryText) },
+                                text = { Text(strings.reorder, color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     isReorderMode = true
@@ -245,7 +246,7 @@ fun IndexPage(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        if (showSubPages) "Hide sub-pages" else "Show sub-pages",
+                                        if (showSubPages) strings.hideSubPages else strings.showSubPages,
                                         color = colors.primaryText
                                     )
                                 },
@@ -263,7 +264,7 @@ fun IndexPage(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Settings", color = colors.primaryText) },
+                                text = { Text(strings.settings, color = colors.primaryText) },
                                 onClick = {
                                     showTopMenu = false
                                     onNavigateToSettings()
@@ -313,7 +314,7 @@ fun IndexPage(
                                 Box(modifier = Modifier.defaultMinSize(minWidth = 32.dp)) {
                                     Icon(
                                         imageVector = Icons.Outlined.ViewTimeline,
-                                        contentDescription = "Timeline",
+                                        contentDescription = strings.timeline,
                                         tint = colors.primaryText.copy(alpha = 0.33f),
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -322,7 +323,7 @@ fun IndexPage(
                                 Spacer(Modifier.width(6.dp))
 
                                 Text(
-                                    text = "Timeline",
+                                    text = strings.timeline,
                                     fontSize = 18.sp,
                                     maxLines = 1,
                                     color = colors.primaryText,
@@ -368,7 +369,7 @@ fun IndexPage(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            if (showTimeline) "Disable" else "Enable",
+                                            if (showTimeline) strings.disable else strings.enable,
                                             color = colors.primaryText
                                         )
                                     },
@@ -453,7 +454,7 @@ fun IndexPage(
                                     Spacer(modifier = Modifier.weight(1f))
                                     Icon(
                                         imageVector = Icons.Default.DragHandle,
-                                        contentDescription = "Reorder",
+                                        contentDescription = strings.reorder,
                                         tint = colors.hint,
                                         modifier = Modifier.draggableHandle(
                                             onDragStopped = {
@@ -473,7 +474,7 @@ fun IndexPage(
                             ) {
                                 if (page.parentId == null) {
                                     DropdownMenuItem(
-                                        text = { Text("Add sub-page", color = colors.primaryText) },
+                                        text = { Text(strings.addSubPage, color = colors.primaryText) },
                                         onClick = {
                                             showMenu = false
                                             val subPagesCount = subPagesByParent[page.id]?.size ?: 0
@@ -496,7 +497,7 @@ fun IndexPage(
                                     text = {
                                         val currentType = PageType.fromOrdinal(page.pageType)
                                         Text(
-                                            if (currentType == PageType.TASKS) "Switch to Notes" else "Switch to Tasks",
+                                            if (currentType == PageType.TASKS) strings.switchToNotes else strings.switchToTasks,
                                             color = colors.primaryText
                                         )
                                     },
@@ -514,7 +515,7 @@ fun IndexPage(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Rename", color = colors.primaryText) },
+                                    text = { Text(strings.rename, color = colors.primaryText) },
                                     onClick = {
                                         showMenu = false
                                         pageToRename = page
@@ -530,7 +531,7 @@ fun IndexPage(
                                 )
                                 if (localPages.size > 1) {
                                     DropdownMenuItem(
-                                        text = { Text("Archive", color = colors.primaryText) },
+                                        text = { Text(strings.archive, color = colors.primaryText) },
                                         onClick = {
                                             showMenu = false
                                             onPageArchive(page)
@@ -543,7 +544,7 @@ fun IndexPage(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Delete", color = colors.primaryText) },
+                                        text = { Text(strings.delete, color = colors.primaryText) },
                                         onClick = {
                                             showMenu = false
                                             pageToDelete = page
@@ -605,7 +606,7 @@ fun IndexPage(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                text = "Archive (${archivedPages.size})",
+                                text = strings.archiveCount(archivedPages.size),
                                 fontSize = 16.sp,
                                 color = colors.hint,
                             )
@@ -643,7 +644,7 @@ fun IndexPage(
                                     modifier = Modifier.background(color = colors.menuBackground),
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Unarchive", color = colors.primaryText) },
+                                        text = { Text(strings.unarchive, color = colors.primaryText) },
                                         onClick = {
                                             showArchivedMenu = false
                                             onPageUnarchive(archivedPage)
@@ -656,7 +657,7 @@ fun IndexPage(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Delete", color = colors.primaryText) },
+                                        text = { Text(strings.delete, color = colors.primaryText) },
                                         onClick = {
                                             showArchivedMenu = false
                                             pageToDelete = archivedPage
@@ -681,7 +682,7 @@ fun IndexPage(
                     page = pageToRename!!,
                     onDismiss = { showRenameDialog = false },
                     onConfirm = { newName ->
-                        onPageNameChange(pageToRename!!, newName.trim().ifBlank { "Page" })
+                        onPageNameChange(pageToRename!!, newName.trim().ifBlank { strings.defaultPageName })
                         showRenameDialog = false
                     }
                 )
@@ -703,7 +704,7 @@ fun IndexPage(
                     parentPage = parentPageForSubPage!!,
                     onDismiss = { showAddSubPageDialog = false },
                     onConfirm = { subPageName ->
-                        onAddSubPage(parentPageForSubPage!!.id, subPageName.trim().ifBlank { "Sub-page" })
+                        onAddSubPage(parentPageForSubPage!!.id, subPageName.trim().ifBlank { strings.defaultSubPageName })
                         showAddSubPageDialog = false
                     }
                 )
@@ -769,11 +770,12 @@ private fun PageTypeIcon(
     size: Dp,
     minWidth: Dp,
 ) {
+    val strings = AppTheme.strings
     Box(modifier = Modifier.defaultMinSize(minWidth = minWidth)) {
         Icon(
             imageVector = if (pageType == PageType.NOTES) Icons.AutoMirrored.Outlined.Notes
             else Icons.Outlined.ChecklistRtl,
-            contentDescription = if (pageType == PageType.NOTES) "Notes page" else "Tasks page",
+            contentDescription = if (pageType == PageType.NOTES) strings.notesPage else strings.tasksPage,
             tint = colors.primaryText.copy(alpha = 0.33f),
             modifier = Modifier.size(size)
         )
@@ -790,6 +792,7 @@ private fun SubPageItem(
     onDelete: () -> Unit,
     onPageTypeChange: (Page, PageType) -> Unit,
 ) {
+    val strings = AppTheme.strings
     var showMenu by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -837,7 +840,7 @@ private fun SubPageItem(
                 text = {
                     val currentType = PageType.fromOrdinal(subPage.pageType)
                     Text(
-                        if (currentType == PageType.TASKS) "Switch to Notes" else "Switch to Tasks",
+                        if (currentType == PageType.TASKS) strings.switchToNotes else strings.switchToTasks,
                         color = colors.primaryText
                     )
                 },
@@ -855,7 +858,7 @@ private fun SubPageItem(
                 }
             )
             DropdownMenuItem(
-                text = { Text("Rename", color = colors.primaryText) },
+                text = { Text(strings.rename, color = colors.primaryText) },
                 onClick = {
                     showMenu = false
                     onRename()
@@ -868,7 +871,7 @@ private fun SubPageItem(
                 }
             )
             DropdownMenuItem(
-                text = { Text("Delete", color = colors.primaryText) },
+                text = { Text(strings.delete, color = colors.primaryText) },
                 onClick = {
                     showMenu = false
                     onDelete()
@@ -893,6 +896,7 @@ fun EditPageNameDialog(
 ) {
     var text by remember { mutableStateOf(page.name) }
     val colors = colors
+    val strings = AppTheme.strings
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -901,7 +905,7 @@ fun EditPageNameDialog(
             shadowElevation = 8.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Edit page name", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Text(strings.editPageName, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(20.dp))
                 BasicTextField(
                     value = text.take(20),
@@ -937,7 +941,7 @@ fun EditPageNameDialog(
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
                     Button(
                         onClick = { onConfirm(text.ifBlank { page.name }) },
@@ -946,7 +950,7 @@ fun EditPageNameDialog(
                             contentColor = colors.menuBackground
                         )
                     ) {
-                        Text("Save")
+                        Text(strings.save)
                     }
                 }
             }
@@ -962,6 +966,7 @@ fun DeletePageConfirmationDialog(
     onConfirm: () -> Unit,
 ) {
     val colors = colors
+    val strings = AppTheme.strings
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -970,13 +975,13 @@ fun DeletePageConfirmationDialog(
             shadowElevation = 8.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Move to trash", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Text(strings.moveToTrash, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(16.dp))
-                Text("Move page '${page.name}' and all its notes to trash?", color = colors.primaryText)
+                Text(strings.movePageToTrashMessage(page.name), color = colors.primaryText)
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
                     Button(
                         onClick = onConfirm,
@@ -985,7 +990,7 @@ fun DeletePageConfirmationDialog(
                             contentColor = colors.menuBackground
                         )
                     ) {
-                        Text("Move to trash")
+                        Text(strings.moveToTrash)
                     }
                 }
             }
@@ -1002,6 +1007,7 @@ fun AddSubPageDialog(
 ) {
     var text by remember { mutableStateOf("") }
     val colors = colors
+    val strings = AppTheme.strings
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -1010,8 +1016,8 @@ fun AddSubPageDialog(
             shadowElevation = 8.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Add sub-page", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
-                Text("to ${parentPage.name}", color = colors.primaryText.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text(strings.addSubPage, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Text(strings.subPageTarget(parentPage.name), color = colors.primaryText.copy(alpha = 0.5f), fontSize = 14.sp)
                 Spacer(Modifier.height(20.dp))
                 BasicTextField(
                     value = text.take(20),
@@ -1038,7 +1044,7 @@ fun AddSubPageDialog(
                             contentAlignment = Alignment.CenterStart
                         ) {
                             if (text.isEmpty()) {
-                                Text("Sub-page name", color = colors.hint, fontSize = 16.sp)
+                                Text(strings.subPageName, color = colors.hint, fontSize = 16.sp)
                             }
                             innerTextField()
                         }
@@ -1047,7 +1053,7 @@ fun AddSubPageDialog(
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
                     Button(
                         onClick = { onConfirm(text) },
@@ -1056,7 +1062,7 @@ fun AddSubPageDialog(
                             contentColor = colors.menuBackground
                         )
                     ) {
-                        Text("Add")
+                        Text(strings.add)
                     }
                 }
             }
@@ -1070,6 +1076,7 @@ fun SubPageLimitDialog(
     onDismiss: () -> Unit,
 ) {
     val colors = colors
+    val strings = AppTheme.strings
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -1078,9 +1085,9 @@ fun SubPageLimitDialog(
             shadowElevation = 8.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Limit reached", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Text(strings.limitReached, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(16.dp))
-                Text("You can only add 10 sub-pages per page.", color = colors.primaryText)
+                Text(strings.subPageLimitMessage, color = colors.primaryText)
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     Button(
@@ -1090,7 +1097,7 @@ fun SubPageLimitDialog(
                             contentColor = colors.menuBackground
                         )
                     ) {
-                        Text("OK")
+                        Text(strings.ok)
                     }
                 }
             }
@@ -1107,6 +1114,7 @@ fun ThemeSelectionDialog(
 ) {
     var selectedTheme by remember { mutableStateOf(currentTheme) }
     val colors = colors
+    val strings = AppTheme.strings
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -1115,7 +1123,7 @@ fun ThemeSelectionDialog(
             shadowElevation = 8.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Theme", color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Text(strings.theme, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
                 Spacer(Modifier.height(16.dp))
                 ThemeMode.entries.forEach { theme ->
                     Row(
@@ -1131,13 +1139,13 @@ fun ThemeSelectionDialog(
                             onClick = { selectedTheme = theme },
                             colors = appRadioButtonColors(),
                         )
-                        Text(text = theme.label, color = colors.primaryText)
+                        Text(text = strings.themeLabel(theme), color = colors.primaryText)
                     }
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = colors.primaryText)
+                        Text(strings.cancel, color = colors.primaryText)
                     }
                     Button(
                         onClick = { onConfirm(selectedTheme) },
@@ -1146,7 +1154,177 @@ fun ThemeSelectionDialog(
                             contentColor = colors.menuBackground
                         )
                     ) {
-                        Text("Save")
+                        Text(strings.save)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LanguageSelectionDialog(
+    currentLanguage: AppLanguage,
+    onDismiss: () -> Unit,
+    onConfirm: (AppLanguage) -> Unit,
+) {
+    var selectedLanguage by remember { mutableStateOf(currentLanguage) }
+    val colors = colors
+    val strings = AppTheme.strings
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(strings.language, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
+                AppLanguage.entries.forEach { language ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedLanguage = language }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedLanguage == language,
+                            onClick = { selectedLanguage = language },
+                            colors = appRadioButtonColors(),
+                        )
+                        Text(text = language.label, color = colors.primaryText)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text(strings.cancel, color = colors.primaryText)
+                    }
+                    Button(
+                        onClick = { onConfirm(selectedLanguage) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
+                        Text(strings.save)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalendarSelectionDialog(
+    currentCalendar: AppCalendar,
+    onDismiss: () -> Unit,
+    onConfirm: (AppCalendar) -> Unit,
+) {
+    var selectedCalendar by remember { mutableStateOf(currentCalendar) }
+    val colors = colors
+    val strings = AppTheme.strings
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(strings.calendar, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
+                AppCalendar.entries.forEach { calendar ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedCalendar = calendar }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedCalendar == calendar,
+                            onClick = { selectedCalendar = calendar },
+                            colors = appRadioButtonColors(),
+                        )
+                        Text(text = strings.calendarLabel(calendar), color = colors.primaryText)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text(strings.cancel, color = colors.primaryText)
+                    }
+                    Button(
+                        onClick = { onConfirm(selectedCalendar) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
+                        Text(strings.save)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WeekStartSelectionDialog(
+    currentWeekStart: WeekStart,
+    onDismiss: () -> Unit,
+    onConfirm: (WeekStart) -> Unit,
+) {
+    var selectedWeekStart by remember { mutableStateOf(currentWeekStart) }
+    val colors = colors
+    val strings = AppTheme.strings
+
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colors.menuBackground,
+            shadowElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(strings.weekStart, color = colors.primaryText, fontWeight = FontWeight.Medium, fontSize = 18.sp)
+                Spacer(Modifier.height(16.dp))
+                WeekStart.entries.forEach { weekStart ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedWeekStart = weekStart }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedWeekStart == weekStart,
+                            onClick = { selectedWeekStart = weekStart },
+                            colors = appRadioButtonColors(),
+                        )
+                        Text(text = strings.weekStartName(weekStart), color = colors.primaryText)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) {
+                        Text(strings.cancel, color = colors.primaryText)
+                    }
+                    Button(
+                        onClick = { onConfirm(selectedWeekStart) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryText,
+                            contentColor = colors.menuBackground
+                        )
+                    ) {
+                        Text(strings.save)
                     }
                 }
             }

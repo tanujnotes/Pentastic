@@ -36,7 +36,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,15 +47,19 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.Icon
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.pentastic.data.Note
+import app.pentastic.utils.DateTexts
+import app.pentastic.utils.DuePeriods
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.data.TimelineBucket
 import app.pentastic.data.TimelineSection
+import app.pentastic.data.WeekStart
 import app.pentastic.data.classifyDueDate
 import app.pentastic.data.classifyRepeatTask
 import app.pentastic.data.epochMillisToLocalDate
 import app.pentastic.data.hasDueDate
 import app.pentastic.data.timelineSectionDropRange
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.titleFontFamily
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.datetime.DateTimeUnit
@@ -64,7 +67,6 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
-import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.isoDayNumber
@@ -72,10 +74,7 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import org.jetbrains.compose.resources.Font
 import org.koin.compose.viewmodel.koinViewModel
-import pentastic.composeapp.generated.resources.Merriweather_Light
-import pentastic.composeapp.generated.resources.Res
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -86,6 +85,9 @@ import kotlin.time.ExperimentalTime
 @Composable
 fun TimelinePage(modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
+    val dateTexts = AppTheme.dateTexts
+    val weekStart = AppTheme.weekStart
+    val strings = AppTheme.strings
     val viewModel = koinViewModel<MainViewModel>()
     val notesByPage by viewModel.notesByPage.collectAsState()
     val pages by viewModel.pages.collectAsState()
@@ -125,7 +127,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
     ) { mutableStateOf(setOf<String>()) }
 
     val sections: List<TimelineSectionUi> =
-        remember(notesByPage, pages, subPagesByParent, timelinePage, today) {
+        remember(notesByPage, pages, subPagesByParent, timelinePage, today, dateTexts, weekStart, strings) {
             // Live (non-deleted, non-archived) pages = root pages + their sub-pages + the Timeline page itself
             val livePageIds = buildSet {
                 pages.forEach { add(it.id) }
@@ -138,8 +140,8 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             val grouped = liveNotes
                 .filter { it.repeatFrequency > 0 || (it.hasDueDate && !it.done) }
                 .groupBy {
-                    if (it.repeatFrequency > 0) classifyRepeatTask(it, today, timeZone)
-                    else classifyDueDate(it.dueStartAt, it.dueEndAt, today, timeZone)
+                    if (it.repeatFrequency > 0) classifyRepeatTask(it, today, timeZone, dateTexts.calendar, weekStart)
+                    else classifyDueDate(it.dueStartAt, it.dueEndAt, today, timeZone, dateTexts.calendar, weekStart)
                 }
 
             // Same ordering as task pages: priority tasks first, then dragged order (newest first)
@@ -147,8 +149,12 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 notes.sortedWith(compareByDescending<Note> { it.priority }.thenByDescending { it.orderAt })
 
             // Sections up to This weekend start expanded, the rest collapsed —
-            // except on weekends, when the imminent Next week starts expanded too
-            val isWeekendToday = today.dayOfWeek.isoDayNumber >= 6
+            // except on weekends, when the imminent Next week starts expanded too.
+            // The weekend is the last two days of the user's week (Thu/Fri for a
+            // Saturday start, Sat/Sun for a Monday start)
+            val weekendStartIso = (weekStart.isoWeekday + 4) % 7 + 1
+            val isWeekendToday = today.dayOfWeek.isoDayNumber == weekendStartIso ||
+                    today.dayOfWeek.isoDayNumber == weekendStartIso % 7 + 1
 
             buildList {
                 TimelineSection.entries.filter { it != TimelineSection.SOMEDAY }.forEach { section ->
@@ -158,8 +164,8 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     add(
                         TimelineSectionUi(
                             key = section.name,
-                            label = section.label,
-                            subtitle = sectionSubtitle(section, today),
+                            label = strings.timelineSection(section),
+                            subtitle = sectionSubtitle(section, today, dateTexts, weekStart),
                             notes = sectionNotes,
                             collapsedByDefault = when {
                                 section.ordinal <= TimelineSection.THIS_WEEKEND.ordinal -> false
@@ -171,15 +177,15 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 }
                 // Year sections: always this year and next, plus any further year with tasks
                 val years = buildSet {
-                    add(today.year)
-                    add(today.year + 1)
+                    add(dateTexts.parts(today.toEpochDays().toInt()).year)
+                    add(dateTexts.parts(today.toEpochDays().toInt()).year + 1)
                     grouped.keys.filterIsInstance<TimelineBucket.Year>().forEach { add(it.year) }
                 }.sorted()
                 years.forEach { year ->
                     add(
                         TimelineSectionUi(
                             key = "YEAR_$year",
-                            label = year.toString(),
+                            label = dateTexts.num(year),
                             notes = prioritySort(grouped[TimelineBucket.Year(year)] ?: emptyList()),
                             collapsedByDefault = true,
                         )
@@ -189,7 +195,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 add(
                     TimelineSectionUi(
                         key = TimelineSection.SOMEDAY.name,
-                        label = TimelineSection.SOMEDAY.label,
+                        label = strings.timelineSection(TimelineSection.SOMEDAY),
                         notes = prioritySort(someday),
                         collapsedByDefault = true,
                     )
@@ -203,14 +209,14 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 // wait here instead of vanishing until their window opens
                 val repeating = prioritySort(
                     timelineOwnNotes.filter {
-                        it.repeatFrequency > 0 && classifyRepeatTask(it, today, timeZone) == null
+                        it.repeatFrequency > 0 && classifyRepeatTask(it, today, timeZone, dateTexts.calendar, weekStart) == null
                     }
                 )
                 if (repeating.isNotEmpty()) {
                     add(
                         TimelineSectionUi(
                             key = "REPEATING",
-                            label = "Repeating",
+                            label = strings.timelineRepeating,
                             notes = repeating,
                             collapsedByDefault = true,
                         )
@@ -225,7 +231,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     add(
                         TimelineSectionUi(
                             key = "UNSCHEDULED",
-                            label = "Unscheduled",
+                            label = strings.timelineUnscheduled,
                             notes = unscheduled,
                             collapsedByDefault = true,
                         )
@@ -254,7 +260,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                     add(
                         TimelineSectionUi(
                             key = "COMPLETED",
-                            label = "Completed",
+                            label = strings.timelineCompleted,
                             notes = completed,
                             collapsedByDefault = true,
                             isDimmed = true,
@@ -357,7 +363,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
             localSections = sections
             return@persist
         }
-        val range = timelineSectionDropRange(section.key, today) ?: run {
+        val range = timelineSectionDropRange(section.key, today, dateTexts.calendar, weekStart) ?: run {
             localSections = sections // defensive: snap back instead of leaving a stale arrangement
             return@persist
         }
@@ -403,7 +409,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                 val isFirst = sectionIndex == 0
                 val notes = sectionUi.notes
                 val isCollapsed = (sectionUi.key in toggledSections) != sectionUi.collapsedByDefault
-                val isDroppable = timelineSectionDropRange(sectionUi.key, today) != null
+                val isDroppable = timelineSectionDropRange(sectionUi.key, today, dateTexts.calendar, weekStart) != null
                 val sectionStart = taskNumber
                 taskNumber += notes.size
                 item(key = "header_${sectionUi.key}") {
@@ -430,7 +436,7 @@ fun TimelinePage(modifier: Modifier = Modifier) {
                             fontSize = if (isFirst) 36.sp else 18.sp,
                             // Only the top section keeps the serif page-title look;
                             // the rest fall back to the theme's sans (Inter)
-                            fontFamily = if (isFirst) FontFamily(Font(Res.font.Merriweather_Light)) else null,
+                            fontFamily = if (isFirst) titleFontFamily() else null,
                             color = if (isCollapsed) colors.pageTitle.copy(alpha = 0.45f) else colors.pageTitle,
                             modifier = Modifier.alignByBaseline(),
                         )
@@ -625,6 +631,9 @@ private data class TimelineSectionUi(
 @Composable
 private fun TimelineEmptyState(today: LocalDate) {
     val colors = AppTheme.colors
+    val dateTexts = AppTheme.dateTexts
+    val weekStart = AppTheme.weekStart
+    val strings = AppTheme.strings
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -634,22 +643,22 @@ private fun TimelineEmptyState(today: LocalDate) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = TimelineSection.TODAY.label,
+            text = strings.timelineSection(TimelineSection.TODAY),
             fontSize = 36.sp,
-            fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+            fontFamily = titleFontFamily(),
             color = colors.pageTitle,
             modifier = Modifier.alignByBaseline(),
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            text = "· ${dayDateLabel(today)}",
+            text = "· ${dateTexts.dayDateLabel(today.toEpochDays().toInt())}",
             fontSize = 16.sp,
             color = colors.hint,
             modifier = Modifier.alignByBaseline(),
         )
     }
     Text(
-        text = "Nothing scheduled yet.\n\nAdd a task below, or open any task's menu and set a due date — it will show up here.",
+        text = strings.timelineEmpty,
         color = colors.hint,
         fontSize = 15.sp,
         lineHeight = 22.sp,
@@ -665,12 +674,12 @@ private fun TimelineEmptyState(today: LocalDate) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = section.label,
+                text = strings.timelineSection(section),
                 fontSize = 18.sp,
                 color = colors.pageTitle,
                 modifier = Modifier.alignByBaseline(),
             )
-            sectionSubtitle(section, today)?.let { subtitle ->
+            sectionSubtitle(section, today, dateTexts, weekStart)?.let { subtitle ->
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "· $subtitle",
@@ -684,43 +693,41 @@ private fun TimelineEmptyState(today: LocalDate) {
 }
 
 /** Light-grey date context shown next to a section title, e.g. "Tue, 4 Aug" or "3–9 Aug". */
-private fun sectionSubtitle(section: TimelineSection, today: LocalDate): String? {
-    val weekStart = today.minus(today.dayOfWeek.isoDayNumber - 1, DateTimeUnit.DAY)
-    return when (section) {
-        TimelineSection.TODAY -> dayDateLabel(today)
-        TimelineSection.TOMORROW -> dayDateLabel(today.plus(1, DateTimeUnit.DAY))
-        TimelineSection.THIS_WEEK ->
-            rangeLabel(weekStart, weekStart.plus(6, DateTimeUnit.DAY))
+private fun sectionSubtitle(
+    section: TimelineSection,
+    today: LocalDate,
+    texts: DateTexts,
+    weekStart: WeekStart,
+): String? {
+    fun day(date: LocalDate) = texts.dayDateLabel(date.toEpochDays().toInt())
+    fun range(start: LocalDate, end: LocalDate) =
+        texts.rangeLabel(start.toEpochDays().toInt(), end.toEpochDays().toInt())
 
+    val weekStartDay = today.minus(
+        (today.dayOfWeek.isoDayNumber - weekStart.isoWeekday + 7) % 7,
+        DateTimeUnit.DAY
+    )
+    return when (section) {
+        TimelineSection.TODAY -> day(today)
+        TimelineSection.TOMORROW -> day(today.plus(1, DateTimeUnit.DAY))
+        TimelineSection.THIS_WEEK -> range(weekStartDay, weekStartDay.plus(6, DateTimeUnit.DAY))
         TimelineSection.THIS_WEEKEND ->
-            rangeLabel(weekStart.plus(5, DateTimeUnit.DAY), weekStart.plus(6, DateTimeUnit.DAY))
+            range(weekStartDay.plus(5, DateTimeUnit.DAY), weekStartDay.plus(6, DateTimeUnit.DAY))
 
         TimelineSection.NEXT_WEEK ->
-            rangeLabel(weekStart.plus(7, DateTimeUnit.DAY), weekStart.plus(13, DateTimeUnit.DAY))
+            range(weekStartDay.plus(7, DateTimeUnit.DAY), weekStartDay.plus(13, DateTimeUnit.DAY))
 
-        TimelineSection.THIS_MONTH -> monthFullLabel(today.month)
+        TimelineSection.THIS_MONTH -> texts.monthFull(texts.parts(today.toEpochDays().toInt()).month)
         TimelineSection.NEXT_MONTH ->
-            monthFullLabel(LocalDate(today.year, today.month, 1).plus(1, DateTimeUnit.MONTH).month)
+            texts.monthFull(
+                texts.parts(
+                    DuePeriods(texts.calendar, weekStart).monthRange(today.toEpochDays().toInt(), 1).first
+                ).month
+            )
 
         TimelineSection.OVERDUE, TimelineSection.SOMEDAY -> null
     }
 }
-
-private fun dayDateLabel(date: LocalDate): String =
-    "${dayAbbrev(date)}, ${date.dayOfMonth} ${monthAbbrev(date.month)}"
-
-private fun rangeLabel(start: LocalDate, end: LocalDate): String =
-    if (start.month == end.month) "${start.dayOfMonth}–${end.dayOfMonth} ${monthAbbrev(start.month)}"
-    else "${start.dayOfMonth} ${monthAbbrev(start.month)} – ${end.dayOfMonth} ${monthAbbrev(end.month)}"
-
-private fun dayAbbrev(date: LocalDate): String =
-    date.dayOfWeek.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-
-private fun monthAbbrev(month: Month): String =
-    month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
-
-private fun monthFullLabel(month: Month): String =
-    month.name.lowercase().replaceFirstChar { it.uppercase() }
 
 private data class NoteLocation(val sectionIdx: Int, val noteIdx: Int)
 
@@ -803,6 +810,7 @@ private fun TimelineNoteRow(
     dragHandleModifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
     var showMenu by remember { mutableStateOf(false) }
     // A truncated row takes two taps: the first reveals the rest of the text, the
     // second opens the menu. Untruncated rows open the menu on the first tap.
@@ -831,7 +839,7 @@ private fun TimelineNoteRow(
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) {
             Text(
                 modifier = Modifier.padding(start = 12.dp, top = 6.dp).defaultMinSize(minWidth = 28.dp),
-                fontFamily = FontFamily(Font(Res.font.Merriweather_Light)),
+                fontFamily = titleFontFamily(),
                 text = "$index.",
                 color = colors.primaryText.copy(alpha = 0.33f),
                 textAlign = TextAlign.Center,
@@ -859,7 +867,7 @@ private fun TimelineNoteRow(
             if (note.repeatFrequency > 0) {
                 Icon(
                     imageVector = Icons.Filled.Repeat,
-                    contentDescription = "Repeating task",
+                    contentDescription = strings.repeatingTask,
                     modifier = Modifier.padding(top = 7.dp, end = 8.dp).size(16.dp),
                     tint = colors.primaryText.copy(alpha = if (isDimmed) 0.33f else 0.4f)
                 )

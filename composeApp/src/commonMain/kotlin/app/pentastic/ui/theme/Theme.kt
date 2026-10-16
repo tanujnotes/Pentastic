@@ -8,9 +8,19 @@ import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import app.pentastic.data.AppCalendar
+import app.pentastic.data.AppLanguage
 import app.pentastic.data.ThemeMode
+import app.pentastic.data.WeekStart
+import app.pentastic.ui.strings.AppStrings
+import app.pentastic.ui.strings.LocalStrings
+import app.pentastic.ui.strings.stringsFor
+import app.pentastic.utils.DateTexts
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
@@ -60,11 +70,30 @@ val DarkColors = AppColors(
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightColors }
+val LocalAppCalendar = staticCompositionLocalOf { AppCalendar.GREGORIAN }
+val LocalWeekStart = staticCompositionLocalOf { WeekStart.MONDAY }
+val LocalDateTexts = staticCompositionLocalOf { DateTexts(AppLanguage.FARSI, AppCalendar.GREGORIAN) }
 
 object AppTheme {
     val colors: AppColors
         @Composable
         get() = LocalAppColors.current
+
+    val strings: AppStrings
+        @Composable
+        get() = LocalStrings.current
+
+    val calendar: AppCalendar
+        @Composable
+        get() = LocalAppCalendar.current
+
+    val weekStart: WeekStart
+        @Composable
+        get() = LocalWeekStart.current
+
+    val dateTexts: DateTexts
+        @Composable
+        get() = LocalDateTexts.current
 }
 
 /**
@@ -106,6 +135,9 @@ fun isDayNightDark(): Boolean {
 @Composable
 fun AppTheme(
     themeMode: ThemeMode = ThemeMode.DAY_NIGHT,
+    language: AppLanguage = AppLanguage.FARSI,
+    calendar: AppCalendar = AppCalendar.GREGORIAN,
+    weekStart: WeekStart = WeekStart.MONDAY,
     content: @Composable () -> Unit,
 ) {
     val darkTheme = when (themeMode) {
@@ -120,9 +152,19 @@ fun AppTheme(
     // Update system bar style based on theme
     SystemBarEffect(isDarkTheme = darkTheme)
 
-    CompositionLocalProvider(LocalAppColors provides colors) {
+    val layoutDirection = if (language.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+    val dateTexts = remember(language, calendar) { DateTexts(language, calendar) }
+
+    CompositionLocalProvider(
+        LocalAppColors provides colors,
+        LocalLayoutDirection provides layoutDirection,
+        LocalStrings provides stringsFor(language),
+        LocalAppCalendar provides calendar,
+        LocalWeekStart provides weekStart,
+        LocalDateTexts provides dateTexts,
+    ) {
         MaterialTheme(
-            typography = interTypography(),
+            typography = appTypography(isFarsi = language == AppLanguage.FARSI),
         ) {
             content()
         }

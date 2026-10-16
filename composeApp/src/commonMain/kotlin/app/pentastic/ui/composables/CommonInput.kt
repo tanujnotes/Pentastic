@@ -106,7 +106,7 @@ fun CommonInput(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = "Add with priority",
+                        contentDescription = AppTheme.strings.addWithPriority,
                         modifier = Modifier.size(24.dp),
                         tint = AppTheme.colors.priorityText.copy(alpha = 0.5f)
                     )

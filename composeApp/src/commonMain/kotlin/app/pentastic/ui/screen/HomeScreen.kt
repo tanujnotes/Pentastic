@@ -35,6 +35,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
@@ -71,6 +73,7 @@ fun HomeScreen(
     prefs: DataStore<Preferences> = koinInject(),
     dataStoreRepository: DataStoreRepository = koinInject(),
 ) {
+    val strings = AppTheme.strings
     val viewModel = koinViewModel<MainViewModel>()
 
     val pages by viewModel.pages.collectAsState()
@@ -95,14 +98,15 @@ fun HomeScreen(
         today = Clock.System.now().toLocalDateTime(timeZone).date
         onPauseOrDispose { }
     }
-    val timelineUrgent = remember(notesByPage, pages, subPagesByParent, timelinePage, today) {
+    val calendar = AppTheme.calendar
+    val timelineUrgent = remember(notesByPage, pages, subPagesByParent, timelinePage, today, calendar) {
         val livePageIds = buildSet {
             pages.forEach { add(it.id) }
             subPagesByParent.values.forEach { subs -> subs.forEach { add(it.id) } }
             timelinePage?.let { add(it.id) }
         }
         timelineUrgentNotes(
-            notesByPage.filterKeys { it in livePageIds }.values.flatten(), today, timeZone
+            notesByPage.filterKeys { it in livePageIds }.values.flatten(), today, timeZone, calendar
         )
     }
     val timelineNotesCount = timelineUrgent.size
@@ -427,9 +431,9 @@ fun HomeScreen(
                                 isEditing = editingNote != null,
                                 placeholder = when {
                                     editingNote != null -> ""
-                                    isOnTimelinePage -> "Add a task..."
-                                    currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES -> "Add a note..."
-                                    currentActivePage != null -> "Add a task..."
+                                    isOnTimelinePage -> strings.addTask
+                                    currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES -> strings.addNote
+                                    currentActivePage != null -> strings.addTask
                                     else -> ""
                                 },
                                 showPriorityButton = currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.TASKS,
@@ -462,11 +466,19 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f)
                     ) { pageIndex ->
                         val pageOffset = pagerState.getOffsetDistanceInPages(pageIndex)
+                        // Read outside the graphicsLayer lambda: it is a @Composable
+                        // call and graphicsLayer is a plain lambda, not composable
+                        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
-                                    translationX = (if (pageOffset < 0f) 0f else -pageOffset * size.width)
+                                    // The pager lays pages right-to-left under an RTL
+                                    // layout direction, so the parallax shift must flip
+                                    // sign too or the incoming page flies in from far
+                                    // off-screen instead of sitting still underneath
+                                    val direction = if (rtl) 1f else -1f
+                                    translationX = if (pageOffset < 0f) 0f else direction * pageOffset * size.width
                                     val scale = lerp(1f, 0.9f, pageOffset.coerceIn(0f, 1f))
                                     scaleX = scale
                                     scaleY = scale
@@ -573,13 +585,13 @@ fun HomeScreen(
                         isEditing = editingNote != null,
                         placeholder = when {
                             editingNote != null -> ""
-                            isOnTimelinePage -> "Add a task..."
-                            isOnIndexPage -> "Add a new page..."
+                            isOnTimelinePage -> strings.addTask
+                            isOnIndexPage -> strings.addPage
                             else -> {
                                 if (currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.NOTES)
-                                    "Add a note..."
+                                    strings.addNote
                                 else
-                                    "Add a task..."
+                                    strings.addTask
                             }
                         },
                         showPriorityButton = !isOnIndexPage && currentActivePage != null && PageType.fromOrdinal(currentActivePage.pageType) == PageType.TASKS,

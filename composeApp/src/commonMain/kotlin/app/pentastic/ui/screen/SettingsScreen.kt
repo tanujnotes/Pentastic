@@ -16,10 +16,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -36,19 +39,19 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pentastic.ui.composables.CalendarSelectionDialog
+import app.pentastic.ui.composables.WeekStartSelectionDialog
 import app.pentastic.ui.composables.ThemeSelectionDialog
+import app.pentastic.ui.composables.LanguageSelectionDialog
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.ui.theme.titleFontFamily
 import app.pentastic.ui.theme.AppTheme.colors
 import app.pentastic.ui.theme.captionBarHeight
 import app.pentastic.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.Font
 import org.koin.compose.viewmodel.koinViewModel
-import pentastic.composeapp.generated.resources.Merriweather_Light
-import pentastic.composeapp.generated.resources.Res
 
 @Composable
 fun SettingsScreen(
@@ -58,9 +61,19 @@ fun SettingsScreen(
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
+    val strings = AppTheme.strings
 
     val themeMode by viewModel.themeMode.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
+
+    val language by viewModel.language.collectAsState()
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
+    val calendar by viewModel.calendar.collectAsState()
+    var showCalendarDialog by remember { mutableStateOf(false) }
+
+    val weekStart by viewModel.weekStart.collectAsState()
+    var showWeekStartDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -72,11 +85,11 @@ fun SettingsScreen(
     ) {
         // Title
         Text(
-            text = "Settings",
+            text = strings.settings,
             style = TextStyle(
                 color = colors.pageTitle,
                 fontSize = 36.sp,
-                fontFamily = FontFamily(Font(Res.font.Merriweather_Light))
+                fontFamily = titleFontFamily()
             ),
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 6.dp)
         )
@@ -85,11 +98,50 @@ fun SettingsScreen(
 
         SettingsItem(
             icon = { Icon(Icons.Default.Palette, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
-            title = "Theme",
+            title = strings.theme,
             onClick = { showThemeDialog = true },
             trailing = {
                 Text(
-                    text = themeMode.label,
+                    text = strings.themeLabel(themeMode),
+                    fontSize = 14.sp,
+                    color = colors.hint,
+                )
+            }
+        )
+
+        SettingsItem(
+            icon = { Icon(Icons.Default.Language, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
+            title = strings.language,
+            onClick = { showLanguageDialog = true },
+            trailing = {
+                Text(
+                    text = language.label,
+                    fontSize = 14.sp,
+                    color = colors.hint,
+                )
+            }
+        )
+
+        SettingsItem(
+            icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
+            title = strings.calendar,
+            onClick = { showCalendarDialog = true },
+            trailing = {
+                Text(
+                    text = strings.calendarLabel(calendar),
+                    fontSize = 14.sp,
+                    color = colors.hint,
+                )
+            }
+        )
+
+        SettingsItem(
+            icon = { Icon(Icons.Default.ViewWeek, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
+            title = strings.weekStart,
+            onClick = { showWeekStartDialog = true },
+            trailing = {
+                Text(
+                    text = strings.weekStartName(weekStart),
                     fontSize = 14.sp,
                     color = colors.hint,
                 )
@@ -98,7 +150,7 @@ fun SettingsScreen(
 
         SettingsItem(
             icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
-            title = "Trash",
+            title = strings.trash,
             onClick = onNavigateToTrash,
             trailing = {
                 Icon(
@@ -114,23 +166,23 @@ fun SettingsScreen(
 
         SettingsItem(
             icon = { Icon(Icons.Default.PersonAdd, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
-            title = "Follow",
+            title = strings.follow,
             onClick = {
                 uriHandler.openUri("https://x.com/tanujnotes")
             }
         )
         SettingsItem(
             icon = { Icon(Icons.Default.Share, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
-            title = "Share",
+            title = strings.share,
             onClick = {
                 coroutineScope.launch {
-                    clipboardManager.setText(AnnotatedString("Get things done with Pentastic!\nhttps://play.google.com/store/apps/details?id=app.pentastic"))
+                    clipboardManager.setText(AnnotatedString(strings.shareText))
                 }
             }
         )
         SettingsItem(
             icon = { Icon(Icons.Default.Star, contentDescription = null, tint = colors.icon, modifier = Modifier.size(22.dp)) },
-            title = "Rate",
+            title = strings.rate,
             onClick = {
                 viewModel.onRateClicked()
                 uriHandler.openUri("https://play.google.com/store/apps/details?id=app.pentastic")
@@ -149,7 +201,41 @@ fun SettingsScreen(
             }
         )
     }
+
+    if (showLanguageDialog) {
+        LanguageSelectionDialog(
+            currentLanguage = language,
+            onDismiss = { showLanguageDialog = false },
+            onConfirm = { selectedLanguage ->
+                viewModel.setLanguage(selectedLanguage)
+                showLanguageDialog = false
+            }
+        )
+    }
+
+    if (showCalendarDialog) {
+        CalendarSelectionDialog(
+            currentCalendar = calendar,
+            onDismiss = { showCalendarDialog = false },
+            onConfirm = { selectedCalendar ->
+                viewModel.setCalendar(selectedCalendar)
+                showCalendarDialog = false
+            }
+        )
+    }
+
+    if (showWeekStartDialog) {
+        WeekStartSelectionDialog(
+            currentWeekStart = weekStart,
+            onDismiss = { showWeekStartDialog = false },
+            onConfirm = { selectedWeekStart ->
+                viewModel.setWeekStart(selectedWeekStart)
+                showWeekStartDialog = false
+            }
+        )
+    }
 }
+
 
 @Composable
 private fun SettingsItem(

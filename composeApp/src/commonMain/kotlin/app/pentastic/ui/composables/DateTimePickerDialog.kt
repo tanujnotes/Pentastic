@@ -37,12 +37,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pentastic.data.AppCalendar
 import app.pentastic.data.RepeatFrequency
 import app.pentastic.ui.theme.AppTheme
+import app.pentastic.utils.JalaliCalendar
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
@@ -65,6 +69,7 @@ fun DateTimePickerDialog(
     onOpenRepeatDialog: () -> Unit = {},
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
 
     var selectedDate by remember { mutableStateOf(initialDate) }
     var selectedHour by remember { mutableStateOf(initialHour) }
@@ -90,7 +95,7 @@ fun DateTimePickerDialog(
             Column(modifier = Modifier.padding(24.dp)) {
                 // Title
                 Text(
-                    text = "Set reminder",
+                    text = strings.setReminder,
                     color = colors.primaryText,
                     fontWeight = FontWeight.Medium,
                     fontSize = 18.sp
@@ -115,13 +120,13 @@ fun DateTimePickerDialog(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "This is a ${repeatFrequency.label.lowercase()} repeating task",
+                                text = strings.repeatingTaskInfo(repeatFrequency),
                                 color = colors.primaryText,
                                 fontSize = 14.sp
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Tap to edit repeat settings",
+                                text = strings.tapToEditRepeat,
                                 color = colors.primaryText.copy(alpha = 0.6f),
                                 fontSize = 12.sp
                             )
@@ -173,7 +178,7 @@ fun DateTimePickerDialog(
                             onClear()
                             onDismiss()
                         }) {
-                            Text("Clear", color = colors.primaryText.copy(alpha = 0.6f))
+                            Text(strings.clear, color = colors.primaryText.copy(alpha = 0.6f))
                         }
                     } else {
                         Spacer(Modifier.width(1.dp))
@@ -181,7 +186,7 @@ fun DateTimePickerDialog(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onDismiss) {
-                            Text("Cancel", color = colors.primaryText)
+                            Text(strings.cancel, color = colors.primaryText)
                         }
                         Spacer(Modifier.width(8.dp))
                         Button(
@@ -197,7 +202,7 @@ fun DateTimePickerDialog(
                             ),
                             shape = RoundedCornerShape(20.dp)
                         ) {
-                            Text("Done")
+                            Text(strings.done)
                         }
                     }
                 }
@@ -213,6 +218,7 @@ private fun CompactTimePicker(
     onTimeSelected: (hour: Int, minute: Int) -> Unit,
 ) {
     val colors = AppTheme.colors
+    val dateTexts = AppTheme.dateTexts
 
     // Convert 24-hour to 12-hour format
     val isAm = selectedHour < 12
@@ -236,43 +242,66 @@ private fun CompactTimePicker(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Hour picker (1-12)
-        WheelPicker(
-            items = (1..12).toList(),
-            selectedItem = hour12,
-            onItemSelected = { newHour12 ->
-                onTimeSelected(toHour24(newHour12, isAm), selectedMinute)
-            }
-        )
+        // Digits read left-to-right even in Farsi, so the time keeps its hour : minute
+        // order in both languages; only the AM/PM marker moves, matching how the
+        // formatted labels render («ب.ظ ۳:۰۵»). Under an RTL layout direction the Row
+        // mirrors child order, so there the children are declared minute-first.
+        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
+        val hourWheel: @Composable () -> Unit = {
+            // Hour picker (1-12)
+            WheelPicker(
+                items = (1..12).toList(),
+                selectedItem = hour12,
+                onItemSelected = { newHour12 ->
+                    onTimeSelected(toHour24(newHour12, isAm), selectedMinute)
+                },
+                format = { dateTexts.num2(it) }
+            )
+        }
+        val colon: @Composable () -> Unit = {
+            Text(
+                text = ":",
+                color = colors.icon,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+        val minuteWheel: @Composable () -> Unit = {
+            // Minute picker
+            WheelPicker(
+                items = (0..59).toList(),
+                selectedItem = selectedMinute,
+                onItemSelected = { onTimeSelected(selectedHour, it) },
+                format = { dateTexts.num2(it) }
+            )
+        }
+        val amPmWheel: @Composable () -> Unit = {
+            Spacer(Modifier.width(8.dp))
 
-        Text(
-            text = ":",
-            color = colors.icon,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
-        )
+            // AM/PM picker
+            WheelPickerGeneric(
+                items = listOf(true, false),
+                selectedItem = isAm,
+                onItemSelected = { newIsAm ->
+                    onTimeSelected(toHour24(hour12, newIsAm), selectedMinute)
+                },
+                format = { dateTexts.amPm(it) },
+                itemWidth = 52.dp
+            )
+        }
 
-        // Minute picker
-        WheelPicker(
-            items = (0..59).toList(),
-            selectedItem = selectedMinute,
-            onItemSelected = { onTimeSelected(selectedHour, it) }
-        )
-
-        Spacer(Modifier.width(8.dp))
-
-        // AM/PM picker
-        WheelPickerGeneric(
-            items = listOf("AM", "PM"),
-            selectedItem = if (isAm) "AM" else "PM",
-            onItemSelected = { amPm ->
-                val newIsAm = amPm == "AM"
-                onTimeSelected(toHour24(hour12, newIsAm), selectedMinute)
-            },
-            format = { it },
-            itemWidth = 52.dp
-        )
+        if (rtl) {
+            minuteWheel()
+            colon()
+            hourWheel()
+            amPmWheel()
+        } else {
+            hourWheel()
+            colon()
+            minuteWheel()
+            amPmWheel()
+        }
     }
 }
 
@@ -281,6 +310,7 @@ private fun WheelPicker(
     items: List<Int>,
     selectedItem: Int,
     onItemSelected: (Int) -> Unit,
+    format: (Int) -> String = { it.toString() },
 ) {
     val colors = AppTheme.colors
     val listState = rememberLazyListState()
@@ -372,7 +402,7 @@ private fun WheelPicker(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = padZero(item),
+                        text = format(item),
                         color = if (isSelected) colors.primaryText else colors.primaryText.copy(alpha = 0.4f),
                         fontSize = if (isSelected) 20.sp else 16.sp,
                         fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
@@ -389,21 +419,28 @@ private fun DateWheelPicker(
     onDateSelected: (LocalDate) -> Unit,
 ) {
     val colors = AppTheme.colors
+    val dateTexts = AppTheme.dateTexts
+    val isJalali = AppTheme.calendar == AppCalendar.JALALI
     val today = remember {
         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     }
 
-    // Generate year range (current year to +10 years)
-    val years = remember { (today.year..(today.year + 10)).toList() }
-    val months = remember { Month.entries.toList() }
+    // Today and the selected date, broken down in the active calendar
+    val todayParts = dateTexts.parts(today.toEpochDays().toInt())
+    val selectedParts = dateTexts.parts(selectedDate.toEpochDays().toInt())
 
-    var selectedYear by remember { mutableStateOf(selectedDate.year) }
-    var selectedMonth by remember { mutableStateOf(selectedDate.month) }
-    var selectedDay by remember { mutableStateOf(selectedDate.dayOfMonth) }
+    // Generate year range (current year to +10 years) in the active calendar
+    val years = remember(todayParts.year) { (todayParts.year..(todayParts.year + 10)).toList() }
+    val months = remember { (1..12).toList() }
 
-    // Calculate days in the selected month
-    val daysInMonth = remember(selectedYear, selectedMonth) {
-        getDaysInMonth(selectedYear, selectedMonth)
+    var selectedYear by remember { mutableStateOf(selectedParts.year) }
+    var selectedMonth by remember { mutableStateOf(selectedParts.month) }
+    var selectedDay by remember { mutableStateOf(selectedParts.day) }
+
+    // Calculate days in the selected month, in the active calendar
+    val daysInMonth = remember(selectedYear, selectedMonth, isJalali) {
+        if (isJalali) JalaliCalendar.monthLength(selectedYear, selectedMonth)
+        else getDaysInMonth(selectedYear, Month.entries[selectedMonth - 1])
     }
     val days = remember(daysInMonth) { (1..daysInMonth).toList() }
 
@@ -416,7 +453,12 @@ private fun DateWheelPicker(
 
     // Update the selected date when any component changes
     LaunchedEffect(selectedYear, selectedMonth, selectedDay) {
-        val newDate = LocalDate(selectedYear, selectedMonth, selectedDay.coerceAtMost(daysInMonth))
+        val day = selectedDay.coerceAtMost(daysInMonth)
+        val newDate = if (isJalali) {
+            LocalDate.fromEpochDays(JalaliCalendar.toEpochDays(selectedYear, selectedMonth, day))
+        } else {
+            LocalDate(selectedYear, selectedMonth, day)
+        }
         if (newDate != selectedDate && newDate >= today) {
             onDateSelected(newDate)
         }
@@ -427,35 +469,55 @@ private fun DateWheelPicker(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Year picker
-        WheelPickerGeneric(
-            items = years,
-            selectedItem = selectedYear,
-            onItemSelected = { selectedYear = it },
-            format = { it.toString() },
-            itemWidth = 64.dp
-        )
+        // Digits and month names read left-to-right even in Farsi, so the wheels keep
+        // their year | month | day left-to-right order in both languages. Under an RTL
+        // layout direction the Row mirrors child order, so there the wheels are
+        // declared day-first to cancel the mirroring and match the date labels.
+        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
-        Spacer(Modifier.width(8.dp))
+        val yearWheel: @Composable () -> Unit = {
+            // Year picker
+            WheelPickerGeneric(
+                items = years,
+                selectedItem = selectedYear,
+                onItemSelected = { selectedYear = it },
+                format = { dateTexts.num(it) },
+                itemWidth = 64.dp
+            )
+        }
+        val monthWheel: @Composable () -> Unit = {
+            // Month picker
+            WheelPickerGeneric(
+                items = months,
+                selectedItem = selectedMonth,
+                onItemSelected = { selectedMonth = it },
+                format = { dateTexts.monthAbbrev(it) },
+                itemWidth = 92.dp
+            )
+        }
+        val dayWheel: @Composable () -> Unit = {
+            // Day picker
+            WheelPickerGeneric(
+                items = days,
+                selectedItem = selectedDay,
+                onItemSelected = { selectedDay = it },
+                format = { dateTexts.num(it) }
+            )
+        }
 
-        // Month picker
-        WheelPickerGeneric(
-            items = months,
-            selectedItem = selectedMonth,
-            onItemSelected = { selectedMonth = it },
-            format = { formatMonthShort(it) },
-            itemWidth = 72.dp
-        )
-
-        Spacer(Modifier.width(8.dp))
-
-        // Day picker
-        WheelPickerGeneric(
-            items = days,
-            selectedItem = selectedDay,
-            onItemSelected = { selectedDay = it },
-            format = { it.toString() }
-        )
+        if (rtl) {
+            dayWheel()
+            Spacer(Modifier.width(8.dp))
+            monthWheel()
+            Spacer(Modifier.width(8.dp))
+            yearWheel()
+        } else {
+            yearWheel()
+            Spacer(Modifier.width(8.dp))
+            monthWheel()
+            Spacer(Modifier.width(8.dp))
+            dayWheel()
+        }
     }
 }
 
@@ -581,25 +643,4 @@ private fun getDaysInMonth(year: Int, month: Month): Int {
 
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
-}
-
-private fun formatMonthShort(month: Month): String {
-    return when (month) {
-        Month.JANUARY -> "Jan"
-        Month.FEBRUARY -> "Feb"
-        Month.MARCH -> "Mar"
-        Month.APRIL -> "Apr"
-        Month.MAY -> "May"
-        Month.JUNE -> "Jun"
-        Month.JULY -> "Jul"
-        Month.AUGUST -> "Aug"
-        Month.SEPTEMBER -> "Sep"
-        Month.OCTOBER -> "Oct"
-        Month.NOVEMBER -> "Nov"
-        Month.DECEMBER -> "Dec"
-    }
-}
-
-private fun padZero(value: Int): String {
-    return if (value < 10) "0$value" else value.toString()
 }

@@ -48,6 +48,8 @@ fun ReminderDialog(
     onRemoveReminder: () -> Unit,
 ) {
     val colors = AppTheme.colors
+    val strings = AppTheme.strings
+    val dateTexts = AppTheme.dateTexts
     val timeZone = TimeZone.currentSystemDefault()
     val now = Clock.System.now()
 
@@ -82,7 +84,7 @@ fun ReminderDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    "Set Reminder",
+                    strings.setReminder,
                     color = colors.primaryText,
                     fontWeight = FontWeight.Medium,
                     fontSize = 24.sp
@@ -96,14 +98,14 @@ fun ReminderDialog(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "${selectedDate.dayOfMonth} ${formatMonth(selectedDate.monthNumber)} ${selectedDate.year}",
+                        text = dateTexts.dayMonthYearFull(selectedDate.toEpochDays().toInt()),
                         color = colors.primaryText,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "${padZero(selectedHour)}:${padZero(selectedMinute)}",
+                        text = dateTexts.time24(selectedHour, selectedMinute),
                         color = colors.primaryText.copy(alpha = 0.7f),
                         fontSize = 16.sp
                     )
@@ -116,7 +118,7 @@ fun ReminderDialog(
                     onClick = { showDateTimePicker = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Change date & time", color = colors.primaryText)
+                    Text(strings.changeDateTime, color = colors.primaryText)
                 }
 
                 // Enable/Disable toggle (only shown if reminder already exists)
@@ -129,7 +131,7 @@ fun ReminderDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Enabled", color = colors.primaryText)
+                        Text(strings.enabled, color = colors.primaryText)
                         Switch(
                             checked = isEnabled,
                             onCheckedChange = { isEnabled = it },
@@ -150,7 +152,7 @@ fun ReminderDialog(
                             onRemoveReminder()
                             onDismiss()
                         }) {
-                            Text("Remove", color = colors.primaryText.copy(alpha = 0.6f))
+                            Text(strings.remove, color = colors.primaryText.copy(alpha = 0.6f))
                         }
                     } else {
                         Spacer(Modifier.width(1.dp))
@@ -158,13 +160,13 @@ fun ReminderDialog(
 
                     Row {
                         TextButton(onClick = onDismiss) {
-                            Text("Cancel", color = colors.primaryText)
+                            Text(strings.cancel, color = colors.primaryText)
                         }
                         TextButton(onClick = {
                             val reminderTime = calculateReminderTime()
                             onConfirm(reminderTime, isEnabled)
                         }) {
-                            Text("Save", color = colors.primaryText)
+                            Text(strings.save, color = colors.primaryText)
                         }
                     }
                 }
@@ -192,26 +194,4 @@ fun ReminderDialog(
             }
         )
     }
-}
-
-private fun formatMonth(month: Int): String {
-    return when (month) {
-        1 -> "January"
-        2 -> "February"
-        3 -> "March"
-        4 -> "April"
-        5 -> "May"
-        6 -> "June"
-        7 -> "July"
-        8 -> "August"
-        9 -> "September"
-        10 -> "October"
-        11 -> "November"
-        12 -> "December"
-        else -> ""
-    }
-}
-
-private fun padZero(value: Int): String {
-    return if (value < 10) "0$value" else value.toString()
 }

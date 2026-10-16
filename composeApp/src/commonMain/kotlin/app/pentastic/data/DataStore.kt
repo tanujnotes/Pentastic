@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.time.Clock
@@ -22,6 +23,9 @@ object DatastoreKeys {
     val SHOW_COMPLETED_TASKS = booleanPreferencesKey("show_completed_tasks")
     val SHOW_TIMELINE = booleanPreferencesKey("show_timeline")
     val SHOW_SUB_PAGES = booleanPreferencesKey("show_sub_pages")
+    val LANGUAGE = intPreferencesKey("language")
+    val CALENDAR = intPreferencesKey("calendar")
+    val WEEK_START = intPreferencesKey("week_start")
 }
 
 class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
@@ -105,6 +109,40 @@ class DataStoreRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setShowSubPages(show: Boolean) {
         dataStore.edit { settings ->
             settings[DatastoreKeys.SHOW_SUB_PAGES] = show
+        }
+    }
+
+    val language: Flow<Int> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.LANGUAGE] ?: AppLanguage.FARSI.ordinal
+    }
+
+    suspend fun languageOnce(): Int =
+        dataStore.data.first()[DatastoreKeys.LANGUAGE] ?: AppLanguage.FARSI.ordinal
+
+    suspend fun saveLanguage(language: Int) {
+        dataStore.edit { settings ->
+            settings[DatastoreKeys.LANGUAGE] = language
+        }
+    }
+
+    val calendar: Flow<Int> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.CALENDAR] ?: AppCalendar.GREGORIAN.ordinal
+    }
+
+    suspend fun saveCalendar(calendar: Int) {
+        dataStore.edit { settings ->
+            settings[DatastoreKeys.CALENDAR] = calendar
+        }
+    }
+
+    /** Null until the user picks one; callers fall back to a language-aware default. */
+    val weekStart: Flow<Int?> = dataStore.data.map { preferences ->
+        preferences[DatastoreKeys.WEEK_START]
+    }
+
+    suspend fun saveWeekStart(weekStart: Int) {
+        dataStore.edit { settings ->
+            settings[DatastoreKeys.WEEK_START] = weekStart
         }
     }
 }
